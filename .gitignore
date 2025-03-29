@@ -1,0 +1,30 @@
+# Node.js
+node_modules/
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend - Vite
+dist/
+
+# MacOS
+.DS_Store
+
+# Editor (VS Code)
+.vscode/
+.idea/
+
+# Backend - Coverage
+coverage/
+
+# Database dumps
+*.sql
+*.sqlite
+
+# System files
+Thumbs.db
