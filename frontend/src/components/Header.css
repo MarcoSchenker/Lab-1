@@ -1,0 +1,27 @@
+.header {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background-color: #333; /* Fondo oscuro */
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px; /* Espacio debajo del Header */
+}
+
+.header-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  margin-left: 20px; /* Mueve el contenido del Header hacia la izquierda */
+}
+
+.logo {
+  height: 50px;
+  margin-right: 10px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+}

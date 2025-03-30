@@ -1,0 +1,239 @@
+/* HomePage.css */
+
+/* Reseteo básico para evitar márgenes no deseados */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  background-color: #343a40; /* Dark background */
+  color: #f8f8f8; /* Light text */
+  height: 100%;
+}
+
+/* Contenedor principal */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: #333; /* Fondo oscuro */
+  color: #fff;
+  min-height: 100vh;
+}
+
+/* Header con logo y título */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+}
+
+.logo {
+  height: 50px;
+  margin-right: 10px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+/* Línea blanca */
+.line {
+  width: 100%;
+  height: 2px;
+  background-color: white;
+  margin: 10px 0;
+}
+
+/* Línea blanca */
+.line-white {
+  width: 100%; /* Ocupa todo el ancho de la página */
+  height: 4px; /* Grosor de la línea */
+  background-color: white; /* Color blanco */
+  margin: 0; /* Sin margen */
+}
+.line-black{
+    width: 250%;
+    height: 2px;
+    background-color: black;
+    margin: 0;
+}
+
+/* Contenido principal */
+.content {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+/* Contenido del lado izquierdo */
+.left-content {
+  display: flex;
+  flex-direction: column;
+  width: 50%; /* Más estrecho para moverlo a la izquierda */
+  margin-left: 5px; /* Mueve el contenido más a la izquierda */
+}
+
+.left-content h2 {
+  font-size: 2rem;
+  margin-bottom: 50px;
+}
+
+.left-content p {
+  font-size: 1.2rem;
+  margin-bottom: 70px;
+}
+
+.button-orange {
+  background-color: #ff7b00;
+  color: #000000;
+  font-size: 1rem; /* Más pequeño */
+  padding: 10px 20px; /* Más ancho */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 300px; /* Más ancho */
+  margin: 30px 0; /* Más abajo */
+  transition: background-color 0.3s;
+}
+
+.button-orange:hover {
+  background-color: #e66300;
+}
+
+.learn-truco {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px; /* Reduce el espacio entre el logo y el texto */
+}
+
+.video-icon {
+  height: 30px;
+  margin-right: 1px;
+}
+
+.learn-truco-text {
+  color: #f8f8f8;
+  font-size: 1.2rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.learn-truco-text:hover {
+  text-decoration: underline;
+}
+
+.rules-modal {
+  background-color: #444;
+  color: #fff;
+  margin-top: 15px;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+/* Contenido del lado derecho */
+.right-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 30%;
+  margin-top: 150px; /* Mueve los botones más abajo */
+}
+
+.button-login {
+  background-color: #007bff; /* Azul */
+  color: #000000;
+  font-size: 1.2rem;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 350px;
+  margin-bottom: 10px;
+  transition: background-color 0.3s;
+}
+
+.button-login:hover {
+  background-color: #0056b3;
+}
+
+.button-register {
+    background-color: #12b300; /* Verde */
+    color: #000000;
+    font-size: 1.2rem;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 350px;
+    margin-bottom: 10px;
+    transition: background-color 0.3s;
+  }
+  
+  .button-register:hover {
+    background-color: #2e7b01;
+  }
+
+.right-content p {
+  font-size: 1rem;
+  color: #f8f8f8;
+  margin-bottom: 20px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .left-content,
+  .right-content {
+    width: 100%;
+    align-items: center;
+  }
+
+  .button-orange,
+  .button-secondary,
+  .button-rules {
+    width: 100%;
+  }
+}
+
+a {
+  font-size: 1.1rem;
+  padding: 12px 25px;
+  border-radius: 8px;
+  text-align: center;
+  text-decoration: none;
+  color: #fff;
+  transition: background-color 0.3s;
+}
+
+@media (max-width: 600px) {
+  .home-container {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .title {
+    font-size: 2.5rem;
+  }
+
+  .button-orange,
+  .button-secondary,
+  .button-rules {
+    width: 100%;
+  }
+}

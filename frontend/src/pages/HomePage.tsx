@@ -1,51 +1,53 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Header from '../components/Header';
+import './HomePage.css';
 
 function HomePage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '50px' }}>
-      <h1>Bienvenido a Truco Online 🎴</h1>
-      <p>Elige una opción para comenzar:</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-        <Link
-          to="/login"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#007BFF',
-            color: '#fff',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            textAlign: 'center',
-          }}
-        >
-          Iniciar Sesión
-        </Link>
-        <Link
-          to="/register"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#28A745',
-            color: '#fff',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            textAlign: 'center',
-          }}
-        >
-          Registrarse
-        </Link>
-        <Link
-          to="/stats/1" // Cambia el ID según sea necesario
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#FFC107',
-            color: '#fff',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            textAlign: 'center',
-          }}
-        >
-          Ver Estadísticas
-        </Link>
+    <div className="home-container">
+      <Header /> {/* Agregamos el Header */}
+
+      {/* Línea blanca */}
+      <hr className="line-white" />
+
+      <div className="content">
+        {/* Contenido del lado izquierdo */}
+        <div className="left-content">
+          <h2>El mejor Truco del Mundo</h2>
+          <p>
+            Trucho es una aplicación creada por los estudiantes
+            <br />
+            Marco Schenker e Ignacio Gaspar
+          </p>
+          <button className="button-orange">Jugá sin Registrarte</button>
+          <div className="learn-truco">
+            <img src="/videoLogo.png" alt="Video" className="video-icon" />
+            <a
+              href="https://www.youtube.com/watch?v=Nw8UFka_2i4&ab_channel=PoppularJuegos"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="learn-truco-text"
+            >
+              Aprendé a jugar al Truco
+            </a>
+          </div>
+        </div>
+
+        {/* Contenido del lado derecho */}
+        <div className="right-content">
+          <Link to="/register">
+            <button className="button-register">Sign Up</button>
+          </Link>
+          <div className="account-text-container">
+            <div className="line-black"></div>
+            <p className="account-text">¿Ya tenés una cuenta?</p>
+            <div className="line-black"></div>
+          </div>
+          <Link to="/login">
+            <button className="button-login">Login</button>
+          </Link>
+        </div>
       </div>
     </div>
   );
