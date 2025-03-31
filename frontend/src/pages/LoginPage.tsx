@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import Header from '../components/Header';
+import Header from '../components/Header'; // Importamos el Header desde el folder components
+import './LoginPage.css'; // Importamos el CSS específico para LoginPage
 import { loginUser } from '../services/api.ts';
 
 const LoginPage = () => {
@@ -25,35 +26,25 @@ const LoginPage = () => {
   };
 
   return (
-    <div>
-      <Header /> {/* Agregamos el Header */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        marginTop: '20px', /* Espacio debajo del Header */
-        textAlign: 'center' 
-      }}>
+    <div className="login-container">
+      <Header /> {/* Header arriba a la izquierda */}
+      <hr className="line-white" /> {/* Línea blanca debajo del Header */}
+      <div className="login-content">
         <h2>Iniciar Sesión</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', width: '300px' }}>
+        <form className="login-form" onSubmit={handleSubmit}>
           <input
             type="text"
             placeholder="Usuario"
             value={nombre_usuario}
             onChange={(e) => setNombreUsuario(e.target.value)}
-            style={{ marginBottom: '10px', padding: '10px', fontSize: '16px' }}
           />
           <input
             type="password"
             placeholder="Contraseña"
             value={contraseña}
             onChange={(e) => setContraseña(e.target.value)}
-            style={{ marginBottom: '10px', padding: '10px', fontSize: '16px' }}
           />
-          <button type="submit" style={{ padding: '10px', fontSize: '16px', cursor: 'pointer' }}>
-            Ingresar
-          </button>
+          <button type="submit">Ingresar</button>
         </form>
       </div>
     </div>

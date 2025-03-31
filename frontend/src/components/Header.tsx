@@ -4,7 +4,7 @@ import './Header.css';
 
 const Header: React.FC = () => {
   return (
-    <div className="header">
+    <div className="header-component">
       <Link to="/" className="header-link">
         <img src="/CardLogo.png" alt="Logo" className="logo" />
         <h1 className="title">Trucho</h1>

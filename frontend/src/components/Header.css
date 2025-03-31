@@ -1,27 +1,30 @@
-.header {
+/* Contenedor del Header */
+.header-component {
   display: flex;
   align-items: center;
-  padding: 20px;
-  background-color: #333; /* Fondo oscuro */
+  justify-content: flex-start;
+  padding: 10px 20px;
   position: relative;
-  width: 100%;
-  margin-bottom: 20px; /* Espacio debajo del Header */
+  width: 97.5%;
+  background-color: grey; /* Fondo oscuro */
 }
-
+/* Enlace del Header */
 .header-link {
   display: flex;
   align-items: center;
-  text-decoration: none;
-  margin-left: 20px; /* Mueve el contenido del Header hacia la izquierda */
+  text-decoration: none; /* Sin subrayado */
+  color: #fff; /* Texto blanco */
 }
 
+/* Logo */
 .logo {
-  height: 50px;
-  margin-right: 10px;
+  height: 50px; /* Tamaño del logo */
+  margin-right: 10px; /* Espaciado entre el logo y el texto */
 }
 
+/* Título */
 .title {
-  font-size: 2.5rem;
+  font-size: 1.8rem; /* Tamaño del texto */
   font-weight: bold;
   color: #fff;
 }

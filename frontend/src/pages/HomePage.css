@@ -28,18 +28,6 @@ body, html {
   min-height: 100vh;
 }
 
-/* Header con logo y título */
-.header {
-  display: flex;
-  align-items: center;
-  padding: 20px;
-}
-
-.logo {
-  height: 50px;
-  margin-right: 10px;
-}
-
 .title {
   font-size: 2.5rem;
   font-weight: bold;
@@ -61,7 +49,7 @@ body, html {
   margin: 0; /* Sin margen */
 }
 .line-black{
-    width: 250%;
+    width: 150%;
     height: 2px;
     background-color: black;
     margin: 0;
@@ -78,7 +66,7 @@ body, html {
 .left-content {
   display: flex;
   flex-direction: column;
-  width: 50%; /* Más estrecho para moverlo a la izquierda */
+  width: 30%; /* Más estrecho para moverlo a la izquierda */
   margin-left: 5px; /* Mueve el contenido más a la izquierda */
 }
 
@@ -96,11 +84,11 @@ body, html {
   background-color: #ff7b00;
   color: #000000;
   font-size: 1rem; /* Más pequeño */
-  padding: 10px 20px; /* Más ancho */
+  padding: 10px 70px; /* Más ancho */
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  width: 300px; /* Más ancho */
+  width: 450px; /* Más ancho */
   margin: 30px 0; /* Más abajo */
   transition: background-color 0.3s;
 }
@@ -122,7 +110,7 @@ body, html {
 
 .learn-truco-text {
   color: #f8f8f8;
-  font-size: 1.2rem;
+  font-size: 2.0rem;
   text-decoration: none;
   cursor: pointer;
 }

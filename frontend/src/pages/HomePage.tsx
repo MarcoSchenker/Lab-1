@@ -16,9 +16,7 @@ function HomePage() {
         <div className="left-content">
           <h2>El mejor Truco del Mundo</h2>
           <p>
-            Trucho es una aplicación creada por los estudiantes
-            <br />
-            Marco Schenker e Ignacio Gaspar
+            Trucho es una aplicación creada por los estudiantes Marco Schenker e Ignacio Gaspar
           </p>
           <button className="button-orange">Jugá sin Registrarte</button>
           <div className="learn-truco">
@@ -41,7 +39,8 @@ function HomePage() {
           </Link>
           <div className="account-text-container">
             <div className="line-black"></div>
-            <p className="account-text">¿Ya tenés una cuenta?</p>
+            <p className="account-text">‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎  
+               ¿Ya tenés una cuenta?</p>
             <div className="line-black"></div>
           </div>
           <Link to="/login">

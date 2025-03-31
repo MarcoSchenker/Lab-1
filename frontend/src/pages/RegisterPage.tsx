@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import Header from '../components/Header';
+import Header from '../components/Header'; // Importamos el Header desde el folder components
+import './RegisterPage.css'; // Importamos el CSS específico para RegisterPage
 import { registerUser } from '../services/api';
 
 const RegisterPage: React.FC = () => {
@@ -27,82 +28,31 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div>
-      <Header /> {/* Agregamos el Header */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        marginTop: '20px', /* Espacio debajo del Header */
-        textAlign: 'center' 
-      }}>
-        <h2 style={{ marginBottom: '20px' }}>Registro</h2>
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            width: '300px',
-            gap: '15px',
-            padding: '20px',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-          }}
-        >
+    <div className="register-container">
+      <Header /> {/* Header arriba a la izquierda */}
+      <hr className="line-white" /> {/* Línea blanca debajo del Header */}
+      <div className="register-content">
+        <h2>Registro</h2>
+        <form className="register-form" onSubmit={handleSubmit}>
           <input
             type="text"
             placeholder="Usuario"
             value={nombre_usuario}
             onChange={(e) => setNombreUsuario(e.target.value)}
-            style={{
-              padding: '10px',
-              fontSize: '16px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-            }}
-            required
           />
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              padding: '10px',
-              fontSize: '16px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-            }}
-            required
           />
           <input
             type="password"
             placeholder="Contraseña"
             value={contraseña}
             onChange={(e) => setContraseña(e.target.value)}
-            style={{
-              padding: '10px',
-              fontSize: '16px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-            }}
-            required
           />
-          <button
-            type="submit"
-            style={{
-              padding: '10px',
-              fontSize: '16px',
-              backgroundColor: loading ? '#ccc' : '#007BFF',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-            disabled={loading}
-          >
+          <button type="submit" disabled={loading}>
             {loading ? 'Registrando...' : 'Registrarse'}
           </button>
         </form>
