@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header'; // Importamos el Header desde el folder components
 import './LoginPage.css'; // Importamos el CSS específico para LoginPage
 import { loginUser } from '../services/api.ts';
@@ -6,6 +7,7 @@ import { loginUser } from '../services/api.ts';
 const LoginPage = () => {
   const [nombre_usuario, setNombreUsuario] = useState('');
   const [contraseña, setContraseña] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,9 +21,10 @@ const LoginPage = () => {
       const response = await loginUser({ nombre_usuario, contraseña });
       alert(`Bienvenido ${nombre_usuario}!`);
       localStorage.setItem('token', response.data.token);
+      navigate('/dashboard'); // Redirige a la nueva página de inicio
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
-      alert('Error al iniciar sesión');
+      alert('Error al iniciar sesión, nombre de usuario o contraseña incorrectos');
     }
   };
 
