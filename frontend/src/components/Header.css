@@ -1,13 +1,17 @@
-/* Contenedor del Header */
 .header-component {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   padding: 10px 20px;
-  position: relative;
-  width: 97.5%;
-  background-color: grey; /* Fondo oscuro */
+  position: fixed;  /* Fija el header */
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: transparent; /* Elimina el fondo gris */
+  z-index: 1000; /* Asegura que esté por encima del contenido */
+  background: linear-gradient(to top, rgba(128, 128, 128, 0.8), rgba(128, 128, 128, 0.473),rgba(128, 128, 128, 0.67), rgba(25, 17, 184, 0.777)); /* Degradado de abajo hacia arriba */
 }
+
 /* Enlace del Header */
 .header-link {
   display: flex;
@@ -20,6 +24,7 @@
 .logo {
   height: 50px; /* Tamaño del logo */
   margin-right: 10px; /* Espaciado entre el logo y el texto */
+  opacity: 1; /* Opacidad del logo */
 }
 
 /* Título */
@@ -27,4 +32,5 @@
   font-size: 1.8rem; /* Tamaño del texto */
   font-weight: bold;
   color: #fff;
+  opacity: 1; /* Opacidad del texto */
 }

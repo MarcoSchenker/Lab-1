@@ -30,7 +30,6 @@ const RegisterPage: React.FC = () => {
   return (
     <div className="register-container">
       <Header /> {/* Header arriba a la izquierda */}
-      <hr className="line-white" /> {/* Línea blanca debajo del Header */}
       <div className="register-content">
         <h2>Registro</h2>
         <form className="register-form" onSubmit={handleSubmit}>
