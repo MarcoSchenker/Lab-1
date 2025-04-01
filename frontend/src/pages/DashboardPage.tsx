@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaCoins, FaSignOutAlt, FaMedal, FaQuestionCircle } from 'react-icons/fa';
-import Header from '../components/Header';
+import Header from '../components/HeaderDashboard';
 import './DashboardPage.css';
 
 const DashboardPage: React.FC = () => {
