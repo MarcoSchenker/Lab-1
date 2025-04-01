@@ -12,6 +12,7 @@ body, html {
   margin: 0;
   padding: 0;
   text-align: center;
+  color: #f8f8f8; /* Light text */
   height: 100%;
 }
 
@@ -19,38 +20,23 @@ body, html {
 .home-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  background-image: url('/Fondo.png'); /* Ruta de la imagen */
-  background-size: cover; /* Ajusta la imagen para cubrir todo el fondo */
-  background-position: center; /* Centra la imagen */
-  background-repeat: no-repeat; /* Evita que la imagen se repita */
-  color: #fff; /* Asegúrate de que el texto sea legible */
-  min-height: 100vh;
   width: 100%;
+  height: 100%;
+  background-color: #333; /* Fondo oscuro */
+  color: #fff;
+  min-height: 100vh;
 }
 
+/* Título */
 .title {
   font-size: 2.5rem;
   font-weight: bold;
+  margin-bottom: 20px; /* Espaciado debajo del título */
+  text-align: center;
 }
 
-/* Línea blanca */
-.line {
-  width: 100%;
-  height: 2px;
-  background-color: white;
-  margin: 10px 0;
-}
-
-/* Línea blanca */
-.line-white {
-  width: 100%; /* Ocupa todo el ancho de la página */
-  height: 4px; /* Grosor de la línea */
-  background-color: white; /* Color blanco */
-  margin: 0; /* Sin margen */
-}
 .line-black{
-    width: 150%;
+    width: 100%;
     height: 2px;
     background-color: black;
     margin: 0;
@@ -58,39 +44,23 @@ body, html {
 
 /* Contenido principal */
 .content {
+  background-color: #0000005c;
   display: flex;
   justify-content: space-between;
   padding: 20px;
 }
 
-/* Contenido del lado izquierdo */
-.left-content {
-  display: flex;
-  flex-direction: column;
-  width: 30%; /* Más estrecho para moverlo a la izquierda */
-  margin-left: 5px; /* Mueve el contenido más a la izquierda */
-}
-
-.left-content h2 {
-  font-size: 2rem;
-  margin-bottom: 50px;
-}
-
-.left-content p {
-  font-size: 1.2rem;
-  margin-bottom: 70px;
-}
 
 .button-orange {
-  background-color: #ff7b00;
-  color: #000000;
-  font-size: 1rem; /* Más pequeño */
-  padding: 10px 70px; /* Más ancho */
+  background-color: #ff7b00; /* Naranja */
+  color: #fff;
+  font-size: 1.2rem;
+  padding: 15px 30px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  width: 450px; /* Más ancho */
-  margin: 30px 0; /* Más abajo */
+  width: 350px;
+  margin: 10px 0; /* Espaciado entre los botones */
   transition: background-color 0.3s;
 }
 
@@ -98,48 +68,37 @@ body, html {
   background-color: #e66300;
 }
 
-.learn-truco {
+/* Sección de Reglas */
+.rules-container {
+  position: absolute; /* Posiciona el contenedor en relación al padre */
+  bottom: 20px; /* Espaciado desde la parte inferior */
+  left: 20px; /* Espaciado desde la parte izquierda */
   display: flex;
   align-items: center;
-  margin-bottom: 10px; /* Reduce el espacio entre el logo y el texto */
-}
-
-.video-icon {
-  height: 30px;
-  margin-right: 1px;
-}
-
-.learn-truco-text {
-  color: #f8f8f8;
-  font-size: 2.0rem;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.learn-truco-text:hover {
-  text-decoration: underline;
-}
-
-.rules-modal {
-  background-color: #444;
-  color: #fff;
-  margin-top: 15px;
-  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.7); /* Fondo semitransparente */
+  padding: 10px 15px;
   border-radius: 8px;
 }
 
-/* Contenido del lado derecho */
-.right-content {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 30%;
-  margin-top: 150px; /* Mueve los botones más abajo */
+.video-icon {
+  height: 50px; /* Tamaño del ícono */
+  margin-right: 10px; /* Espaciado entre el ícono y el texto */
 }
 
-.button-login {
-  background-color: #007bff; /* Azul */
-  color: #000000;
+.rules-link {
+  color: #f8f8f8;
+  font-size: 1.2rem;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.rules-link:hover {
+  color: #ff7b00; /* Cambia el color al pasar el mouse */
+}
+
+.button-register {
+  background-color: #12b300; /* Verde */
+  color: white;
   font-size: 1.2rem;
   padding: 15px 30px;
   border: none;
@@ -150,31 +109,72 @@ body, html {
   transition: background-color 0.3s;
 }
 
+.button-register:hover {
+  background-color: #2e7b01;
+}
+
+.right-content p {
+  font-size: 1rem;
+  color: #f8f8f8;
+  background-color: #4444446f;
+  margin-bottom: 20px;
+}
+
+/* Botones */
+.button-login {
+  background-color: #007bff; /* Azul */
+  color: #fff;
+  font-size: 1.2rem;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 350px;
+  margin: 10px 0; /* Espaciado entre los botones */
+  transition: background-color 0.3s;
+}
+
 .button-login:hover {
   background-color: #0056b3;
 }
 
 .button-register {
-    background-color: #12b300; /* Verde */
-    color: #000000;
-    font-size: 1.2rem;
-    padding: 15px 30px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    width: 350px;
-    margin-bottom: 10px;
-    transition: background-color 0.3s;
-  }
-  
-  .button-register:hover {
-    background-color: #2e7b01;
-  }
+  background-color: #12b300; /* Verde */
+}
 
-.right-content p {
+.button-register:hover {
+  background-color: #2e7b01;
+}
+
+/* Texto adicional */
+.text {
+  font-size: 1.2rem;
+  color: #f8f8f8;
+  margin: 20px 0; /* Espaciado arriba y abajo */
+  text-align: center;
+}
+
+/* Contenedor del texto "¿Ya tenés una cuenta?" con líneas negras */
+.account-text-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0; /* Espaciado vertical */
+  width: 100%;
+}
+
+.account-text {
   font-size: 1rem;
   color: #f8f8f8;
-  margin-bottom: 20px;
+  margin: 0 10px; /* Espaciado horizontal entre las líneas */
+  text-align: center;
+}
+
+.line-black {
+  flex: 1; /* Hace que las líneas se expandan */
+  height: 1px; /* Grosor de la línea */
+  background-color: black;
+  max-width: 350px; /* Limita el ancho de las líneas al ancho de los botones */
 }
 
 /* Responsivo */

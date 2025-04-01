@@ -31,7 +31,6 @@ const LoginPage = () => {
   return (
     <div className="login-container">
       <Header /> {/* Header arriba a la izquierda */}
-      <hr className="line-white" /> {/* Línea blanca debajo del Header */}
       <div className="login-content">
         <h2>Iniciar Sesión</h2>
         <form className="login-form" onSubmit={handleSubmit}>

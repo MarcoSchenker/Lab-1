@@ -3,21 +3,36 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: #333; /* Fondo oscuro */
-  color: #fff;
+  justify-content: center;
   min-height: 100vh;
   width: 100%;
+  background: url('Fondo.png') no-repeat center center/cover; /* Igual que HomePage */
+  color: #fff;
 }
 
-/* Header */
+/* Header fijo */
 .header {
-  display: flex;
-  align-items: center;
-  padding: 5px;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  background-color: #343a40; /* Fondo oscuro */
-  color: #f8f8f8;
+  background: transparent; /* Sin fondo gris */
+  z-index: 1000;
 }
+
+/* Contenido */
+.login-content {
+  background-color: #0000005c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 30%;
+  height: 50;
+  padding: 20px;
+  margin-top: 80px; /* Espacio para el header */
+}
+
 
 /* Línea blanca */
 .line-white {
@@ -25,17 +40,6 @@
   height: 4px;
   background-color: white;
   margin: 0;
-}
-
-/* Contenido principal */
-.login-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 20px;
-  margin-top: 20px; /* Espacio debajo del Header */
 }
 
 /* Formulario */
@@ -50,7 +54,7 @@
   padding: 10px;
   font-size: 16px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 30px;
 }
 
 .login-form button {
