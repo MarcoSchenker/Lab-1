@@ -35,12 +35,26 @@ app.get('/', (req, res) => {
 app.post('/usuarios', async (req, res) => {
   const { nombre_usuario, email, contraseña } = req.body;
 
+  // Validar que todos los campos estén presentes
+  if (!nombre_usuario || !email || !contraseña) {
+    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+  }
+
+  // Validar el formato del email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'El email no tiene un formato válido' });
+  }
+
+  // Validar la longitud de la contraseña
+  if (contraseña.length < 6) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+  }
+
   try {
-    // Encriptar la contraseña antes de guardarla
     const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash(contraseña, 10);
-
-    // Insertar el usuario en la base de datos
+    // Insertar el usuario en la base de datos sin encriptar la contraseña
     const [result] = await pool.query(
       'INSERT INTO usuarios (nombre_usuario, email, contraseña) VALUES (?, ?, ?)',
       [nombre_usuario, email, hashedPassword]
@@ -48,7 +62,9 @@ app.post('/usuarios', async (req, res) => {
 
     res.status(201).json({ message: 'Usuario registrado exitosamente', userId: result.insertId });
   } catch (err) {
-    console.error('Error al registrar usuario:', err.message);
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'El nombre de usuario o email ya está en uso' });
+    }
     res.status(500).json({ error: 'Error al registrar usuario' });
   }
 });
@@ -66,8 +82,7 @@ app.post('/login', async (req, res) => {
     }
 
     const usuario = rows[0];
-
-    // Verificar la contraseña
+    
     const bcrypt = require('bcrypt');
     const isMatch = await bcrypt.compare(contraseña, usuario.contraseña);
 
