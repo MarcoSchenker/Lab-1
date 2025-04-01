@@ -184,7 +184,7 @@ body, html {
 
 .line-black {
   flex: 1; /* Hace que las líneas se expandan */
-  height: 1px; /* Grosor de la línea */
+  height: 2px; /* Grosor de la línea */
   background-color: black;
   max-width: 350px; /* Limita el ancho de las líneas al ancho de los botones */
 }

@@ -10,7 +10,7 @@ function HomePage() {
       <div className='background'>
       <h1 className="title">El mejor Truco del Mundo</h1>
       <p className="text">
-        Trucho es una aplicación creada por los estudiantes Marco Schenker e Ignacio Gaspar.
+        Trucho es una aplicación creada por los estudiantes <br/> Marco Schenker e Ignacio Gaspar.
       </p>
       <button className="button button-orange">Jugá sin Registrarte</button>
       <Link to="/register">
