@@ -12,8 +12,6 @@ body, html {
   margin: 0;
   padding: 0;
   text-align: center;
-  background-color: #343a40; /* Dark background */
-  color: #f8f8f8; /* Light text */
   height: 100%;
 }
 
@@ -21,11 +19,14 @@ body, html {
 .home-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
-  background-color: #333; /* Fondo oscuro */
-  color: #fff;
+  align-items: center;
+  background-image: url('/Fondo.png'); /* Ruta de la imagen */
+  background-size: cover; /* Ajusta la imagen para cubrir todo el fondo */
+  background-position: center; /* Centra la imagen */
+  background-repeat: no-repeat; /* Evita que la imagen se repita */
+  color: #fff; /* Asegúrate de que el texto sea legible */
   min-height: 100vh;
+  width: 100%;
 }
 
 .title {
