@@ -39,7 +39,9 @@ const Header: React.FC = () => {
           <div className="icon-text">
             <FaMedal /> {userElo}
           </div>
-          <FaSignOutAlt className="icon" title="Cerrar sesión" />
+          <Link to="/" className="icon-link">
+            <FaSignOutAlt className="icon" title="Cerrar sesión" />
+          </Link>
         </div>
         {isDropdownVisible && ( // Muestra el menú desplegable si el estado es true
           <div className="dropdown-menu">
