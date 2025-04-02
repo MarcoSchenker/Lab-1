@@ -1,0 +1,109 @@
+/* Contenedor del Header */
+.header-component {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Espaciado entre el logo y los íconos */
+  padding: 10px 20px;
+  position: fixed; /* Fija el Header en la parte superior */
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to top, rgba(128, 128, 128, 0.8), rgba(128, 128, 128, 0.473), rgba(128, 128, 128, 0.67), rgba(25, 17, 184, 0.777)); /* Degradado */
+  z-index: 1000; /* Asegura que el Header esté por encima del contenido */
+}
+
+/* Enlace del Header */
+.header-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none; /* Sin subrayado */
+  color: #fff; /* Texto blanco */
+}
+
+/* Logo */
+.logo {
+  height: 50px; /* Tamaño del logo */
+  margin-right: 10px; /* Espaciado entre el logo y el texto */
+}
+
+/* Título */
+.title {
+  font-size: 1.8rem; /* Tamaño del texto */
+  font-weight: bold;
+  color: #fff;
+}
+
+/* Íconos en la parte derecha */
+.top-right-icons {
+  margin-right: 50px; /* Espaciado a la derecha */
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Información del perfil */
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.profile-icon {
+  width: 50px;
+  height: 50px;
+  background-color: #555; /* Color de fondo por defecto */
+  border-radius: 50%; /* Hace que sea circular */
+  background-size: cover; /* Escala la imagen para cubrir el contenedor */
+  background-position: center; /* Centra la imagen */
+  background-repeat: no-repeat; /* Evita que la imagen se repita */
+  cursor: pointer; /* Cambia el cursor al pasar sobre el ícono */
+}
+
+/* Menú desplegable */
+.dropdown-menu {
+  position: absolute;
+  top: 70px; /* Ajusta según la altura del Header */
+  right: 20px; /* Alinea a la derecha */
+  background-color: rgba(0, 0, 0, 0.9); /* Fondo oscuro */
+  color: #fff;
+  padding: 15px 20px; /* Más espacio interno */
+  border-radius: 10px; /* Bordes redondeados */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra para destacar */
+  z-index: 1100; /* Asegura que esté por encima del Header */
+  width: 250px; /* Ancho del menú */
+  transition: transform 0.3s ease, opacity 0.3s ease; /* Animación de apertura */
+  transform: scale(1); /* Tamaño normal */
+  opacity: 1; /* Totalmente visible */
+}
+
+.dropdown-menu p {
+  margin: 10px 0; /* Espaciado entre las líneas */
+  font-size: 16px; /* Tamaño de texto más grande */
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Hover en los elementos del menú */
+.dropdown-menu p:hover {
+  color: #ff7b00; /* Cambia el color al pasar el mouse */
+}
+
+/* Texto de los íconos */
+.icon-text {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 16px;
+  color: #fff;
+}
+
+/* Íconos generales */
+.icon {
+  font-size: 24px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.icon:hover {
+  transform: scale(1.1);
+}
