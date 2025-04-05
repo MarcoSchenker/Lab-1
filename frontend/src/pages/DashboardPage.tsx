@@ -12,7 +12,7 @@ const DashboardPage: React.FC = () => {
         <FaQuestionCircle className="icon" title="Ayuda" />
       </div>
       <div className="game-modes">
-        <Link to="/jugar-offline" className="game-mode">
+        <Link to="/elegir-dificultad" className="game-mode">
           <div>Jugar Offline</div>
         </Link>
         <Link to="/torneo" className="game-mode">
