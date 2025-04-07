@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
 
 // Endpoint para registrar un usuario
 app.post('/usuarios', async (req, res) => {
-  const { nombre_usuario, email, contraseña } = req.body;
+  const { nombre_usuario, email, contraseña, fromGoogle } = req.body;
 
   // Validar que todos los campos estén presentes
   if (!nombre_usuario || !email || !contraseña) {
@@ -46,9 +46,9 @@ app.post('/usuarios', async (req, res) => {
     return res.status(400).json({ error: 'El email no tiene un formato válido' });
   }
 
-  // Validar la longitud de la contraseña
-  if (contraseña.length < 6) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+  /// Validar la longitud de la contraseña (solo si no es fromGoogle)
+  if (contraseña.length < 6 && !fromGoogle) {
+  return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
   }
 
   try {
