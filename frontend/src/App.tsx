@@ -7,19 +7,43 @@ import StatsPage from './pages/StatsPage';
 import DashboardPage from './pages/DashboardPage';
 import ElegirDificultad from './pages/ElegirDificultad';
 import JugarOffline from './pages/JugarOffline';
-
+import AuthRoute from './AuthRoute'; // Importa el componente AuthRoute
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Rutas públicas */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/stats/:userId" element={<StatsPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path='/elegir-dificultad' element={<ElegirDificultad />} />
         <Route path="/jugar-offline" element={<JugarOffline />} />
+
+        {/* Rutas protegidas */}
+        <Route
+          path="/dashboard"
+          element={
+            <AuthRoute>
+              <DashboardPage />
+            </AuthRoute>
+          }
+        />
+        <Route
+          path="/stats/:userId"
+          element={
+            <AuthRoute>
+              <StatsPage />
+            </AuthRoute>
+          }
+        />
+        <Route
+          path="/elegir-dificultad"
+          element={
+            <AuthRoute>
+              <ElegirDificultad />
+            </AuthRoute>
+          }
+        />
       </Routes>
     </Router>
   );

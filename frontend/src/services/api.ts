@@ -15,9 +15,31 @@ export interface User {
 }
 
 // Función para registrar un usuario
-export const registerUser = async (data: { nombre_usuario: string; email: string; contraseña: string }) => {
-  return await api.post('/usuarios', data);
+export const registerUser = async ({
+  nombre_usuario,
+  email,
+  contraseña,
+  fromGoogle = false
+}: {
+  nombre_usuario: string;
+  email: string;
+  contraseña: string;
+  fromGoogle?: boolean;
+}) => {
+  const response = await fetch(`${API_URL}/usuarios`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre_usuario, email, contraseña, fromGoogle })
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Error al registrar usuario');
+  }
+
+  return response.json();
 };
+
 
 // Función para iniciar sesión
 export const loginUser = async (data: User) => {
