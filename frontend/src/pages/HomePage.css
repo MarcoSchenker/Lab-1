@@ -1,240 +1,147 @@
-/* HomePage.css */
-
-/* Reseteo básico para evitar márgenes no deseados */
-body, html {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-}
-
-#root {
-  margin: 0;
-  padding: 0;
-  text-align: center;
-  color: #f8f8f8; /* Light text */
-  height: 100%;
-}
-
-/* Contenedor principal */
+/* Fondo general */
 .home-container {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
+  height: 100vh;
   width: 100%;
-  height: 100%;
-  color: #fff;
   background-image: url('/Fondo.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  margin-top: 0; /* Ajusta este valor según la altura del Header */
-  padding-top: 80px; /* Espacio para el header fijo */
+  position: relative;
 }
 
-.background{
-  width: 40%;
-  height: 75%;
-  background-color: #0000005c;
-}
-
-/* Título */
-.title {
-  font-size: 2.5rem;
-  font-weight: bold;
-  margin-bottom: 20px; /* Espaciado debajo del título */
-  text-align: center;
-}
-
-.line-black{
-    width: 100%;
-    height: 2px;
-    background-color: black;
-    margin: 0;
-}
-
-/* Contenido principal */
-.content {
-  background-color: #0000005c;
+/* Panel izquierdo (login box centrado) */
+.left-panel {
+  width: 50%;
   display: flex;
-  justify-content: space-between;
-  padding: 20px;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.4); /* Oscurece un poco para mejor contraste */
 }
 
+/* Caja del login */
+.login-box {
+  width: 100%;
+  max-width: 400px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  color: white;
+}
 
-.button-orange {
-  background-color: #ff7b00; /* Naranja */
-  color: #fff;
-  font-size: 1.2rem;
-  padding: 15px 30px;
+/* Estilos de input */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.input-group label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.input-group input {
+  background-color: transparent;
   border: none;
-  border-radius: 8px;
+  border-bottom: 1px solid white;
+  padding: 0.5rem;
+  color: white;
+  outline: none;
+}
+
+/* Botón de login */
+.login-button {
+  background-color: white;
+  color: black;
+  font-weight: 600;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem;
+  width: 100%;
+  margin-top: 1rem;
   cursor: pointer;
-  width: 350px;
-  margin: 10px 0; /* Espaciado entre los botones */
-  transition: background-color 0.3s;
+  transition: background-color 0.3s ease;
 }
 
-.button-orange:hover {
-  background-color: #e66300;
+.login-button:hover {
+  background-color: #eaeaea;
 }
 
-/* Sección de Reglas */
+/* Google Login personalizado */
+.google-login-container button {
+  width: 100% !important;
+  border-radius: 9999px !important;
+  padding: 0.75rem !important;
+  background-color: white !important;
+  color: black !important;
+  font-weight: bold !important;
+  border: none !important;
+  margin-top: 1rem !important;
+}
+
+/* Panel derecho */
+.right-panel {
+  width: 50%;
+  padding: 4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+}
+
 .rules-container {
-  position: absolute; /* Posiciona el contenedor en relación al padre */
-  bottom: 20px; /* Espaciado desde la parte inferior */
-  left: 20px; /* Espaciado desde la parte izquierda */
   display: flex;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.7); /* Fondo semitransparente */
-  padding: 10px 15px;
-  border-radius: 8px;
-}
-
-.video-icon {
-  height: 50px; /* Tamaño del ícono */
-  margin-right: 10px; /* Espaciado entre el ícono y el texto */
+  gap: 10px;
+  margin-top: 1.5rem;
 }
 
 .rules-link {
-  color: #f8f8f8;
-  font-size: 1.2rem;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.rules-link:hover {
-  color: #ff7b00; /* Cambia el color al pasar el mouse */
-}
-
-.button-register {
-  background-color: #12b300; /* Verde */
-  color: white;
-  font-size: 1.2rem;
-  padding: 15px 30px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 350px;
-  margin-bottom: 10px;
-  transition: background-color 0.3s;
-}
-
-.button-register:hover {
-  background-color: #2e7b01;
-}
-
-.right-content p {
-  font-size: 1rem;
-  color: #f8f8f8;
-  background-color: #4444446f;
-  margin-bottom: 20px;
-}
-
-/* Botones */
-.button-login {
-  background-color: #007bff; /* Azul */
+  text-decoration: underline;
   color: #fff;
-  font-size: 1.2rem;
-  padding: 15px 30px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 350px;
-  margin: 10px 0; /* Espaciado entre los botones */
-  transition: background-color 0.3s;
+  font-weight: 500;
 }
 
-.button-login:hover {
-  background-color: #0056b3;
-}
-
-.button-register {
-  background-color: #12b300; /* Verde */
-}
-
-.button-register:hover {
-  background-color: #2e7b01;
-}
-
-/* Texto adicional */
-.text {
-  font-size: 1.2rem;
-  color: #f8f8f8;
-  margin: 20px 0; /* Espaciado arriba y abajo */
+/* Otros elementos */
+.divider {
   text-align: center;
+  margin: 1.5rem 0;
+  position: relative;
 }
 
-/* Contenedor del texto "¿Ya tenés una cuenta?" con líneas negras */
-.account-text-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 20px 0; /* Espaciado vertical */
-  width: 100%;
+.divider span {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 0 1rem;
+  position: relative;
+  z-index: 1;
 }
 
-.account-text {
-  font-size: 1rem;
-  color: #f8f8f8;
-  margin: 0 10px; /* Espaciado horizontal entre las líneas */
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: white;
+  z-index: 0;
+}
+
+.error-message {
+  color: #f87171;
+  margin-bottom: 0.5rem;
+}
+
+.signup-link {
+  margin-top: 2rem;
   text-align: center;
-}
-
-.line-black {
-  flex: 1; /* Hace que las líneas se expandan */
-  height: 2px; /* Grosor de la línea */
-  background-color: black;
-  max-width: 350px; /* Limita el ancho de las líneas al ancho de los botones */
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-  .content {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .left-content,
-  .right-content {
-    width: 100%;
-    align-items: center;
-  }
-
-  .button-orange,
-  .button-secondary,
-  .button-rules {
-    width: 100%;
-  }
-}
-
-a {
-  font-size: 1.1rem;
-  padding: 12px 25px;
-  border-radius: 8px;
-  text-align: center;
-  text-decoration: none;
-  color: #fff;
-  transition: background-color 0.3s;
-}
-
-@media (max-width: 600px) {
-  .home-container {
-    padding: 1rem;
-  }
-
-  h1 {
-    font-size: 2rem;
-  }
-
-  .title {
-    font-size: 2.5rem;
-  }
-
-  .button-orange,
-  .button-secondary,
-  .button-rules {
-    width: 100%;
-  }
+  font-size: 0.9rem;
+  color: #d1d5db;
 }

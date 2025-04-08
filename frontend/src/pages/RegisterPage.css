@@ -19,6 +19,16 @@
   background: transparent; /* Sin fondo gris */
   z-index: 1000;
 }
+.google-signup {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.google-signup p {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  color: #fff;
+}
 
 /* Contenido */
 .register-content {
