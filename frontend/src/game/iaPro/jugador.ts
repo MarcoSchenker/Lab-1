@@ -1,5 +1,5 @@
 // jugador.ts
-import { Naipe } from './naipe';
+import { Naipe } from './naipes';
 import { Palo } from './types';
 
 export class Jugador {
