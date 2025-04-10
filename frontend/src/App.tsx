@@ -5,7 +5,6 @@ import RegisterPage from './pages/RegisterPage';
 import StatsPage from './pages/StatsPage';
 import DashboardPage from './pages/DashboardPage';
 import ElegirDificultad from './pages/ElegirDificultad';
-import JugarOffline from './pages/JugarOffline';
 import AuthRoute from './AuthRoute'; // Importa el componente AuthRoute
 
 function App() {
@@ -15,7 +14,6 @@ function App() {
         {/* Rutas públicas */}
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/jugar-offline" element={<JugarOffline />} />
 
         {/* Rutas protegidas */}
         <Route
