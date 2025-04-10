@@ -12,9 +12,8 @@ body {
   justify-content: center;
   min-height: 100vh;
   width: 100vw;
-  background: url('RomboAzul.jpg') repeat-y; /* Repite solo en el eje Y */
+  background: url('Fondo Azul.jpg') no-repeat center center fixed; /* Imagen de fondo */
   background-size: cover; /* Escala la imagen para cubrir el ancho */
-  animation: scroll-up 5s linear infinite; /* Animación para mover el fondo */
   color: #fff;
   position: relative;
   overflow: hidden;
