@@ -1,9 +1,8 @@
 // ui.ts
-import $ from 'jquery';
+import $ from 'jquery'; // Asegúrate de tener jQuery instalado
 import { Jugador } from './jugador';
 import { Naipe } from './naipe';
-import { Canto } from './types';
-import { IA } from './ia.placeholder'; // Para diferenciar Jugador de IA si es necesario
+import { Canto, AccionesPosibles } from './types';
 
 export class UIHandler {
   private readonly logElement: JQuery<HTMLElement>;
@@ -94,6 +93,7 @@ export class UIHandler {
       container.append(li);
     });
   }
+  
 
   /** Limpia las cartas jugadas en la mesa */
   clearPlayedCards(): void {
@@ -202,6 +202,41 @@ export class UIHandler {
         this.playerCards2Container.empty();
    }
 
+   public actualizarAccionesPosibles(acciones: AccionesPosibles): void {
+    // 1. Ocultar/deshabilitar todo por defecto (o casi todo)
+    this.hideAllActionButtons(); // Oculta todos los botones con clase 'boton-accion'
+    // Deshabilitar click en cartas inicialmente
+     $('.naipe-humano').parent('a').addClass('disabled-card'); // Asume que <a> envuelve <img>
+
+     // 2. Habilitar/Mostrar según el objeto 'acciones'
+     if (acciones.puedeJugarCarta) {
+          // Habilitar click en cartas (quitando clase 'disabled')
+          $('.naipe-humano').parent('a').removeClass('disabled-card');
+     }
+
+     // Habilitar botones de canto Envido
+     acciones.puedeCantarEnvido.forEach(canto => {
+         const selector = `[data-canto="${canto}"]`; // Busca botones con data-canto="E", "R", "F"
+         this.setButtonState(selector, true, true); // Habilita y muestra
+     });
+
+     // Habilitar botones de canto Truco
+     acciones.puedeCantarTruco.forEach(canto => {
+         const selector = `[data-canto="${canto}"]`; // Busca botones con data-canto="T", "RT", "V"
+         this.setButtonState(selector, true, true);
+     });
+
+     // Habilitar botones de Respuesta/Contracanto
+     acciones.puedeResponder.forEach(canto => {
+         const selector = `[data-canto="${canto}"]`; // Busca botones con data-canto="S", "N", "EE", "RT", etc.
+         this.setButtonState(selector, true, true);
+     });
+
+     // Habilitar botón Mazo
+     if (acciones.puedeMazo) {
+         this.setButtonState('#IrAlMazo', true, true);
+     }
+}
 
   // --- Métodos para Vincular Eventos del DOM a la Lógica del Juego ---
 

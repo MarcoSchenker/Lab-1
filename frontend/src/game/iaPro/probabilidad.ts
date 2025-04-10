@@ -1,7 +1,7 @@
 // probabilidad.ts
-import { Naipe } from './naipes';
-import { Palo, Canto } from './types';
-import { getLast } from './utils'; // Importar utilidad
+import { Naipe } from './naipe';
+import { Ronda } from './ronda';
+import { Palo } from './types';
 
 export class Probabilidad {
   // Parámetros originales para ponderar
@@ -21,7 +21,7 @@ export class Probabilidad {
   }
 
   /** Calcula un modificador basado en la carta vista del oponente */
-  evaluarCartaVista(carta?: Naipe): number {
+  evaluarCartaVista(carta?: Naipe | null)  : number {
     if (!carta) return 0;
 
     const e = carta.puntosEnvido;
@@ -168,9 +168,4 @@ export class Probabilidad {
     }
     return sumaProbabilidades / cartas.length;
   }
-}
-
-// utils.ts (Pequeña utilidad para reemplazar Array.prototype.getLast)
-export function getLast<T>(arr: T[]): T | undefined {
-    return arr.length > 0 ? arr[arr.length - 1] : undefined;
 }

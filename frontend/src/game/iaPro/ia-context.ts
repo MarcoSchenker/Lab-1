@@ -1,7 +1,6 @@
 // ia-context.ts
-import { Naipe } from './naipes';
+import { Naipe } from './naipe';
 import { Canto, Equipo } from './types';
-import { Jugador } from './jugador'; // Necesario para oponente.jugador...
 
 // Contexto relevante para decisiones de Envido
 export interface EnvidoContext {
@@ -9,19 +8,24 @@ export interface EnvidoContext {
     oponente: Equipo;
     limitePuntaje: number;
     misPuntosEnvido: number;          // Puntos de envido de la IA en esta mano
-    ultimoCantoEnvido: Canto | null; // Último canto de envido realizado
-    puntosEnvidoAcumulados: number; // Puntos ya en juego por cantos previos
-    cartaVistaOponente: Naipe | null; // Última carta jugada por el oponente (si aplica)
-    historialEnvidoOponente: { // Para acceder a las stats guardadas en Jugador/IA
+    ultimoCantoEnvido: Canto | null; // Último canto de envido realizado POR EL OPONENTE o por la IA si es mano? -> Último canto en general.
+    puntosEnvidoAcumulados: number; // Puntos que se ganarían SI SE QUIERE (sin contar Falta Envido)
+    puntosSiNoQuiero: number;      // Puntos que se ganarían SI NO SE QUIERE
+    cartaVistaOponente: Naipe | null; // Última carta jugada por el oponente (si aplica y es relevante para envido)
+    statsEnvidoOponente: { // Estadísticas del oponente (provistas por Ronda)
         envidoS: number[];
         revire: number[];
         realEnvido: number[];
+        faltaEnvido: number[];
     };
     probabilidad: { // Métodos de Probabilidad necesarios
         ponderarPuntos: (puntos: number) => number;
-        CartaVista: (carta: Naipe | null | undefined) => number;
-        medianaEnvidoOponente: (pcc: number[]) => number | null;
+        evaluarCartaVista: (carta: Naipe | null) => number; // Cambiado de CartaVista a evaluarCartaVista
+        medianaEnvidoOponente: (historial: number[]) => number | null;
     };
+    // ¿Necesitamos saber quién es mano/pie en el contexto? Podría ser útil.
+    esIAManoDeRonda: boolean;
+    historialEnvido: { canto: Canto; equipo: Equipo }[];
 }
 
 // Contexto relevante para decisiones de Truco
@@ -42,7 +46,9 @@ export interface TrucoContext {
     cartasJugadasOponente: Naipe[];
     puntosEnvidoGanadosIA: number; // Puntos que IA ganó en el envido de esta ronda
     puntosEnvidoCantadosOponente: number | null; // Puntos que cantó el oponente (si lo hizo)
-     probabilidad: { // Métodos de Probabilidad necesarios
-        deducirCarta: (puntos: number, jugadas: Naipe[]) => Naipe[] | null;
+    cartaJugadaIAMano0: Naipe | null; // Carta IA en MANO 0
+    cartaJugadaOpMano0: Naipe | null; // Carta Oponente en MANO 0
+    probabilidad: { // Métodos de Probabilidad necesarios
+        deducirCarta: (puntos: number, cartasJugadas: Naipe[]) => Naipe[];
     };
 }
