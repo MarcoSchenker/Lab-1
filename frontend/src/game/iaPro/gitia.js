@@ -1,9 +1,3 @@
-/*******************************************************************
- * 
- * Clase IA
- * 
- *******************************************************************
-*/ 
 IA.prototype = new Jugador();
 
 IA.prototype.constructor = IA;
@@ -14,9 +8,7 @@ function IA () {
     this.estrategiaDeJuego = null;
 }
 
-//------------------------------------------------------------------
 // Clasifica una carta en baja, media, alta 
-//------------------------------------------------------------------
 
 IA.prototype.clasificar  = function(carta){
             if (carta.valor <= 6 )
@@ -27,9 +19,7 @@ IA.prototype.clasificar  = function(carta){
                 return 2;
 }
 
-//------------------------------------------------------------------
 //  Elige la carta mas baja o la mas alta segun los datos 
-//------------------------------------------------------------------
 // El tercer argumento sirve para elegir una carta de cierta clisificacion
 // 0 - Baja
 // 1 - Media
@@ -61,9 +51,7 @@ IA.prototype.elegir  =  function ( orden , carta , claseC) {
     return indice;
 }
 
-//------------------------------------------------------------------
 // LLeva estadistica de los cantos del humano
-//------------------------------------------------------------------
 
 IA.prototype.statsEnvido = function(cantos, quienCanto, puntos){
     if (cantos !== undefined && cantos !== null)
@@ -88,9 +76,7 @@ IA.prototype.statsEnvido = function(cantos, quienCanto, puntos){
 }
 
 
-//------------------------------------------------------------------
 //  Determina si gane un determinado numero de mano
-//------------------------------------------------------------------
 
 IA.prototype.gane = function(nroMano){
     var e1 = _rondaActual.equipoPrimero;
@@ -99,9 +85,7 @@ IA.prototype.gane = function(nroMano){
     return (e2.jugador.cartasJugadas[nroMano].valor - e1.jugador.cartasJugadas[nroMano].valor);
 }
 
-//------------------------------------------------------------------
-// Clasifica las cartas en baja, media, alta
-//------------------------------------------------------------------	
+// Clasifica las cartas en baja, media, alta	
 
 IA.prototype.clasificarCartas = function(cartas){
     var media = 0, alta = 0, baja = 0;
@@ -115,11 +99,8 @@ IA.prototype.clasificarCartas = function(cartas){
             alta++;
     return {alta:alta, media:media, baja:baja};
 }
-
-//---------------------------------------------------------------
 //Devuelve el indice de la carta en mano con menor valor capaz de matar .
-//la carta pasada por argumento. Si no la puede matar, devuelve -1
-//---------------------------------------------------------------    
+//la carta pasada por argumento. Si no la puede matar, devuelve -    
 IA.prototype.laMato = function (carta)
 {
     var indice = -1, valor = 99;
@@ -133,9 +114,7 @@ IA.prototype.laMato = function (carta)
     return indice;
 }
 
-//------------------------------------------------------------------
 // Determina si tengo una carta mas baja 
-//------------------------------------------------------------------
 
 IA.prototype.masBaja = function (carta)
 {
@@ -145,9 +124,7 @@ IA.prototype.masBaja = function (carta)
     return false;
 }
 
-//------------------------------------------------------------------
 // Evalua el canto
-//------------------------------------------------------------------
 
 IA.prototype.ptoEnJuego = function (ultimo) {
     switch(ultimo){  
@@ -162,9 +139,7 @@ IA.prototype.ptoEnJuego = function (ultimo) {
     }		
 }
 
-//------------------------------------------------------------------
 // Determina el canto del truco (muy larga la funcion jeje ) 
-//------------------------------------------------------------------
 
 IA.prototype.truco = function (resp , ultimo) {
 var e1 = _rondaActual.equipoPrimero;
@@ -694,9 +669,7 @@ else{ //tengo el quiero
         }
 }
 }
-//------------------------------------------------------------------
 // Determina el canto del envido
-//------------------------------------------------------------------
 
 IA.prototype.envido = function(ultimo,acumulado, ultimaCarta){
     var puntos = this.getPuntosDeEnvido(this.cartas);
@@ -745,7 +718,7 @@ IA.prototype.envido = function(ultimo,acumulado, ultimaCarta){
             if (ran + posible  <  valor  * 100 ) return   'E';
             else return '';
 
-    } else{        //me cantaron algo *******************************
+    } else{        //me cantaron algo
         //return 'S';
         
         var rta = '';
@@ -805,10 +778,7 @@ IA.prototype.envido = function(ultimo,acumulado, ultimaCarta){
         return rta;
     }
 }
-
-//------------------------------------------------------------------
 // LA maquina elige una carta para jugar
-//------------------------------------------------------------------
 
 IA.prototype.jugarCarta =  function () {
     
@@ -824,9 +794,7 @@ IA.prototype.jugarCarta =  function () {
     return carta;
 }
 
-//------------------------------------------------------
 // Diferentes estrategias para jugar las cartas
-//------------------------------------------------------
 IA.prototype.estrategiaClasica = function(){
     var primero = (_rondaActual.jugadasEnMano === 0) ? true : false;
     var carta = null;
