@@ -9,7 +9,7 @@ const ElegirDificultad: React.FC = () => {
   const seleccionarDificultad = async (dificultad: 'facil' | 'dificil') => {
     if (dificultad === 'dificil') {
       try {
-        const ia = await import('../game/ia'); // Importación dinámica de ia.js
+        const ia = await import('../game/iaPro/ia'); // Importación dinámica de ia.js
         console.log('IA cargada para dificultad difícil:', ia);
       } catch (error) {
         console.error('Error al cargar la IA:', error);
