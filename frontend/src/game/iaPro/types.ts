@@ -39,14 +39,20 @@ export enum Palo {
     querido: number;
     noQuerido: number;
   };
-  
+
+  export interface AccionesPosibles {
+    puedeJugarCarta: boolean;
+    puedeCantarEnvido: Canto[]; // Lista de cantos de envido posibles (E, R, F)
+    puedeCantarTruco: Canto[];  // Lista de cantos de truco posibles (T, RT, V)
+    puedeResponder: Canto[];   // Lista de respuestas/contracantos posibles (S, N, EE, RT, V, F)
+    puedeMazo: boolean;
+}
   /** Estructura básica de un equipo */
   export interface Equipo {
     jugador: Jugador; // Puede ser Jugador o IA
     puntos: number;
     esMano: boolean;
     manosGanadasRonda: number;
-    // esSuTurno: boolean; // Redundante con Ronda.equipoEnTurno
   }
   
   // Se necesita importar Jugador aquí, puede generar dependencia cíclica.

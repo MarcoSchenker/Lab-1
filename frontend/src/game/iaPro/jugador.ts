@@ -1,5 +1,5 @@
 // jugador.ts
-import { Naipe } from './naipes';
+import { Naipe } from './naipe';
 import { Palo } from './types';
 
 export class Jugador {
@@ -8,10 +8,17 @@ export class Jugador {
   public cartasJugadasRonda: Naipe[] = []; // Cartas jugadas en la ronda actual
   public puntosGanadosEnvidoRonda: number = 0; // Para estadísticas o lógica IA
 
+
   // Estadísticas (usadas principalmente por la IA)
   public statsEnvidoCantadosOponente: number[] = [];
   public statsRealEnvidoCantadosOponente: number[] = [];
   public statsFaltaEnvidoCantadosOponente: number[] = []; // Incluye EE, R de Falta
+
+  // Estadísticas del Oponente (registradas por la IA sobre este jugador)
+  public statsEnvidoSCantados: number[] = [];
+  public statsRevireCantados: number[] = [];
+  public statsRealEnvidoCantados: number[] = [];
+  public statsFaltaEnvidoCantados: number[] = [];
 
   constructor(public nombre: string, public readonly esHumano: boolean) {}
 
