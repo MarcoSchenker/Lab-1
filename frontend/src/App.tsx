@@ -6,6 +6,7 @@ import StatsPage from './pages/StatsPage';
 import DashboardPage from './pages/DashboardPage';
 import ElegirDificultad from './pages/ElegirDificultad';
 import AuthRoute from './AuthRoute'; // Importa el componente AuthRoute
+import GamePage from './pages/GamePage';
 
 function App() {
   return (
@@ -40,6 +41,14 @@ function App() {
             </AuthRoute>
           }
         />
+        <Route
+          path="/game-page"
+          element={
+            <AuthRoute>
+              <GamePage />
+            </AuthRoute>
+          }
+          />
       </Routes>
     </Router>
   );
