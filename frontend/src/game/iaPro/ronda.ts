@@ -200,13 +200,17 @@ export class Ronda {
             switch (this.estadoRonda) {
                 case EstadoRonda.InicioMano:
                 case EstadoRonda.EsperandoJugadaNormal:
-                    if (this.equipoEnTurno.jugador.esHumano) {
-                        this.gestionarTurnoNormal();
-                        return; // Esperar input del humano
-                    } else {
-                        this.gestionarTurnoNormal(); // La IA realiza su acción
+                    if (this.jugadasEnMano === 2) { // ¿Terminó la mano?
+                        this.estadoRonda = EstadoRonda.ManoTerminada;
+                        continue; // Procesar ManoTerminada en la siguiente iteración
                     }
-                    break;
+                    // ¿Hay respuesta pendiente de envido o truco? (No debería estar aquí si sí)
+                    if (this.equipoDebeResponderEnvido) { this.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido; continue; }
+                    if (this.equipoDebeResponderTruco) { this.estadoRonda = EstadoRonda.EsperandoRespuestaTruco; continue; }
+
+                    // Proceder con el turno normal (jugar o cantar)
+                    this.gestionarTurnoNormal();
+                    return; // Salir del bucle (espera humano o procesó IA y llamará a continuarFlujo)
 
                 case EstadoRonda.EsperandoRespuestaEnvido:
                     this.gestionarRespuestaEnvido();

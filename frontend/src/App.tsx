@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import ElegirDificultad from './pages/ElegirDificultad';
 import AuthRoute from './AuthRoute'; // Importa el componente AuthRoute
 import GamePage from './pages/GamePage';
+import AddFriendsPage from './pages/AddFriendsPage';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         {/* Rutas públicas */}
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/agregar-amigo" element={<AddFriendsPage />} />
 
         {/* Rutas protegidas */}
         <Route
@@ -48,6 +50,14 @@ function App() {
             </AuthRoute>
           }
         />
+        <Route
+          path="/agregar-amigo"
+          element={
+            <AuthRoute>
+              <AddFriendsPage />
+            </AuthRoute>
+          }
+          />
       </Routes>
     </Router>
   );

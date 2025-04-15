@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaQuestionCircle } from 'react-icons/fa';
+import { IoPersonAddSharp } from "react-icons/io5";
 import Header from '../components/HeaderDashboard';
 import './DashboardPage.css';
 
@@ -10,6 +11,11 @@ const DashboardPage: React.FC = () => {
       <Header />
       <div className="top-left-help">
         <FaQuestionCircle className="icon" title="Ayuda" />
+      </div>
+      <div className="right-add-friend">
+        <Link to="/agregar-amigo" title="Agregar Amigo">
+          <IoPersonAddSharp className="icon" />
+        </Link>
       </div>
       <div className="game-modes">
         <Link to="/elegir-dificultad" className="game-mode">
