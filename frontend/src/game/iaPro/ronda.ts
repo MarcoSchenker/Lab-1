@@ -149,6 +149,8 @@ export class Ronda {
             this.callbacks.displayLog(`Debug: ${this.equipoSegundo.jugador.nombre} Envido=${this.equipoSegundo.jugador.getPuntosDeEnvido(this.equipoSegundo.jugador.cartas)}`);
         }
 
+        console.log("Estado inicial", this)
+
         // Iniciar el flujo del juego
         this.continuarFlujo();
     }
@@ -178,6 +180,8 @@ export class Ronda {
 
     /** Motor principal de estados de la ronda */
     private continuarFlujo(enEsperaHumano: boolean = false): void {
+        console.log("continuarFlujo", this)
+
         if (enEsperaHumano) {
             // Se detiene aquí, esperando la acción del humano que será gatillada por la UI
             return;

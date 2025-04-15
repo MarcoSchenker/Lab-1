@@ -139,7 +139,7 @@ const GamePage: React.FC = () => {
     // --- Handlers para acciones del usuario que llaman a la lógica ---
     const handlePlayCard = useCallback((index: number) => {
         // Validar si la acción es permitida ANTES de llamar a la lógica
-        if (!gameState.partidaTerminada && gameState.turnoActual === gameState.equipoPrimero && gameState.accionesPosibles.puedeJugarCarta) {
+        if (!gameState.partidaTerminada && gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre && gameState.accionesPosibles.puedeJugarCarta) {
             partida.handleHumanPlayCard(index);
         } else {
             console.warn("Intento de jugar carta bloqueado por UI (fuera de turno o acción no permitida).");
@@ -149,7 +149,8 @@ const GamePage: React.FC = () => {
 
     const handleCanto = useCallback((canto: Canto) => {
         // Validar si la acción es permitida ANTES de llamar a la lógica
-        if (!gameState.partidaTerminada && gameState.turnoActual === gameState.equipoPrimero) {
+        debugger
+        if (!gameState.partidaTerminada && gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre) {
             const acciones = gameState.accionesPosibles;
             const esCantoValido = acciones.puedeCantarEnvido.includes(canto) || acciones.puedeCantarTruco.includes(canto) || (canto === Canto.IrAlMazo && acciones.puedeMazo);
             const esRespuestaValida = acciones.puedeResponder.includes(canto);
@@ -183,7 +184,7 @@ const GamePage: React.FC = () => {
                     <PlayerArea
                         jugador={gameState.equipoSegundo?.jugador ?? null}
                         cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? 3).fill(null)}
-                        esTurno={gameState.turnoActual === gameState.equipoSegundo}
+                        esTurno={gameState.turnoActual?.jugador.nombre === gameState.equipoSegundo?.jugador.nombre}
                         ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoSegundo?.jugador ? gameState.ultimoCanto.mensaje : null}
                         onCardClick={() => {}}
                         puedeJugarCarta={false}
@@ -201,7 +202,7 @@ const GamePage: React.FC = () => {
                     <PlayerArea
                         jugador={gameState.equipoPrimero?.jugador ?? null}
                         cartas={gameState.cartasManoJugador}
-                        esTurno={gameState.turnoActual === gameState.equipoPrimero}
+                        esTurno={gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre} 
                         ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoPrimero?.jugador ? gameState.ultimoCanto.mensaje : null}
                         onCardClick={handlePlayCard}
                         puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta && !gameState.partidaTerminada} // Añadir chequeo partidaTerminada
