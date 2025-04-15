@@ -55,7 +55,7 @@ export class Ronda {
         public equipoSegundo: Equipo,
         gameCallbacks: GameCallbacks, // Recibe callbacks de UI
         onRondaTerminadaCallback: (puntosEq1: number, puntosEq2: number) => void,
-        limitePuntaje: number = 30,
+        limitePuntaje: number = 15,
         debugMode: boolean = false
     ) {
         this.equipoPrimero = equipoPrimero;
@@ -604,8 +604,6 @@ export class Ronda {
         this.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
         // El flujo continuará y seteará el turno y acciones correctas
     }
-
-     // --- Métodos de Resolución ---
 
      // --- Métodos de Resolución (usan callbacks) ---
 
