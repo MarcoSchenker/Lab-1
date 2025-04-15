@@ -1,6 +1,8 @@
 import React, { useState, useEffect, ChangeEventHandler } from "react";
 import "./AddFriendsPage.css";
 import api from "../services/api"; // Importa el cliente API configurado
+import { FaMagnifyingGlass } from "react-icons/fa6";
+
 
 interface SearchTermProps {
   value: string;
@@ -10,13 +12,16 @@ interface SearchTermProps {
 
 const SearchBar: React.FC<SearchTermProps> = (props) => {
   return (
-    <input
-      type="search"
-      className="searchBar"
-      placeholder={props.placeholder}
-      value={props.value}
-      onChange={props.searchHandler}
-    />
+    <div className="searchBarContainer">
+      <FaMagnifyingGlass className="searchIcon" />
+      <input
+        type="search"
+        className="searchBar"
+        placeholder={props.placeholder}
+        value={props.value}
+        onChange={props.searchHandler}
+      />
+    </div>
   );
 };
 

@@ -12,9 +12,10 @@ const DashboardPage: React.FC = () => {
       <div className="top-left-help">
         <FaQuestionCircle className="icon" title="Ayuda" />
       </div>
-      <div className='right-add-friend'>
-        <IoPersonAddSharp className="icon" title="Agregar Amigo" />
-        <Link to="/agregar-amigo" className="add-friend-text"></Link>
+      <div className="right-add-friend">
+        <Link to="/agregar-amigo" title="Agregar Amigo">
+          <IoPersonAddSharp className="icon" />
+        </Link>
       </div>
       <div className="game-modes">
         <Link to="/elegir-dificultad" className="game-mode">

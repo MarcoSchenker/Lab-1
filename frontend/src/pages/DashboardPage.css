@@ -41,6 +41,17 @@ body {
   top: 120px;
   right: 50px;
 }
+.right-add-friend .icon {
+  font-size: 2rem; /* Tamaño del ícono */
+  color: white; /* Color del ícono */
+  cursor: pointer; /* Cambia el cursor al pasar el mouse */
+  transition: transform 0.2s ease; /* Animación al pasar el mouse */
+}
+
+.right-add-friend .icon:hover {
+  transform: scale(1.2); /* Aumenta el tamaño al pasar el mouse */
+  color: blue;
+}
 
 /* Línea blanca */
 .line-white {
