@@ -36,6 +36,12 @@ body {
   left: 10px;
 }
 
+.right-add-friend{
+  position: absolute;
+  top: 120px;
+  right: 50px;
+}
+
 /* Línea blanca */
 .line-white {
   width: 100%;

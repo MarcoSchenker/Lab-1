@@ -25,7 +25,7 @@ export class Partida {
         this.equipoSegundo = { jugador: null!, puntos: 0, esMano: true, manosGanadasRonda: 0 };
     }
 
-    public iniciar(nombreJugadorUno: string, nombreJugadorDos: string, limite: number = 15): void {
+    public iniciar(nombreJugadorUno: string, nombreJugadorDos: string, limite: number = 30): void {
         this.partidaTerminada = false;
         this.limitePuntaje = limite;
 

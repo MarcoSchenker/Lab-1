@@ -69,6 +69,16 @@ app.post('/usuarios', async (req, res) => {
   }
 });
 
+app.get("/usuarios", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT nombre_usuario FROM usuarios");
+    res.json(rows);
+  } catch (err) {
+    console.error("Error al obtener usuarios:", err.message);
+    res.status(500).json({ error: "Error al obtener usuarios" });
+  }
+});
+
 // Endpoint para iniciar sesión
 app.post('/login', async (req, res) => {
   const { nombre_usuario, contraseña } = req.body;
