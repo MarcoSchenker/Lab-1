@@ -55,7 +55,7 @@ export class Ronda {
         public equipoSegundo: Equipo,
         gameCallbacks: GameCallbacks, // Recibe callbacks de UI
         onRondaTerminadaCallback: (puntosEq1: number, puntosEq2: number) => void,
-        limitePuntaje: number = 15,
+        limitePuntaje: number = 30,
         debugMode: boolean = false
     ) {
         this.equipoPrimero = equipoPrimero;
@@ -196,17 +196,13 @@ export class Ronda {
             switch (this.estadoRonda) {
                 case EstadoRonda.InicioMano:
                 case EstadoRonda.EsperandoJugadaNormal:
-                    if (this.jugadasEnMano === 2) { // ¿Terminó la mano?
-                        this.estadoRonda = EstadoRonda.ManoTerminada;
-                        continue; // Procesar ManoTerminada en la siguiente iteración
+                    if (this.equipoEnTurno.jugador.esHumano) {
+                        this.gestionarTurnoNormal();
+                        return; // Esperar input del humano
+                    } else {
+                        this.gestionarTurnoNormal(); // La IA realiza su acción
                     }
-                    // ¿Hay respuesta pendiente de envido o truco? (No debería estar aquí si sí)
-                    if (this.equipoDebeResponderEnvido) { this.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido; continue; }
-                    if (this.equipoDebeResponderTruco) { this.estadoRonda = EstadoRonda.EsperandoRespuestaTruco; continue; }
-
-                    // Proceder con el turno normal (jugar o cantar)
-                    this.gestionarTurnoNormal();
-                    return; // Salir del bucle (espera humano o procesó IA y llamará a continuarFlujo)
+                    break;
 
                 case EstadoRonda.EsperandoRespuestaEnvido:
                     this.gestionarRespuestaEnvido();
@@ -551,6 +547,7 @@ export class Ronda {
 
     private registrarJugada(carta: Naipe, equipoQueJuega: Equipo): void {
         // Validar si es el turno del equipo
+        console.log(`Turno de ${equipoQueJuega.jugador.nombre} para jugar carta.`);
         if (equipoQueJuega !== this.equipoEnTurno) {
             console.error(`Error: Jugó ${equipoQueJuega.jugador.nombre} fuera de turno.`);
             return; // No registrar jugada fuera de turno

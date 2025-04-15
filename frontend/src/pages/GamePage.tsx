@@ -50,7 +50,7 @@ const initialState: GameState = {
 
 // --- Constante para la ruta de las imágenes ---
 // ¡IMPORTANTE! Asegúrate que esta ruta sea correcta desde la RAÍZ PÚBLICA de tu servidor web
-const IMAGE_BASE_PATH = 'frontend/public/cartas/mazoOriginal'; // Ejemplo si 'cartas' está dentro de 'public'
+const IMAGE_BASE_PATH = 'cartas/mazoOriginal'; // Ejemplo si 'cartas' está dentro de 'public'
 
 // --- Componente Principal de la Página del Juego ---
 const GamePage: React.FC = () => {

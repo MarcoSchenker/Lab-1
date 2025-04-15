@@ -8,7 +8,7 @@ import { GameCallbacks } from '../game-callbacks';
 export class Partida {
     public equipoPrimero: Equipo; // Humano
     public equipoSegundo: Equipo; // IA
-    public limitePuntaje: number = 15; // Default, puede cambiar
+    public limitePuntaje: number = 30; // Default, puede cambiar
     private callbacks: GameCallbacks;
     private debugMode: boolean = false;
     private partidaTerminada: boolean = false;

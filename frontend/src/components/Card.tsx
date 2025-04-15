@@ -25,7 +25,7 @@ function getNaipeImageFilename(carta: Naipe): string {
      }
      const numeroArchivo = carta.numero; // Usar el número (1-12)
      // Asumiendo extensión .png (ajusta si es diferente)
-     return `${numeroArchivo}${paloArchivo}.png`;
+     return `${numeroArchivo}${paloArchivo}.jpg`;
 }
 
 

@@ -47,7 +47,7 @@ function App() {
               <GamePage />
             </AuthRoute>
           }
-          />
+        />
       </Routes>
     </Router>
   );
