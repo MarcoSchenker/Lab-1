@@ -5,10 +5,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 // Ajusta estas rutas si tu estructura es diferente
 import { Partida } from '../game/iaPro/partida';
 import { Jugador } from '../game/iaPro/jugador';
-import { IA } from '../game/iaPro/ia';
 import { Naipe } from '../game/iaPro/naipe';
 import { Canto, AccionesPosibles, Equipo } from '../game/iaPro/types';
 import { GameCallbacks } from '../game/game-callbacks'; // Asegúrate que esta ruta es correcta
+
 
 // --- Importar Componentes de UI ---
 // Ajusta estas rutas si tu estructura es diferente
@@ -137,19 +137,18 @@ const GamePage: React.FC = () => {
     }, [partida]); // Depende de la instancia de partida
 
     // --- Handlers para acciones del usuario que llaman a la lógica ---
-    const handlePlayCard = useCallback((index: number) => {
+    const handlePlayCard = useCallback((carta: Naipe) => {
         // Validar si la acción es permitida ANTES de llamar a la lógica
         if (!gameState.partidaTerminada && gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre && gameState.accionesPosibles.puedeJugarCarta) {
-            partida.handleHumanPlayCard(index);
+            partida.handleHumanPlayCard(carta);
         } else {
             console.warn("Intento de jugar carta bloqueado por UI (fuera de turno o acción no permitida).");
             // Opcional: Mostrar feedback al usuario
         }
-    }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.equipoPrimero, gameState.accionesPosibles.puedeJugarCarta]);
+    }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.equipoPrimero, gameState.accionesPosibles]);
 
     const handleCanto = useCallback((canto: Canto) => {
-        // Validar si la acción es permitida ANTES de llamar a la lógica
-        debugger
+        // Validar si la acción es permitida ANTES de llamar a la lógicas
         if (!gameState.partidaTerminada && gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre) {
             const acciones = gameState.accionesPosibles;
             const esCantoValido = acciones.puedeCantarEnvido.includes(canto) || acciones.puedeCantarTruco.includes(canto) || (canto === Canto.IrAlMazo && acciones.puedeMazo);
@@ -184,7 +183,7 @@ const GamePage: React.FC = () => {
                     <PlayerArea
                         jugador={gameState.equipoSegundo?.jugador ?? null}
                         cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? 3).fill(null)}
-                        esTurno={gameState.turnoActual?.jugador.nombre === gameState.equipoSegundo?.jugador.nombre}
+                        esTurno={gameState.turnoActual === gameState.equipoSegundo}
                         ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoSegundo?.jugador ? gameState.ultimoCanto.mensaje : null}
                         onCardClick={() => {}}
                         puedeJugarCarta={false}
@@ -202,10 +201,10 @@ const GamePage: React.FC = () => {
                     <PlayerArea
                         jugador={gameState.equipoPrimero?.jugador ?? null}
                         cartas={gameState.cartasManoJugador}
-                        esTurno={gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre} 
+                        esTurno={gameState.turnoActual === gameState.equipoPrimero} 
                         ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoPrimero?.jugador ? gameState.ultimoCanto.mensaje : null}
                         onCardClick={handlePlayCard}
-                        puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta && !gameState.partidaTerminada} // Añadir chequeo partidaTerminada
+                        puedeJugarCarta={!gameState.partidaTerminada && gameState.turnoActual === gameState.equipoPrimero && gameState.accionesPosibles.puedeJugarCarta} // <-- Comparación Humano
                         imageBasePath={IMAGE_BASE_PATH}
                     />
                 </div>

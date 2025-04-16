@@ -4,6 +4,7 @@ import { Ronda } from './ronda';
 import { AccionesPosibles, Canto, Equipo } from './types';
 import { GameCallbacks } from '../game-callbacks';
 import { getRandomInt } from './utils'; // Asegúrate de que esta función esté implementada
+import { Naipe } from './naipe';
 
 export class Partida {
     public equipoPrimero: Equipo; // Humano
@@ -127,9 +128,9 @@ export class Partida {
         this.callbacks.clearPlayedCards();
     }
 
-    public handleHumanPlayCard(index: number): void {
+    public handleHumanPlayCard(carta: Naipe): void {
         if (this.rondaActual && !this.partidaTerminada) {
-            this.rondaActual.handleHumanPlayCard(index);
+            this.rondaActual.handleHumanPlayCard(carta);
         } else {
             console.warn("Intento de jugar carta sin ronda activa o partida terminada.");
             this.callbacks.displayLog("Error: No se puede jugar ahora.");
