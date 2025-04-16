@@ -5,9 +5,11 @@ import { Canto, Equipo, PuntosEnvido, PuntosTruco, Palo , AccionesPosibles} from
 import { getRandomInt, shuffleArray, getLast } from './utils'; // Importar utils
 import { EnvidoContext, TrucoContext } from './ia-context'; // Importar contexto de Envido
 import { GameCallbacks } from '../game-callbacks';
+import * as Calculos from './ronda-calculos';
+import * as Actions from './ronda-actions';
 
 // Define estados más explícitos para la ronda
-enum EstadoRonda {
+export enum EstadoRonda {
     InicioMano,
     EsperandoJugadaNormal,
     EsperandoRespuestaEnvido,
@@ -24,24 +26,24 @@ export class Ronda {
     public estadoRonda: EstadoRonda = EstadoRonda.InicioMano;
 
     // Referencias y Configuración
-    private equipoMano: Equipo;
-    private equipoPie: Equipo;
-    private equipoEnTurno: Equipo;
-    private limitePuntaje: number;
-    private debugMode: boolean;
+    public equipoMano: Equipo;
+    public equipoPie: Equipo;
+    public equipoEnTurno: Equipo;
+    public limitePuntaje: number;
+    public debugMode: boolean;
 
     // Estado Envido
-    private cantosEnvido: { canto: Canto, equipo: Equipo }[] = [];
-    private equipoDebeResponderEnvido: Equipo | null = null;
-    private envidoResuelto: boolean = false;
-    private puntosEnvidoGanados: number = 0; // Puntos ganados por el envido en esta ronda
+    public cantosEnvido: { canto: Canto, equipo: Equipo }[] = [];
+    public equipoDebeResponderEnvido: Equipo | null = null;
+    public envidoResuelto: boolean = false;
+    public puntosEnvidoGanados: number = 0; // Puntos ganados por el envido en esta ronda
 
     // Estado Truco
-    private cantosTruco: { canto: Canto, equipo: Equipo }[] = [];
-    private equipoDebeResponderTruco: Equipo | null = null;
-    private trucoResuelto: boolean = false; // Si se dijo Quiero/NoQuiero
-    private trucoNoQueridoPor: Equipo | null = null;
-    private puntosTrucoGanados: number = 0; // Puntos ganados por el truco en esta ronda
+    public cantosTruco: { canto: Canto, equipo: Equipo }[] = [];
+    public equipoDebeResponderTruco: Equipo | null = null;
+    public trucoResuelto: boolean = false; // Si se dijo Quiero/NoQuiero
+    public trucoNoQueridoPor: Equipo | null = null;
+    public puntosTrucoGanados: number = 0; // Puntos ganados por el truco en esta ronda
 
     // Cartas jugadas en la mesa (para fácil acceso)
     private cartasMesa: (Naipe | null)[] = [null, null, null, null, null, null]; // [J1M0, J2M0, J1M1, J2M1, J1M2, J2M2]
@@ -49,13 +51,16 @@ export class Ronda {
     // Callbacks
     private onRondaTerminada: (puntosEq1: number, puntosEq2: number) => void; // Callback para Partida
     private callbacks: GameCallbacks; // Callbacks para la UI (React)
+    
+    public equipoPrimero: Equipo;
+    public equipoSegundo: Equipo;
 
     constructor(
-        public equipoPrimero: Equipo,
-        public equipoSegundo: Equipo,
+        equipoPrimero: Equipo,
+        equipoSegundo: Equipo,
         gameCallbacks: GameCallbacks, // Recibe callbacks de UI
         onRondaTerminadaCallback: (puntosEq1: number, puntosEq2: number) => void,
-        limitePuntaje: number = 15,
+        limitePuntaje: number = 30,
         debugMode: boolean = false
     ) {
         this.equipoPrimero = equipoPrimero;
@@ -149,6 +154,8 @@ export class Ronda {
             this.callbacks.displayLog(`Debug: ${this.equipoSegundo.jugador.nombre} Envido=${this.equipoSegundo.jugador.getPuntosDeEnvido(this.equipoSegundo.jugador.cartas)}`);
         }
 
+        console.log("Estado inicial", this)
+
         // Iniciar el flujo del juego
         this.continuarFlujo();
     }
@@ -176,218 +183,217 @@ export class Ronda {
     }
 
 
-    /** Motor principal de estados de la ronda */
+    /** Motor principal de estados de la ronda - REFACTORIZADO */
     private continuarFlujo(enEsperaHumano: boolean = false): void {
         if (enEsperaHumano) {
-            // Se detiene aquí, esperando la acción del humano que será gatillada por la UI
-            return;
+            return; // Esperar acción humana
         }
 
-        // Bucle para procesar automáticamente hasta necesitar input humano o terminar
         while (this.estadoRonda !== EstadoRonda.RondaTerminada) {
-
-            // Notificar a React quién tiene el turno ANTES de procesar el estado
-            this.callbacks.setTurno(this.equipoEnTurno);
+            this.callbacks.setTurno(this.equipoEnTurno); // Informar turno a la UI
 
             if (this.debugMode) {
-                this.callbacks.displayLog(`Debug: Estado=${EstadoRonda[this.estadoRonda]}, Turno=${this.equipoEnTurno.jugador.nombre}, Mano=${this.numeroDeMano}, Jugada=${this.jugadasEnMano}`);
+                this.callbacks.displayLog(`Estado=${EstadoRonda[this.estadoRonda]}, Turno=${this.equipoEnTurno.jugador.nombre}, Mano=${this.numeroDeMano}, Jugada=${this.jugadasEnMano}`);
             }
 
+            // Delegar al método correspondiente según el estado
             switch (this.estadoRonda) {
                 case EstadoRonda.InicioMano:
                 case EstadoRonda.EsperandoJugadaNormal:
-                    if (this.jugadasEnMano === 2) { // ¿Terminó la mano?
-                        this.estadoRonda = EstadoRonda.ManoTerminada;
-                        continue; // Procesar ManoTerminada en la siguiente iteración
+                    // Llamar a _procesarTurnoNormal y verificar si debemos esperar al humano
+                    if (this.procesarTurnoNormal()) {
+                        return; // Salir del bucle para esperar al humano
                     }
-                    // ¿Hay respuesta pendiente de envido o truco? (No debería estar aquí si sí)
-                    if (this.equipoDebeResponderEnvido) { this.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido; continue; }
-                    if (this.equipoDebeResponderTruco) { this.estadoRonda = EstadoRonda.EsperandoRespuestaTruco; continue; }
-
-                    // Proceder con el turno normal (jugar o cantar)
-                    this.gestionarTurnoNormal();
-                    return; // Salir del bucle (espera humano o procesó IA y llamará a continuarFlujo)
+                    break; // Continuar el bucle si la IA actuó
 
                 case EstadoRonda.EsperandoRespuestaEnvido:
-                    this.gestionarRespuestaEnvido();
-                    return; // Salir del bucle
+                    // Llamar a _procesarRespuestaEnvido y verificar si debemos esperar al humano
+                    if (this.procesarRespuestaEnvido()) {
+                        return; // Salir del bucle para esperar al humano
+                    }
+                    break; // Continuar el bucle si la IA actuó
 
                 case EstadoRonda.EsperandoRespuestaTruco:
-                    this.gestionarRespuestaTruco();
-                    return; // Salir del bucle
+                     // Llamar a _procesarRespuestaTruco y verificar si debemos esperar al humano
+                    if (this.procesarRespuestaTruco()) {
+                        return; // Salir del bucle para esperar al humano
+                    }
+                    break; // Continuar el bucle si la IA actuó
 
                 case EstadoRonda.ManoTerminada:
-                    this.resolverManoActual(); // Determina ganador, actualiza contadores, cambia turno
-                    const ganadorRonda = this.determinarGanadorRonda(); // Verifica si la ronda terminó
-
-                    if (ganadorRonda !== null) {
-                        this.estadoRonda = EstadoRonda.RondaTerminada;
-                        continue; // Procesar fin de ronda
-                    } else {
-                        // Iniciar siguiente mano
-                        this.numeroDeMano++;
-                        this.callbacks.setNumeroMano(this.numeroDeMano);
-                        this.jugadasEnMano = 0;
-                        this.cartasMesa = Array(6).fill(null);
-                        this.callbacks.clearPlayedCards(); // Limpiar mesa visual
-                        this.estadoRonda = EstadoRonda.InicioMano;
-                        this.puedeEnvido = false; // Ya no se puede envido
-                        // El turno ya se estableció en resolverManoActual
-                        // Notificar turno de nuevo por si acaso? No, ya se hará al inicio del loop
-                        continue; // Procesar inicio de la nueva mano
-                    }
+                    this.procesarFinDeMano(); // Este método actualiza estadoRonda
+                    continue; // Volver al inicio del while para procesar el nuevo estado
 
                 default:
                     console.error("Estado de ronda desconocido:", this.estadoRonda);
-                    this.estadoRonda = EstadoRonda.RondaTerminada; // Forzar fin en caso de error
+                    this.estadoRonda = EstadoRonda.RondaTerminada; // Forzar fin
                     continue;
-
-            } // Fin switch
+            }
+             // Si la IA actuó y no estamos esperando, el bucle while continúa
         } // Fin while
 
         // Si el bucle terminó porque estadoRonda es RondaTerminada
         if (this.estadoRonda === EstadoRonda.RondaTerminada) {
-            this.finalizarRonda();
+            this.finalizarRondaLogica();
         }
     }
-    
 
-   /** Gestiona el turno normal: jugar carta o iniciar un canto */
-   private gestionarTurnoNormal(): void {
-    const jugadorActual = this.equipoEnTurno.jugador;
+    /**
+     * Procesa el turno normal (jugar carta o cantar).
+     * @returns `true` si se debe esperar al humano, `false` si la IA actuó.
+     */
+    private procesarTurnoNormal(): boolean {
+        const jugadorActual = this.equipoEnTurno.jugador;
 
-    if (jugadorActual.esHumano) {
-        const acciones = this.calcularAccionesPosiblesParaTurno();
-        this.callbacks.actualizarAccionesPosibles(acciones); // Informar a React qué puede hacer
-        this.continuarFlujo(true); // Esperar input del usuario
-    } else {
-        // Deshabilitar acciones humanas mientras IA "piensa"
-         this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
+        if (jugadorActual.esHumano) {
+            // Calcular y mostrar acciones posibles para el humano
+            const acciones = Actions.calcularAccionesPosiblesParaTurno(this);
+            this.callbacks.actualizarAccionesPosibles(acciones);
+            return true; // Indicar que se espera al humano
+        } else {
+            // Deshabilitar acciones humanas mientras IA actúa
+            this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
 
-        // --- Lógica de Decisión IA ---
-        const ia = jugadorActual as IA;
-        let accionRealizada = false;
+            const ia = jugadorActual as IA;
+            let accionRealizada = false;
 
-        // 1. Decidir si cantar Envido (si es posible)
-        if (this.puedeEnvido && !this.envidoResuelto && this.getPosiblesCantosEnvido().length > 0) {
-            const contextoEnvido = this.crearContextoEnvido(ia);
-            const cantoEnvidoIA = ia.envido(contextoEnvido);
-            if (cantoEnvidoIA !== Canto.Paso) {
-                this.registrarCanto(cantoEnvidoIA, this.equipoEnTurno);
-                accionRealizada = true;
+            // 1. Decidir Envido
+            if (this.puedeEnvido && !this.envidoResuelto && Actions.getPosiblesCantosEnvido(this).length > 0) {
+                const contextoEnvido = this.crearContextoEnvido(ia); // Sin cambios
+                const cantoEnvidoIA = ia.envido(contextoEnvido);
+                if (cantoEnvidoIA !== Canto.Paso) {
+                    this.registrarCanto(cantoEnvidoIA, this.equipoEnTurno); // registrarCanto actualiza estadoRonda
+                    accionRealizada = true;
+                }
             }
-        }
 
-        // 2. Decidir si cantar Truco (si no cantó envido y es posible)
-        if (!accionRealizada && this.getPosiblesCantosTruco().length > 0) { // Usa el getter para validar
-            const contextoTruco = this.crearContextoTruco(ia);
-            const cantoTrucoIA = ia.truco(false, contextoTruco); // false = no está respondiendo
-            if (cantoTrucoIA !== Canto.Paso && this.getPosiblesCantosTruco().includes(cantoTrucoIA)) { // Doble check
-                this.registrarCanto(cantoTrucoIA, this.equipoEnTurno);
-                accionRealizada = true;
+            // 2. Decidir Truco (si no cantó envido)
+            if (!accionRealizada && Actions.getPosiblesCantosTruco(this).length > 0) {
+                 const contextoTruco = this.crearContextoTruco(ia); // Sin cambios
+                 const cantoTrucoIA = ia.truco(false, contextoTruco);
+                 if (cantoTrucoIA !== Canto.Paso && Actions.getPosiblesCantosTruco(this).includes(cantoTrucoIA)) {
+                    this.registrarCanto(cantoTrucoIA, this.equipoEnTurno); // registrarCanto actualiza estadoRonda
+                    accionRealizada = true;
+                 }
             }
-        }
 
-        // 3. Jugar Carta (si no cantó nada)
-        if (!accionRealizada) {
-            // Asegurarse que realmente puede jugar carta (debería si está en este estado)
-            if (this.calcularAccionesPosiblesParaTurno().puedeJugarCarta) {
-                 const cartaJugada = ia.jugarCarta(this); // IA actualiza su propia mano y devuelve la carta
-                 this.registrarJugada(cartaJugada, this.equipoEnTurno);
-                 accionRealizada = true;
-            } else {
-                console.error(`Error: IA ${ia.nombre} intentó jugar carta pero no era posible según el estado.`);
-                // TODO: ¿Qué hacer aquí? ¿Forzar fin de ronda? ¿Pasar turno?
-                // Por ahora, loguear y continuar podría causar un bucle. Mejor finalizar.
-                 this.estadoRonda = EstadoRonda.RondaTerminada; // Forzar fin
+            // 3. Jugar Carta (si no cantó)
+            if (!accionRealizada) {
+                if (Actions.calcularAccionesPosiblesParaTurno(this).puedeJugarCarta) {
+                     const cartaJugada = ia.jugarCarta(this); // jugarCarta actualiza mano IA
+                     this.registrarJugada(cartaJugada, this.equipoEnTurno); // registrarJugada actualiza estadoRonda
+                     accionRealizada = true;
+                 } else {
+                    console.error(`Error: IA ${ia.nombre} intentó jugar carta pero no era posible.`);
+                    this.estadoRonda = EstadoRonda.RondaTerminada; // Forzar fin
+                 }
             }
-        }
-        // --- Fin Lógica IA ---
 
-        // Continuar flujo después de un breve delay para simular pensamiento IA
-         if(this.estadoRonda !== EstadoRonda.RondaTerminada) { // Solo si no se forzó el fin
-            setTimeout(() => this.continuarFlujo(), 1000);
-         } else {
-             setTimeout(() => this.continuarFlujo(), 100); // Si se forzó fin, procesar rápido
-         }
+            // La IA ya actuó, no esperar
+             // Pausa simulada (¡OJO! setTimeout dentro de un bucle síncrono no funciona como se espera)
+             // La continuación debe manejarse por la estructura del bucle `continuarFlujo`
+             // setTimeout(() => this.continuarFlujo(), 1000); // <- INCORRECTO AQUI
+             return false;
+        }
     }
-}
 
-    /** Gestiona la espera de una respuesta al Envido */
-    private gestionarRespuestaEnvido(): void {
-        if (!this.equipoDebeResponderEnvido) {
+    /**
+     * Procesa la espera de respuesta al Envido.
+     * @returns `true` si se debe esperar al humano, `false` si la IA actuó.
+    */
+    private procesarRespuestaEnvido(): boolean {
+         if (!this.equipoDebeResponderEnvido) {
             console.error("Error: gestionando respuesta envido sin equipo que deba responder.");
-            this.estadoRonda = EstadoRonda.EsperandoJugadaNormal; // Intentar recuperar
-            this.continuarFlujo();
-            return;
+            this.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
+            return false; // Recuperar y continuar flujo
         }
         const jugadorResponde = this.equipoDebeResponderEnvido.jugador;
 
         if (jugadorResponde.esHumano) {
-            const acciones = this.calcularAccionesPosiblesParaRespuestaEnvido();
+            const acciones = Actions.calcularAccionesPosiblesParaRespuestaEnvido(this);
             this.callbacks.actualizarAccionesPosibles(acciones);
-            this.continuarFlujo(true); // Esperar input
+            return true; // Esperar al humano
         } else {
-             // Deshabilitar acciones humanas mientras IA responde
              this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
+             const ia = jugadorResponde as IA;
+             const contextoEnvido = this.crearContextoEnvido(ia);
+             let respuestaIA = ia.envido(contextoEnvido);
 
-            const ia = jugadorResponde as IA;
-            const contextoEnvido = this.crearContextoEnvido(ia);
-            let respuestaIA = ia.envido(contextoEnvido); // true = está respondiendo
-
-             // Validar que la respuesta sea posible
-             const accionesPosiblesIA = this.getPosiblesRespuestasEnvido();
+             const accionesPosiblesIA = Actions.getPosiblesRespuestasEnvido(this);
              if (!accionesPosiblesIA.includes(respuestaIA) && respuestaIA !== Canto.Paso) {
                  console.warn(`IA ${ia.nombre} intentó respuesta inválida de Envido (${respuestaIA}). Forzando NoQuiero.`);
                  respuestaIA = Canto.NoQuiero;
              }
-             if (respuestaIA === Canto.Paso) { // IA no encontró canto/respuesta válida
-                 respuestaIA = Canto.NoQuiero; // Default a no querer si pasa
+             if (respuestaIA === Canto.Paso) {
+                 respuestaIA = Canto.NoQuiero;
              }
 
-            this.registrarRespuesta(respuestaIA, this.equipoDebeResponderEnvido);
-
-            setTimeout(() => this.continuarFlujo(), 1000);
+             this.registrarRespuesta(respuestaIA, this.equipoDebeResponderEnvido); // Actualiza estadoRonda
+             // setTimeout(() => this.continuarFlujo(), 1000); // <- INCORRECTO AQUI
+             return false; // IA actuó, no esperar
         }
     }
 
-    /** Gestiona la espera de una respuesta al Truco */
-    private gestionarRespuestaTruco(): void {
-         if (!this.equipoDebeResponderTruco) {
-            console.error("Error: gestionando respuesta truco sin equipo que deba responder.");
-            this.estadoRonda = EstadoRonda.EsperandoJugadaNormal; // Intentar recuperar
-            this.continuarFlujo();
-            return;
-        }
-        const jugadorResponde = this.equipoDebeResponderTruco.jugador;
+     /**
+      * Procesa la espera de respuesta al Truco.
+      * @returns `true` si se debe esperar al humano, `false` si la IA actuó.
+      */
+     private procesarRespuestaTruco(): boolean {
+          if (!this.equipoDebeResponderTruco) {
+             console.error("Error: gestionando respuesta truco sin equipo que deba responder.");
+             this.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
+             return false; // Recuperar y continuar flujo
+         }
+         const jugadorResponde = this.equipoDebeResponderTruco.jugador;
 
-        if (jugadorResponde.esHumano) {
-            const acciones = this.calcularAccionesPosiblesParaRespuestaTruco();
-            this.callbacks.actualizarAccionesPosibles(acciones);
-            this.continuarFlujo(true); // Esperar input
-        } else {
-            // Deshabilitar acciones humanas mientras IA responde
-            this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
+         if (jugadorResponde.esHumano) {
+             const acciones = Actions.calcularAccionesPosiblesParaRespuestaTruco(this);
+             this.callbacks.actualizarAccionesPosibles(acciones);
+             return true; // Esperar al humano
+         } else {
+             this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
+             const ia = jugadorResponde as IA;
+             const contextoTruco = this.crearContextoTruco(ia);
+             let respuestaIA = ia.truco(true, contextoTruco);
 
-            const ia = jugadorResponde as IA;
-            const contextoTruco = this.crearContextoTruco(ia);
-            let respuestaIA = ia.truco(true, contextoTruco); // true = está respondiendo
-
-             // Validar que la respuesta sea posible
-             const accionesPosiblesIA = this.getPosiblesRespuestasTruco();
+             const accionesPosiblesIA = Actions.getPosiblesRespuestasTruco(this);
              if (!accionesPosiblesIA.includes(respuestaIA) && respuestaIA !== Canto.Paso) {
                  console.warn(`IA ${ia.nombre} intentó respuesta inválida de Truco (${respuestaIA}). Forzando NoQuiero.`);
                  respuestaIA = Canto.NoQuiero;
              }
-             if (respuestaIA === Canto.Paso) { // IA no encontró canto/respuesta válida
-                 respuestaIA = Canto.NoQuiero; // Default a no querer si pasa
+              if (respuestaIA === Canto.Paso) {
+                 respuestaIA = Canto.NoQuiero;
              }
 
-            this.registrarRespuesta(respuestaIA, this.equipoDebeResponderTruco);
+             this.registrarRespuesta(respuestaIA, this.equipoDebeResponderTruco); // Actualiza estadoRonda
+             // setTimeout(() => this.continuarFlujo(), 1000); // <- INCORRECTO AQUI
+             return false; // IA actuó, no esperar
+         }
+     }
+    
 
-            setTimeout(() => this.continuarFlujo(), 1000);
+     /** Procesa el final de una mano (determina ganador, cambia turno, prepara siguiente mano o fin de ronda) */
+    private procesarFinDeMano(): void {
+        this.resolverManoActual(); // Resuelve la mano y establece el turno para la siguiente
+
+        const ganadorRonda = this.determinarGanadorRonda(); // Verifica si la ronda terminó
+
+        if (ganadorRonda !== null) {
+            this.estadoRonda = EstadoRonda.RondaTerminada;
+        } else {
+            // Iniciar siguiente mano
+            this.numeroDeMano++;
+            this.callbacks.setNumeroMano(this.numeroDeMano);
+            this.jugadasEnMano = 0;
+             // Limpiar cartas de la mesa para la siguiente mano (visual y lógico)
+            this.cartasMesa = Array(6).fill(null); // Limpiar lógico
+            this.callbacks.clearPlayedCards(); // Limpiar visual
+            this.estadoRonda = EstadoRonda.InicioMano;
+            this.puedeEnvido = false; // Ya no se puede envido
+            // El turno ya se estableció en _resolverManoActualLogica
         }
     }
+
 
 
     private crearContextoEnvido(ia: IA): EnvidoContext {
@@ -459,94 +465,103 @@ export class Ronda {
         const esEnvido = [Canto.Envido, Canto.EnvidoEnvido, Canto.RealEnvido, Canto.FaltaEnvido].includes(canto);
         const esTruco = [Canto.Truco, Canto.ReTruco, Canto.ValeCuatro].includes(canto);
 
+        // Validar acción posible usando el módulo Actions
+        let accionValida = false;
+        if (esEnvido && (Actions.getPosiblesCantosEnvido(this).includes(canto) || Actions.getPosiblesRespuestasEnvido(this).includes(canto))) {
+            accionValida = true;
+        } else if (esTruco && (Actions.getPosiblesCantosTruco(this).includes(canto) || Actions.getPosiblesRespuestasTruco(this).includes(canto))) {
+            accionValida = true;
+        } else if (canto === Canto.IrAlMazo && Actions.calcularAccionesPosiblesParaTurno(this).puedeMazo) { // Asumiendo que mazo es posible en turno normal
+             accionValida = true;
+        }
+
+        if (!accionValida) {
+             console.warn(`Canto/Respuesta inválido ${canto} registrado por ${equipoQueCanta.jugador.nombre}`);
+             // Podríamos notificar a la UI aquí también
+             return; // No registrar canto inválido
+        }
+
         this.callbacks.showPlayerCall(equipoQueCanta.jugador, this.cantoToString(canto));
 
         if (esEnvido) {
-            // Validar si realmente puede cantar envido (doble check)
-            if (!this.getPosiblesCantosEnvido().includes(canto) && !this.getPosiblesRespuestasEnvido().includes(canto)) {
-                 console.warn(`Canto/Respuesta Envido inválido ${canto} registrado por ${equipoQueCanta.jugador.nombre}`);
-                 return; // No registrar canto inválido
-            }
             this.cantosEnvido.push({ canto, equipo: equipoQueCanta });
             this.equipoDebeResponderEnvido = this.getOponente(equipoQueCanta);
-            this.equipoDebeResponderTruco = null; // Envido interrumpe Truco pendiente
-            // this.puedeEnvido = false; // Se setea en jugar carta o resolver envido
+            this.equipoDebeResponderTruco = null;
             this.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido;
-            this.equipoEnTurno = this.equipoDebeResponderEnvido; // Turno pasa a quien responde
-
+            this.equipoEnTurno = this.equipoDebeResponderEnvido;
         } else if (esTruco) {
-             // Validar si realmente puede cantar truco (doble check)
-            if (!this.getPosiblesCantosTruco().includes(canto) && !this.getPosiblesRespuestasTruco().includes(canto)) {
-                console.warn(`Canto/Respuesta Truco inválido ${canto} registrado por ${equipoQueCanta.jugador.nombre}`);
-                return; // No registrar canto inválido
-            }
             this.cantosTruco.push({ canto, equipo: equipoQueCanta });
             this.equipoDebeResponderTruco = this.getOponente(equipoQueCanta);
-            this.equipoDebeResponderEnvido = null; // Truco interrumpe Envido pendiente? No, al revés.
+            this.equipoDebeResponderEnvido = null; // Envido se interrumpe
             this.estadoRonda = EstadoRonda.EsperandoRespuestaTruco;
-            this.equipoEnTurno = this.equipoDebeResponderTruco; // Turno pasa a quien responde
-
+            this.equipoEnTurno = this.equipoDebeResponderTruco;
         } else if (canto === Canto.IrAlMazo) {
             this.trucoNoQueridoPor = equipoQueCanta;
-            this.puntosTrucoGanados = this.calcularPuntosTruco().noQuerido; // Calcular puntos del estado actual
-            this.estadoRonda = EstadoRonda.RondaTerminada; // Termina inmediatamente
-            // Los puntos del envido ya deberían estar acumulados si se jugó
+            // Usar el cálculo externo
+            this.puntosTrucoGanados = Calculos.calcularPuntosTruco(this.cantosTruco).noQuerido;
+            this.estadoRonda = EstadoRonda.RondaTerminada;
         }
-        // El flujo continuará y seteará el turno y acciones correctas
     }
 
     private registrarRespuesta(respuesta: Canto, equipoQueResponde: Equipo): void {
         const esRespuestaSN = this.esRespuesta(respuesta);
         this.callbacks.showPlayerCall(equipoQueResponde.jugador, this.cantoToString(respuesta));
+        let accionValida = false;
 
         if (this.equipoDebeResponderEnvido === equipoQueResponde) {
-            // Validar respuesta
-            if (!this.getPosiblesRespuestasEnvido().includes(respuesta)) {
-                console.warn(`Respuesta Envido inválida ${respuesta} registrada por ${equipoQueResponde.jugador.nombre}`);
-                return;
+            if (!Actions.getPosiblesRespuestasEnvido(this).includes(respuesta)) {
+                 console.warn(`Respuesta Envido inválida ${respuesta} registrada por ${equipoQueResponde.jugador.nombre}`);
+                 return;
             }
-
+            accionValida = true;
             this.cantosEnvido.push({ canto: respuesta, equipo: equipoQueResponde });
-            this.equipoDebeResponderEnvido = null; // Ya no se espera respuesta a este nivel
+            this.equipoDebeResponderEnvido = null;
 
             if (esRespuestaSN) {
-                this.resolverEnvido(respuesta === Canto.Quiero); // Resuelve y acumula puntos envido
+                this.resolverEnvido(respuesta === Canto.Quiero); // Resolver con método lógico
                 this.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
-                // El turno vuelve a quien cantó originalmente para que juegue su carta
-                this.equipoEnTurno = this.getOponente(equipoQueResponde);
-            } else { // Fue un contra-canto (EE, R, F)
-                this.equipoDebeResponderEnvido = this.getOponente(equipoQueResponde); // Ahora responde el otro
+                // El turno vuelve a quien cantó originalmente OJO: si se resolvió envido y había truco pendiente? Revisar flujo.
+                 // Por ahora, asumimos que vuelve a quien cantó envido.
+                const ultimoCantadorEnvido = getLast(this.cantosEnvido.filter(c => !this.esRespuesta(c.canto)))?.equipo;
+                 if (ultimoCantadorEnvido) {
+                     this.equipoEnTurno = ultimoCantadorEnvido;
+                 } else { // Si no hay cantador (ej: respuesta a nada?), asignar a mano? Raro.
+                     console.error("Error: Envido resuelto sin cantador previo?");
+                     this.equipoEnTurno = this.equipoMano;
+                 }
+
+            } else { // Contra-canto Envido
+                this.equipoDebeResponderEnvido = this.getOponente(equipoQueResponde);
                 this.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido;
-                this.equipoEnTurno = this.equipoDebeResponderEnvido; // Turno pasa al que debe responder
+                this.equipoEnTurno = this.equipoDebeResponderEnvido;
             }
 
         } else if (this.equipoDebeResponderTruco === equipoQueResponde) {
-             // Validar respuesta
-            if (!this.getPosiblesRespuestasTruco().includes(respuesta)) {
+             if (!Actions.getPosiblesRespuestasTruco(this).includes(respuesta)) {
                  console.warn(`Respuesta Truco inválida ${respuesta} registrada por ${equipoQueResponde.jugador.nombre}`);
                  return;
             }
-
+            accionValida = true;
             this.cantosTruco.push({ canto: respuesta, equipo: equipoQueResponde });
-            this.equipoDebeResponderTruco = null; // Ya no se espera respuesta a este nivel
+            this.equipoDebeResponderTruco = null;
 
             if (esRespuestaSN) {
-                this.resolverTruco(respuesta === Canto.Quiero); // Puede terminar la ronda si es NoQuiero
-                // Si fue Quiero, el juego sigue
+                this.resolverTruco(respuesta === Canto.Quiero); // Resolver con método lógico (puede cambiar estadoRonda)
                 if (this.estadoRonda !== EstadoRonda.RondaTerminada) {
                     this.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
                     // Turno pasa a quien respondió (para jugar o escalar)
                     this.equipoEnTurno = equipoQueResponde;
                 }
-            } else { // Fue un contra-canto (RT, V4)
-                this.equipoDebeResponderTruco = this.getOponente(equipoQueResponde); // Ahora responde el otro
+            } else { // Contra-canto Truco
+                this.equipoDebeResponderTruco = this.getOponente(equipoQueResponde);
                 this.estadoRonda = EstadoRonda.EsperandoRespuestaTruco;
-                this.equipoEnTurno = this.equipoDebeResponderTruco; // Turno pasa al que debe responder
+                this.equipoEnTurno = this.equipoDebeResponderTruco;
             }
-        } else {
-            console.error("Error: Se registró respuesta sin equipo que deba responder.");
         }
-         // El flujo continuará y seteará el turno y acciones correctas
+
+        if (!accionValida) {
+             console.error("Error: Se registró respuesta sin equipo que deba responder o inválida.");
+        }
     }
 
     private registrarJugada(carta: Naipe, equipoQueJuega: Equipo): void {
@@ -562,26 +577,38 @@ export class Ronda {
               return;
          }
 
-        // --- Lógica de Registro ---
-        // Calcular índice en la mesa
+        // --- INICIO: Lógica de Registro y Actualización de Mano ---
+
+        // 1. Eliminar la carta de la mano del jugador ANTES de notificar a la UI
+        const jugador = equipoQueJuega.jugador;
+        const exitoAlQuitar = jugador.registrarCartaJugadaPorObjeto(carta);
+
+        if (!exitoAlQuitar) {
+            console.error(`Error Crítico: ${jugador.nombre} intentó jugar la carta ${carta.getNombre()} pero no se encontró en su mano.`);
+            // Aquí podrías intentar recuperar el estado o forzar fin de ronda/partida
+            this.callbacks.displayLog(`Error interno: No se encontró la carta ${carta.getNombre()} en tu mano.`);
+            return; // Detener el proceso si la carta no estaba
+        }
+
+        // 2. Actualizar cartas en mesa
         const playerIndex = equipoQueJuega === this.equipoPrimero ? 0 : 1;
         const mesaIndex = this.numeroDeMano * 2 + playerIndex;
-        // const mesaIndex = this.numeroDeMano * 2 + (this.jugadasEnMano); // Corrección: índice por jugada
 
         if (mesaIndex >= this.cartasMesa.length) {
-            console.error(`Error: Índice de mesa inválido ${mesaIndex}`);
+            console.error(`Error: Índice de mesa inválido ${mesaIndex} al jugar ${carta.getNombre()}`);
             return;
         }
         this.cartasMesa[mesaIndex] = carta;
-        equipoQueJuega.jugador.cartasJugadasRonda.push(carta); // Crucial para IA
+        // jugador.cartasJugadasRonda.push(carta); // Esto ya lo hace registrarCartaJugadaPorObjeto
 
-        // --- Notificar a la UI ---
-        this.callbacks.displayPlayedCard(equipoQueJuega.jugador, carta, this.numeroDeMano, this.jugadasEnMano);
-        // Si jugó el humano, actualizar su mano visualmente (ya lo hizo al clickear, pero por si acaso)
-        if (equipoQueJuega.jugador.esHumano) {
-            this.callbacks.displayPlayerCards(equipoQueJuega.jugador);
-        }
-        // -------------------------
+        // --- FIN: Lógica de Registro y Actualización de Mano ---
+
+
+        // --- Notificar a la UI (AHORA con la mano actualizada) ---
+        this.callbacks.displayPlayedCard(jugador, carta, this.numeroDeMano, this.jugadasEnMano);
+        // Actualizar la mano visual del jugador (Humano o IA - aunque IA no se vea)
+        this.callbacks.displayPlayerCards(jugador); // <-- Ahora tiene la mano correcta
+        // --------------------------------------------------------
 
         this.jugadasEnMano++;
         // Pasar turno SIEMPRE después de jugar
@@ -596,25 +623,30 @@ export class Ronda {
              }
         }
 
-        // El estado vuelve a normal para la siguiente jugada o fin de mano
+       // Si se completó la mano (ambos jugaron), resolverla
+       if (this.jugadasEnMano === 2) {
+        this.estadoRonda = EstadoRonda.ManoTerminada;
+   } else {
+        // Si no, esperar la siguiente jugada normal
         this.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
-        // El flujo continuará y seteará el turno y acciones correctas
+        }
     }
 
      // --- Métodos de Resolución (usan callbacks) ---
 
     private resolverManoActual(): void {
-        // Asegurarse que se jugaron ambas cartas de la mano
-        // Los índices dependen de quién fue mano/pie en la ronda
         const indiceMano = this.equipoMano === this.equipoPrimero ? 0 : 1;
         const indicePie = this.equipoPie === this.equipoPrimero ? 0 : 1;
-        const cartaMano = this.cartasMesa[this.numeroDeMano * 2 + indiceMano];
-        const cartaPie = this.cartasMesa[this.numeroDeMano * 2 + indicePie];
+        // Indices para la mano actual en el array plano cartasMesa
+        const idxCartaMano = this.numeroDeMano * 2 + indiceMano;
+        const idxCartaPie = this.numeroDeMano * 2 + indicePie;
+        const cartaMano = this.cartasMesa[idxCartaMano];
+        const cartaPie = this.cartasMesa[idxCartaPie];
 
         let ganadorManoEquipo: Equipo | null = null;
         let cartaGanadora: Naipe | null = null;
         let jugadorGanador: Jugador | null = null;
-        let jugadaGanadoraIndex = -1; // 0 si la jugó el mano, 1 si la jugó el pie
+        let jugadaGanadoraIndex = -1; // 0 para mano, 1 para pie
 
         if (!cartaMano || !cartaPie) {
             console.error(`Error al resolver mano ${this.numeroDeMano}: faltan cartas.`);
@@ -627,31 +659,28 @@ export class Ronda {
             ganadorManoEquipo = this.equipoMano;
             cartaGanadora = cartaMano;
             jugadorGanador = this.equipoMano.jugador;
-            jugadaGanadoraIndex = 0; // Mano jugó la ganadora
+            jugadaGanadoraIndex = 0;
         } else if (cartaPie.valor > cartaMano.valor) {
             ganadorManoEquipo = this.equipoPie;
             cartaGanadora = cartaPie;
             jugadorGanador = this.equipoPie.jugador;
-            jugadaGanadoraIndex = 1; // Pie jugó la ganadora
+            jugadaGanadoraIndex = 1;
         } else { // Parda
-            ganadorManoEquipo = null; // Nadie gana la mano
+            ganadorManoEquipo = null;
             this.callbacks.displayLog(`Mano ${this.numeroDeMano + 1}: Parda`);
             this.equipoEnTurno = this.equipoMano; // En parda, empieza el mano de la ronda
-            return; // Salir, no hay highlight ni cambio de turno basado en ganador
+            // Marcar parda en algún lado si es necesario para desempate?
+            // Se podría añadir una propiedad a Equipo como manosEmpardadasRonda. Por ahora no.
+            return;
         }
 
-        // Si hubo ganador de la mano
-        this.callbacks.displayLog(`Mano ${this.numeroDeMano + 1}: Gana ${ganadorManoEquipo.jugador.nombre} (${cartaGanadora.getNombre()})`);
+        this.callbacks.displayLog(`Mano ${this.numeroDeMano + 1}: Gana ${ganadorManoEquipo.jugador.nombre} (${cartaGanadora?.getNombre()})`);
         ganadorManoEquipo.manosGanadasRonda++;
         this.equipoEnTurno = ganadorManoEquipo; // El ganador empieza la siguiente mano
 
-        // --- Callback opcional para highlight ---
         if (this.callbacks.highlightWinningCard && jugadorGanador && cartaGanadora) {
-            // Necesitamos saber qué jugada fue (0 o 1 en la mano actual)
-             // La jugada 0 es del mano, la 1 del pie.
-            this.callbacks.highlightWinningCard(jugadorGanador, this.numeroDeMano, jugadaGanadoraIndex);
+             this.callbacks.highlightWinningCard(jugadorGanador, this.numeroDeMano, jugadaGanadoraIndex);
         }
-        // ---------------------------------------
     }
      /** Compara dos cartas y devuelve el equipo ganador o null si es parda */
      private determinarGanadorMano(cartaEq1: Naipe, cartaEq2: Naipe): Equipo | null {
@@ -739,40 +768,40 @@ export class Ronda {
 
      private resolverEnvido(querido: boolean): void {
         this.envidoResuelto = true;
-        // this.equipoDebeResponderEnvido = null; // Se hace en registrarRespuesta
-
-        const puntosCalculados = this.calcularPuntosEnvido();
+        // Llamar al cálculo externo
+        const puntosCalculados = Calculos.calcularPuntosEnvido(
+            this.cantosEnvido,
+            this.limitePuntaje,
+            this.equipoPrimero.puntos, // Pasar puntos actuales por si es Falta Envido
+            this.equipoSegundo.puntos
+        );
         let equipoGanador: Equipo | null = null;
         let puntosOtorgados = 0;
-        let puntosOponenteSiQuerido: number | null = null; // Para stats IA
+        let puntosOponenteSiQuerido: number | null = null;
 
         if (querido) {
             const pMano = this.equipoMano.jugador.getPuntosDeEnvido(this.equipoMano.jugador.cartas);
             const pPie = this.equipoPie.jugador.getPuntosDeEnvido(this.equipoPie.jugador.cartas);
 
-            // Mostrar puntos de ambos
             this.callbacks.showPlayerCall(this.equipoMano.jugador, `${this.cantoToString(pMano)}`);
-            // Pausa breve para que se vean ambos cantos
             setTimeout(() => {
                  this.callbacks.showPlayerCall(this.equipoPie.jugador, `${this.cantoToString(pPie)}`);
             }, 600);
 
-
-            if (pMano >= pPie) { // Gana mano (o empata)
+            if (pMano >= pPie) {
                 equipoGanador = this.equipoMano;
                 puntosOtorgados = puntosCalculados.ganador;
-                puntosOponenteSiQuerido = pPie; // Puntos del perdedor
-            } else { // Gana pie
+                puntosOponenteSiQuerido = pPie;
+            } else {
                 equipoGanador = this.equipoPie;
                 puntosOtorgados = puntosCalculados.ganador;
-                puntosOponenteSiQuerido = pMano; // Puntos del perdedor
+                puntosOponenteSiQuerido = pMano;
             }
 
-            // Registrar stats en la IA perdedora
              const equipoPerdedor = (equipoGanador === this.equipoPrimero) ? this.equipoSegundo : this.equipoPrimero;
              if (!equipoPerdedor.jugador.esHumano && equipoPerdedor.jugador instanceof IA) {
-                 // Pasar los puntos del *ganador* a la IA perdedora para stats
-                  const puntosGanador = equipoGanador === this.equipoMano ? pMano : pPie;
+                 const puntosGanador = equipoGanador === this.equipoMano ? pMano : pPie;
+                  // La IA necesita saber los puntos del *oponente* (ganador) para aprender
                   equipoPerdedor.jugador.statsEnvido(this.cantosEnvido, puntosGanador);
              }
 
@@ -786,15 +815,10 @@ export class Ronda {
 
         if (equipoGanador && puntosOtorgados > 0) {
             this.callbacks.displayLog(`Envido: Gana ${puntosOtorgados}pts ${equipoGanador.jugador.nombre}`);
-            equipoGanador.jugador.puntosGanadosEnvidoRonda = puntosOtorgados; // Guardar para contexto Truco IA
-            // Acumular puntos para el final de la ronda
-            if(equipoGanador === this.equipoPrimero) this.puntosEnvidoGanados += puntosOtorgados;
-            else this.puntosEnvidoGanados += puntosOtorgados; // Error, debe ser por equipo
-            // Corrección:
-             this.puntosEnvidoGanados = puntosOtorgados; // Solo puede haber un ganador de envido
-             // Al final, se asignarán al equipo correcto.
+             // Guardar temporalmente quién ganó y cuántos puntos para asignarlos al final de la ronda
+             equipoGanador.jugador.puntosGanadosEnvidoRonda = puntosOtorgados;
+             // NO acumular en this.puntosEnvidoGanados aquí, se hará en _finalizarRondaLogica
         }
-        // No cambia estadoRonda aquí, se maneja en registrarRespuesta/continuarFlujo
     }
 
 
@@ -883,98 +907,93 @@ export class Ronda {
 
      /** Resuelve el Truco después de Quiero/NoQuiero */
      private resolverTruco(querido: boolean): void {
-        this.trucoResuelto = true; // Marca que se respondió al último canto
-        // this.equipoDebeResponderTruco = null; // Se hace en registrarRespuesta
+        this.trucoResuelto = true;
 
         if (!querido) {
             const equipoQueRespondio = getLast(this.cantosTruco)?.equipo ?? null;
             if (equipoQueRespondio) {
                 this.trucoNoQueridoPor = equipoQueRespondio;
-                this.puntosTrucoGanados = this.calcularPuntosTruco().noQuerido; // Calcular puntos del estado actual
+                 // Usar cálculo externo
+                this.puntosTrucoGanados = Calculos.calcularPuntosTruco(this.cantosTruco).noQuerido;
                 this.estadoRonda = EstadoRonda.RondaTerminada; // Termina la ronda
             } else { console.error("Error: Truco No Querido sin respuesta previa?"); }
         }
-        // Si fue querido, el juego simplemente continúa. Los puntos se calculan al final.
-        // No cambia estadoRonda aquí, se maneja en registrarRespuesta/continuarFlujo
+        // Si fue querido, no pasa nada aquí, los puntos se calculan al final.
     }
-
 
      /** Determina si hay un ganador de la ronda */
      private determinarGanadorRonda(): Equipo | null {
         const e1 = this.equipoPrimero;
         const e2 = this.equipoSegundo;
 
-        // El primero en ganar 2 manos gana
         if (e1.manosGanadasRonda >= 2) return e1;
         if (e2.manosGanadasRonda >= 2) return e2;
 
-        // Si se jugaron las 3 manos (numeroDeMano llega a 2 y se resuelve)
-        if (this.numeroDeMano >= 2 && this.jugadasEnMano === 0) { // Mano 2 resuelta, no hay más jugadas
-            // Si ambos tienen 1 mano ganada, gana el mano de la ronda
-            if (e1.manosGanadasRonda === 1 && e2.manosGanadasRonda === 1) {
-                return this.equipoMano;
-            }
-            // Si uno tiene más manos ganadas, gana ese equipo
-            if (e1.manosGanadasRonda > e2.manosGanadasRonda) return e1;
-            if (e2.manosGanadasRonda > e1.manosGanadasRonda) return e2;
-            // Si ambos tienen 0 manos ganadas (3 pardas), gana el mano de la ronda
-            if (e1.manosGanadasRonda === 0 && e2.manosGanadasRonda === 0) {
-                return this.equipoMano;
-            }
+        // Comprobar después de la mano 3 (índice 2)
+        if (this.numeroDeMano >= 2) { // Si ya se jugó la mano 3 (o hubo 2 victorias antes)
+            // Si la primera fue parda y uno ganó la 2da y 3ra
+             // Nota: La lógica de parda no está explícitamente guardada, se asume que gana el mano en caso de empate final.
+
+             // Si llegaron a la 3ra mano (implica 1-1 o pardas)
+             if (e1.manosGanadasRonda === 1 && e2.manosGanadasRonda === 1) {
+                 return this.equipoMano; // Gana el mano de la ronda
+             }
+             // Podría haber casos de múltiples pardas, el mano siempre tiene ventaja
+             if (e1.manosGanadasRonda > e2.manosGanadasRonda) return e1;
+             if (e2.manosGanadasRonda > e1.manosGanadasRonda) return e2;
+             // Si 0-0 tras 3 manos (3 pardas), gana el mano
+             if (e1.manosGanadasRonda === 0 && e2.manosGanadasRonda === 0) {
+                 return this.equipoMano;
+             }
         }
 
         return null; // No hay ganador aún
      }
 
-     private finalizarRonda(): void {
+     /** Finaliza la ronda, calcula puntos y notifica a Partida */
+     private finalizarRondaLogica(): void {
         this.estadoRonda = EstadoRonda.RondaTerminada; // Asegurar estado final
-
-        // Deshabilitar acciones en la UI
         this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
 
         let ganadorRondaEquipo: Equipo | null = null;
         let puntosGanadosTruco = 0;
-        let puntosGanadosEnvidoTotal = this.puntosEnvidoGanados; // Usar el valor acumulado en resolverEnvido
+        let puntosGanadosEnvidoEq1 = this.equipoPrimero.jugador.puntosGanadosEnvidoRonda; // Puntos de envido que ganó E1
+        let puntosGanadosEnvidoEq2 = this.equipoSegundo.jugador.puntosGanadosEnvidoRonda; // Puntos de envido que ganó E2
 
-        // Determinar ganador y puntos del truco
         if (this.trucoNoQueridoPor) {
             ganadorRondaEquipo = this.getOponente(this.trucoNoQueridoPor);
-            puntosGanadosTruco = this.puntosTrucoGanados; // Ya se calcularon al no querer/mazo
+            puntosGanadosTruco = this.puntosTrucoGanados; // Ya calculados
             this.callbacks.displayLog(`Ronda: ${ganadorRondaEquipo.jugador.nombre} gana ${puntosGanadosTruco}pts (No Querido / Mazo)`);
         } else {
             ganadorRondaEquipo = this.determinarGanadorRonda();
             if (ganadorRondaEquipo) {
-                puntosGanadosTruco = this.calcularPuntosTruco().querido; // Calcular puntos del truco querido
+                // Usar cálculo externo
+                puntosGanadosTruco = Calculos.calcularPuntosTruco(this.cantosTruco).querido;
                 this.callbacks.displayLog(`Ronda: ${ganadorRondaEquipo.jugador.nombre} gana ${puntosGanadosTruco}pts (Truco)`);
                 if (this.callbacks.displayRoundWinner) {
                     this.callbacks.displayRoundWinner(ganadorRondaEquipo.jugador.nombre);
                 }
             } else {
-                this.callbacks.displayLog(`Ronda: EMPATE (No debería pasar con la lógica actual)`);
-                 ganadorRondaEquipo = this.equipoMano; // Desempate por mano si algo falla
-                 puntosGanadosTruco = 1; // Dar 1 punto por defecto?
+                this.callbacks.displayLog(`Ronda: EMPATE (Error?)`);
+                 ganadorRondaEquipo = this.equipoMano; // Desempate por mano si falla la lógica
+                 puntosGanadosTruco = 1;
             }
         }
 
-        // Calcular puntos totales para cada equipo
+        // Calcular puntos totales para Partida
         let puntosEq1 = (ganadorRondaEquipo === this.equipoPrimero) ? puntosGanadosTruco : 0;
         let puntosEq2 = (ganadorRondaEquipo === this.equipoSegundo) ? puntosGanadosTruco : 0;
 
-        // Sumar puntos del envido al equipo correcto
-        // Necesitamos saber quién ganó el envido para asignar correctamente
-         if (this.equipoPrimero.jugador.puntosGanadosEnvidoRonda > 0) {
-             puntosEq1 += this.equipoPrimero.jugador.puntosGanadosEnvidoRonda;
-         }
-         if (this.equipoSegundo.jugador.puntosGanadosEnvidoRonda > 0) {
-             puntosEq2 += this.equipoSegundo.jugador.puntosGanadosEnvidoRonda;
-         }
+        // Sumar puntos del envido (ya están asignados al jugador correcto)
+        puntosEq1 += puntosGanadosEnvidoEq1;
+        puntosEq2 += puntosGanadosEnvidoEq2;
 
-
-        // Notificar a Partida con los puntos finales de la ronda
+        // Notificar a Partida
         setTimeout(() => {
             this.onRondaTerminada(puntosEq1, puntosEq2);
-        }, 1500); // Pausa para que se vea el resultado
+        }, 1500);
     }
+
 
 
     // --- Métodos para calcular acciones posibles (refinados) ---
@@ -1099,32 +1118,42 @@ export class Ronda {
 
    // --- Handlers para acciones del Humano (reciben llamada desde Partida) ---
 
-   public handleHumanPlayCard(indiceCarta: number): void {
-       // La validación de turno y estado se hace aquí dentro
-       this.registrarJugada(this.equipoEnTurno.jugador.cartasEnMano[indiceCarta], this.equipoEnTurno); // Llama a registrarJugada
-       // La lógica interna de registrarJugada valida turno y estado
-       // Si la jugada es válida, el flujo continuará automáticamente
+   /** Procesa la jugada de carta del humano */
+   public handleHumanPlayCard(carta: Naipe): void { // <-- Acepta Naipe
+    this.registrarJugada(carta, this.equipoEnTurno); // Llama a registrarJugada modificado
+    // Ya no necesita validar aquí, registrarJugada lo hace.
+    // Si la jugada es válida, el flujo continuará automáticamente.
+    // Si no es válida, registrarJugada mostrará mensaje y no continuará.
+    this.continuarFlujo(); // <--- IMPORTANTE: Continuar el flujo después de la acción humana
+}
+
+/** Procesa el canto/respuesta del humano */
+public handleHumanCanto(canto: Canto): void { // <-- Sin cambios en la firma
+    let accionValida = false;
+    // Determinar si es un canto inicial o una respuesta y si es válido
+   if (this.equipoDebeResponderEnvido === this.equipoEnTurno && this.calcularAccionesPosiblesParaRespuestaEnvido().puedeResponder.includes(canto)) {
+       this.registrarRespuesta(canto, this.equipoEnTurno);
+       accionValida = true;
+   } else if (this.equipoDebeResponderTruco === this.equipoEnTurno && this.calcularAccionesPosiblesParaRespuestaTruco().puedeResponder.includes(canto)) {
+        this.registrarRespuesta(canto, this.equipoEnTurno);
+        accionValida = true;
+   } else if (this.calcularAccionesPosiblesParaTurno().puedeCantarEnvido.includes(canto) ||
+              this.calcularAccionesPosiblesParaTurno().puedeCantarTruco.includes(canto) ||
+              (canto === Canto.IrAlMazo && this.calcularAccionesPosiblesParaTurno().puedeMazo)) {
+       this.registrarCanto(canto, this.equipoEnTurno);
+       accionValida = true;
+   } else {
+       console.warn(`Intento de canto/respuesta humano inválido: ${canto} en estado ${EstadoRonda[this.estadoRonda]}`);
+       this.callbacks.displayLog(`No puedes ${this.cantoToString(canto)} ahora.`);
+       // No continuar flujo si la acción no fue válida
+       return;
    }
 
-   public handleHumanCanto(canto: Canto): void {
-       // Determinar si es un canto inicial o una respuesta
-       if (this.equipoDebeResponderEnvido === this.equipoEnTurno && this.calcularAccionesPosiblesParaRespuestaEnvido().puedeResponder.includes(canto)) {
-           this.registrarRespuesta(canto, this.equipoEnTurno);
-       } else if (this.equipoDebeResponderTruco === this.equipoEnTurno && this.calcularAccionesPosiblesParaRespuestaTruco().puedeResponder.includes(canto)) {
-            this.registrarRespuesta(canto, this.equipoEnTurno);
-       } else if (this.calcularAccionesPosiblesParaTurno().puedeCantarEnvido.includes(canto) ||
-                  this.calcularAccionesPosiblesParaTurno().puedeCantarTruco.includes(canto) ||
-                  (canto === Canto.IrAlMazo && this.calcularAccionesPosiblesParaTurno().puedeMazo)) {
-           this.registrarCanto(canto, this.equipoEnTurno);
-       } else {
-           console.warn(`Intento de canto/respuesta humano inválido: ${canto} en estado ${EstadoRonda[this.estadoRonda]}`);
-           this.callbacks.displayLog(`No puedes ${this.cantoToString(canto)} ahora.`);
-           // No continuar flujo si la acción no fue válida
-           return;
-       }
-       // Si la acción fue válida, continuar el flujo
-       this.continuarFlujo();
+   // Si la acción fue válida, continuar el flujo
+   if(accionValida) {
+        this.continuarFlujo(); // <--- IMPORTANTE: Continuar el flujo después de la acción humana
    }
+}
 
     /** Permite a Partida actualizar el modo debug */
     public setDebugMode(activado: boolean): void {

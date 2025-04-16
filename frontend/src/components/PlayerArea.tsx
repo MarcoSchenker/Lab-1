@@ -9,7 +9,7 @@ interface PlayerAreaProps {
     cartas: Naipe[]; // Cartas en mano de este jugador
     esTurno: boolean;
     ultimoCanto: string | null; // El mensaje del último canto de este jugador
-    onCardClick: (index: number) => void; // Callback al hacer clic en una carta
+    onCardClick: (naipe : Naipe) => void; // Callback al hacer clic en una carta
     puedeJugarCarta: boolean; // Si las cartas son clickeables ahora
     imageBasePath?: string;
 }
@@ -48,8 +48,8 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
                         key={carta ? `${carta.palo}-${carta.numero}` : `dorso-${index}`} // Key única
                         carta={carta}
                         bocaAbajo={!esHumano} // IA siempre boca abajo
-                        onClick={() => esHumano && onCardClick(index)} // Solo clickeable si es humano
-                        disabled={!esHumano || !puedeJugarCarta || !esTurno} // Deshabilitada si no es humano, no puede jugar, o no es su turno
+                        onClick={() => esHumano && onCardClick(carta)} // Solo clickeable si es humano
+                        disabled={!esHumano || !puedeJugarCarta || !esTurno || !carta} // Deshabilitada si no es humano, no puede jugar, o no es su turno
                         imageBasePath={imageBasePath}
                         className={`z-${index * 10}`} // Añadir z-index para solapamiento correcto
                     />

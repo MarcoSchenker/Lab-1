@@ -79,27 +79,36 @@ export class Jugador {
     return maxPuntos;
   }
 
-  /** Registra una carta jugada por el humano (lógica de arrays) */
-  registrarCartaJugada(indice: number): Naipe | undefined {
-    if (indice >= 0 && indice < this.cartasEnMano.length) {
-        const cartaJugada = this.cartasEnMano.splice(indice, 1)[0];
-        if (cartaJugada) {
-            this.cartasJugadasRonda.push(cartaJugada);
-            return cartaJugada;
-        }
-    }
-    return undefined;
-  }
+  /** Registra una carta jugada por la IA (eliminándola de la mano) */
+  registrarCartaJugadaIA(carta: Naipe): boolean {
+    return this.registrarCartaJugadaPorObjeto(carta); // Reutilizar la nueva lógica
+}
 
-   /** Registra una carta jugada por la IA (lógica de arrays) */
-   registrarCartaJugadaIA(carta: Naipe): boolean {
-       const index = this.cartasEnMano.findIndex(c => c === carta);
-       if (index > -1) {
-           this.cartasEnMano.splice(index, 1);
-           this.cartasJugadasRonda.push(carta);
-           return true;
-       }
-       console.error(`[IA ${this.nombre}] Intentó registrar carta no encontrada en mano: ${carta.getNombre()}`);
-       return false;
-   }
+/**
+ * Busca y elimina una carta específica de la mano del jugador y la registra como jugada.
+ * @param carta El objeto Naipe a jugar.
+ * @returns `true` si la carta se encontró y se jugó, `false` en caso contrario.
+ */
+registrarCartaJugadaPorObjeto(carta: Naipe): boolean {
+    // Buscar la carta por referencia o por sus propiedades únicas (valor y palo)
+    // La comparación por referencia (===) es ideal si los objetos son los mismos.
+    const index = this.cartasEnMano.findIndex(c => c === carta);
+
+    // Si la búsqueda por referencia falla (podría pasar si el objeto se clona en algún punto),
+    // intentar buscar por valor y palo como fallback.
+    // const indexFallback = this.cartasEnMano.findIndex(c => c.valor === carta.valor && c.palo === carta.palo);
+    // const finalIndex = (index !== -1) ? index : indexFallback;
+
+    if (index > -1) {
+        // Eliminar la carta de la mano usando splice
+        this.cartasEnMano.splice(index, 1);
+        // Añadir la carta a las jugadas de la ronda
+        this.cartasJugadasRonda.push(carta);
+        console.log(`${this.nombre} jugó ${carta.getNombre()}. Mano restante: ${this.cartasEnMano.map(c=>c.getNombre()).join(', ')}`)
+        return true; // Éxito
+    } else {
+        console.error(`[${this.nombre}] Intentó jugar carta no encontrada en mano: ${carta.getNombre()}. Mano actual: ${this.cartasEnMano.map(c=>c.getNombre()).join(', ')}`);
+        return false; // Fallo
+    }
+}
 }

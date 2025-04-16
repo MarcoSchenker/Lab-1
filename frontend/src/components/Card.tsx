@@ -40,6 +40,8 @@ const Card: React.FC<CardProps> = ({
     imageBasePath = '/cartas/mazoOriginal',
 }) => {
     const esClickeable = onClick && !disabled && !bocaAbajo && carta;
+    //const esClickeable = true;
+
 
     const handleClick = () => {
         if (esClickeable) {
