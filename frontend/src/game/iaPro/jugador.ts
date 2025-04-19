@@ -1,6 +1,5 @@
 // jugador.ts
 import { Naipe } from './naipe';
-import { Palo } from './types';
 
 export class Jugador {
   public cartas: Naipe[] = [];          // Las 3 cartas iniciales de la ronda
