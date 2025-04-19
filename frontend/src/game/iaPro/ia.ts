@@ -1,8 +1,7 @@
-// ia.ts
 import { Jugador } from './jugador';
 import { Probabilidad } from './probabilidad';
 import { Naipe } from './naipe';
-import { Canto, Palo, Equipo } from './types';
+import { Canto, Equipo } from './types';
 import { Ronda } from './ronda';
 import { getRandomInt, getLast } from './utils';
 import { EnvidoContext, TrucoContext } from './ia-context'; // Asegúrate que este archivo existe y está correcto
@@ -10,8 +9,6 @@ import { EnvidoContext, TrucoContext } from './ia-context'; // Asegúrate que es
 export class IA extends Jugador {
     public prob: Probabilidad;
     public estrategiaDeJuego: (ronda: Ronda) => number; // Devuelve el índice de la carta a jugar
-
-    // Propiedades para estadísticas (equivalentes a las de JS)
     public envidoS: number[] = [];
     public revire: number[] = [];
     public realEnvido: number[] = [];
@@ -24,22 +21,12 @@ export class IA extends Jugador {
         this.estrategiaDeJuego = this.estrategiaClasica; // Estrategia por defecto
     }
 
-    // --- Métodos Helper (Traducidos de JS) ---
-
     /** Clasifica una carta en baja(0), media(1), alta(2) */
     private clasificar(carta: Naipe): number {
         if (carta.valor <= 6) return 0;      // 4, 5, 6
         else if (carta.valor <= 10) return 1; // 7s falsos, 10, 11, 12
         else return 2;                       // 1, 2, 3, 7s verdaderos, Anchos
     }
-
-    /**
-     * Elige la carta mas baja(0) o la mas alta(1) segun los datos.
-     * @param orden 0: busca la más baja; 1: busca la más alta (o la más baja que mate a cartaComparar).
-     * @param cartaComparar Carta del oponente a la que se intenta matar (si orden es 1).
-     * @param claseC Filtra por clase de carta (0: baja, 1: media, 2: alta).
-     * @returns El índice de la carta elegida en cartasEnMano, o -1 si no se encuentra.
-     */
     private elegir(orden: 0 | 1, cartaComparar: Naipe | null = null, claseC?: 0 | 1 | 2): number {
         let indice = -1;
         let valor = (orden === 0) ? 99 : (cartaComparar === null ? -1 : 99); // Valor inicial para comparación
@@ -87,19 +74,7 @@ export class IA extends Jugador {
 
         return indice;
     }
-
-    /**
-     * Determina si la IA ganó(>0), perdió(<0) o empató(0) una mano específica.
-     * Adaptado para usar el contexto TrucoContext en lugar de _rondaActual global.
-     */
     private gane(nroMano: number, contexto: TrucoContext): number {
-        // Necesitamos las cartas jugadas en esa mano específica. El contexto TrucoContext
-        // no tiene directamente el historial completo de cartas jugadas por mano de forma simple.
-        // Se podría añadir al contexto, o calcularlo aquí si la Ronda lo permite.
-        // *** SOLUCIÓN TEMPORAL: Asumir que la Ronda tiene acceso a las cartas jugadas por mano ***
-        // Esto requiere modificar TrucoContext o pasar la Ronda. Por ahora, simulamos:
-        // const cartaIA = contexto.cartasJugadasIA[nroMano]; // Necesitaría esta propiedad
-        // const cartaOp = contexto.cartasJugadasOponente[nroMano]; // Necesitaría esta propiedad
 
         // *** SOLUCIÓN ALTERNATIVA: Usar resultadosMano0 y resultadoMano1 del contexto ***
         if (nroMano === 0) return contexto.resultadoMano0;
@@ -141,30 +116,6 @@ export class IA extends Jugador {
         return indice;
     }
 
-    /** Determina si tengo al menos una carta más baja que la carta del oponente. */
-    private masBaja(cartaOp: Naipe): boolean {
-        for (const cartaMano of this.cartasEnMano) {
-            if (cartaOp.valor > cartaMano.valor) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Calcula los puntos en juego actualmente en el Truco y cuál sería el siguiente canto. */
-    private ptoEnJuego(ultimo: Canto | null): { now: number; next: Canto | ''; pnext: number } {
-        switch (ultimo) {
-            case Canto.Truco:
-                return { now: 2, next: Canto.ReTruco, pnext: 3 };
-            case Canto.ReTruco:
-                return { now: 3, next: Canto.ValeCuatro, pnext: 4 };
-            case Canto.ValeCuatro:
-                return { now: 4, next: '', pnext: 4 }; // No hay siguiente canto
-            default: // No se cantó nada o es un estado inválido aquí
-                return { now: 1, next: Canto.Truco, pnext: 2 }; // La ronda vale 1, el siguiente es Truco
-        }
-    }
-
    /**
  * Lleva estadistica de los cantos de envido del oponente cuando el envido fue querido.
  * @param historialCantos El historial completo de cantos de envido de la ronda.
@@ -179,18 +130,12 @@ public statsEnvido(historialCantos: { canto: Canto; equipo: Equipo }[], puntosEn
     let ultimoCantoOponente: Canto | null = null;
     for (let i = historialCantos.length - 1; i >= 0; i--) {
         const item = historialCantos[i];
-        // Verificar si el canto fue del oponente (no de esta IA)
-        // Necesitamos una forma de comparar equipos/jugadores. Asumiendo que tenemos acceso a `this.equipo` o similar.
-        // O mejor, que Ronda pase el equipo Oponente.
-        // Forma simple (asumiendo 1v1): si no es la IA, es el oponente.
         const equipoOponente = historialCantos.find(h => h.equipo.jugador !== this)?.equipo; // Encuentra el equipo oponente
         if (equipoOponente && item.equipo === equipoOponente && !this.esRespuesta(item.canto)) {
              ultimoCantoOponente = item.canto;
              break;
         }
     }
-
-
     if (ultimoCantoOponente) {
          switch (ultimoCantoOponente) {
              case Canto.Envido:
@@ -207,10 +152,6 @@ public statsEnvido(historialCantos: { canto: Canto; equipo: Equipo }[], puntosEn
                  break;
          }
     } else {
-        // Si el oponente solo dijo "Quiero" (IA cantó primero), ¿qué estadística guardamos?
-        // JS no parecía cubrir este caso explícitamente. Podríamos guardar en envidoS por defecto.
-        // O podríamos decidir no guardar nada si el oponente no hizo un canto propio.
-        // Por ahora, no guardamos si el oponente solo aceptó.
         console.warn(`[statsEnvido] No se encontró un canto explícito del oponente en el historial.`);
     }
 }
@@ -219,164 +160,234 @@ public statsEnvido(historialCantos: { canto: Canto; equipo: Equipo }[], puntosEn
 private esRespuesta(canto: Canto): boolean {
     return canto === Canto.Quiero || canto === Canto.NoQuiero;
 }
-
-
-    // --- Decisión ENVIDO (Lógica JS Adaptada a TS y Contexto) ---
-    public envido(contexto: EnvidoContext): Canto { // Ahora recibe el contexto completo
-    
-        // Determinar si IA está respondiendo o iniciando el canto
-        // Original en envido() dentro de ia.ts
-        // const ultimoCanto = contexto.historialEnvido?.findLast(c => !this.esRespuesta(c.canto));
-
-        // Alternativa
+    public envido(contexto: EnvidoContext): Canto {
+        console.log(`[IA ${this.nombre}] envido() contexto:`, contexto);
         const cantosNoRespuesta = contexto.historialEnvido?.filter(c => !this.esRespuesta(c.canto));
         const ultimoCanto = cantosNoRespuesta && cantosNoRespuesta.length > 0 ? cantosNoRespuesta[cantosNoRespuesta.length - 1] : undefined;
         const iaDebeResponder = ultimoCanto?.equipo !== contexto.equipoIA && ultimoCanto !== undefined;
-    
-    
+
         if (iaDebeResponder) { // Respondiendo
-            return this.decidirRespuestaEnvido(contexto);
-        } else { // Iniciando o continuando un canto propio (si aplica)
-            return this.decidirCantoEnvidoInicial(contexto);
+            const r = this.decidirRespuestaEnvido(contexto);
+            console.log(`[IA ${this.nombre}] decide responder envido con:`, r);
+            return r;
+        } else {
+            const r = this.decidirCantoEnvidoInicial(contexto);
+            console.log(`[IA ${this.nombre}] decide cantar envido con:`, r);
+            return r;
         }
     }
     
     private decidirCantoEnvidoInicial(contexto: EnvidoContext): Canto {
         const { misPuntosEnvido, cartaVistaOponente, probabilidad, statsEnvidoOponente, equipoIA, oponente, limitePuntaje, esIAManoDeRonda } = contexto;
-        const p1 = oponente.puntos; const p2 = equipoIA.puntos; const diff = p1 - p2;
-        const posibleModificador = probabilidad.evaluarCartaVista(cartaVistaOponente); // Usar evaluarCartaVista
-        const valor = probabilidad.ponderarPuntos(misPuntosEnvido);
-        const ran = getRandomInt(0, 100);
+        const p1 = oponente.puntos;
+        const p2 = equipoIA.puntos;
+        const diff = p1 - p2; // Positivo: IA pierde, Negativo: IA gana
+        const valorConfianza = probabilidad.ponderarPuntos(misPuntosEnvido); // 0 a 1, qué tan buenos son los puntos
+        const ran = getRandomInt(0, 100); // Mantener para variabilidad
     
-        // Lógica especial cerca del final
-        if (p2 >= limitePuntaje - 2) {
-            // JS usaba this.envidoS (propio). ¿Debería usar el historial del oponente aquí?
-            // La lógica original parece defensiva: si el oponente suele tener poco, canto falta.
-            const pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.envidoS);
-            const pHistorialFactor = pHistorialOponente === null ? 0 : -(15 - pHistorialOponente);
-             // Ajustar la condición original JS (ran + diff < valor * 100) con el factor historial?
-             // Por ahora, mantenemos la versión simple de TS:
-            if (ran + diff < valor * 100) return Canto.FaltaEnvido;
-            else return Canto.Paso;
+        // --- Modificadores ---
+        // 1. Modificador por carta vista (más impacto)
+        // Asumamos que evaluarCartaVista devuelve: >0 si la carta vista es MALA para el envido del oponente, <0 si es BUENA, 0 si neutra/no vista.
+        const modCartaVista = probabilidad.evaluarCartaVista(cartaVistaOponente) * 1.5; // Amplificar impacto
+    
+        // 2. Modificador por agresividad según puntaje
+        let modAgresividad = 0;
+        if (diff > 5) modAgresividad = 10; // Más agresivo si pierde por > 5
+        else if (diff > 0) modAgresividad = 5; // Ligeramente más agresivo si pierde
+        else if (diff < -10) modAgresividad = -15; // Más conservador si gana por mucho
+        else if (diff < -5) modAgresividad = -10; // Ligeramente más conservador si gana
+    
+        // 3. Modificador por historial (si el oponente acepta/rechaza mucho) - *Requiere stats adicionales*
+        // const modHistorial = calcularModHistorial(statsEnvidoOponente); // Futuro
+    
+        // --- Lógica de Decisión ---
+    
+        // Farol Básico (siendo mano, baja probabilidad)
+        if (esIAManoDeRonda && misPuntosEnvido < 23 && getRandomInt(0, 100) < 5 + (diff > 5 ? 5 : 0) /* Más chance si pierde */) {
+             console.log(`[IA ${this.nombre}] Bluffing Envido!`);
+             return Canto.Envido;
         }
     
-        // Lógica normal para iniciar
-        if (!esIAManoDeRonda) { // Soy pie (oponente jugó carta O podría haberla jugado)
-             if (misPuntosEnvido > 28) {
-                  // Usar statsEnvidoOponente
-                 const pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.envidoS.concat(statsEnvidoOponente.revire, statsEnvidoOponente.realEnvido));
-                 if (pHistorialOponente === null || pHistorialOponente < misPuntosEnvido) {
-                     return (misPuntosEnvido > 30) ? Canto.RealEnvido : Canto.Envido; // JS era más agresivo con R
+        // Lógica cerca del final (mantener, es crucial)
+        if (p2 >= limitePuntaje - 3) { // Umbral un poco más amplio (3)
+            const pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente?.envidoS ?? []);
+            const umbralFalta = 60 - modAgresividad + (pHistorialOponente ? (30 - pHistorialOponente) : 0); // Combinar factores
+            if (valorConfianza * 100 + ran / 2 > umbralFalta && misPuntosEnvido > 26) { // Necesita puntos decentes
+                 return Canto.FaltaEnvido;
+            }
+             // Si no canta Falta, no canta nada más para no arriesgarse a perder tontamente
+             return Canto.Paso;
+        }
+    
+        // --- Lógica Normal ---
+        let umbralCanto = 50; // Base
+        if (esIAManoDeRonda) {
+            umbralCanto -= 5; // Ligeramente más propenso a cantar si es mano
+        } else {
+            umbralCanto += 5; // Ligeramente menos propenso si es pie
+        }
+    
+        // Ajustar umbral con modificadores
+        umbralCanto -= modAgresividad;
+        umbralCanto -= modCartaVista;
+        // umbralCanto -= modHistorial; // Futuro
+    
+        // Calcular la decisión final
+        const puntajePonderado = valorConfianza * 100 + ran / 3; // Reducir un poco el impacto del random puro
+    
+        if (puntajePonderado > umbralCanto) {
+            // Decidir qué cantar basado en los puntos
+            if (misPuntosEnvido >= 30) {
+                // Evaluar Real Envido vs Envido
+                const pHistorialOponenteRE = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.realEnvido);
+                // Cantar Real si los puntos son muy altos O si el oponente tiende a tener menos en RE
+                 if (misPuntosEnvido >= 31 || (pHistorialOponenteRE !== null && pHistorialOponenteRE < misPuntosEnvido)) {
+                     return Canto.RealEnvido;
                  } else {
-                     return (misPuntosEnvido > 30) ? Canto.RealEnvido : Canto.Envido; // JS era R siempre si pHistorial >= puntos
-                     // Mantener adaptación TS por ahora: R con 31+, E con 29-30
+                     return Canto.Envido; // Empezar con Envido aunque tenga 31-32 si el rival parece fuerte
                  }
-             } else {
-                 if (cartaVistaOponente && cartaVistaOponente.puntosEnvido >= misPuntosEnvido && misPuntosEnvido < 7) return Canto.Paso;
-                 // JS: if (ran + posible + diff < valor * 100 ) return 'E';
-                 // Adaptación TS: usar posibleModificador
-                 if (ran + posibleModificador - diff < valor * 100) return Canto.Envido; // Usar +/- según si modificador es positivo/negativo? JS sumaba siempre.
-                 else return Canto.Paso;
-             }
-        } else { // Soy mano
-             // JS: if (ran + posible < valor * 100 ) return 'E'; -> No usaba diff si era mano? Revisar JS.
-             // gitia.js, linea 496: if (ran + posible < valor * 100 ) return 'E'; -> Correcto, no usa diff si es mano.
-             if (ran + posibleModificador < valor * 100) return Canto.Envido; // Usar posibleModificador
-             else return Canto.Paso;
+            } else if (misPuntosEnvido >= 27) {
+                 return Canto.Envido;
+            } else {
+                 // Cantó por debajo de 28 debido a modificadores (agresividad, carta vista, random)
+                 if (puntajePonderado > umbralCanto + 10) { // Solo si la confianza es relativamente alta a pesar de puntos bajos
+                     return Canto.Envido;
+                 } else {
+                     return Canto.Paso; // No cantar si apenas supera el umbral con puntos < 28
+                 }
+            }
+        } else {
+             return Canto.Paso;
         }
     }
     
     private decidirRespuestaEnvido(contexto: EnvidoContext): Canto {
+        console.log(`[IA ${this.nombre}] decidirRespuestaEnvido: contexto=`, contexto, "decisión=", /* tu decisión aquí */);
         const { misPuntosEnvido, ultimoCantoEnvido, puntosEnvidoAcumulados, puntosSiNoQuiero, cartaVistaOponente, probabilidad, statsEnvidoOponente, equipoIA, oponente, limitePuntaje } = contexto;
     
-        if (!ultimoCantoEnvido) return Canto.Paso; // No debería pasar
+        if (!ultimoCantoEnvido) return Canto.Paso; // Seguridad
     
-        const p1 = oponente.puntos; const p2 = equipoIA.puntos; const diff = p1 - p2;
+        const p1 = oponente.puntos;
+        const p2 = equipoIA.puntos;
+        const diff = p1 - p2; // Positivo: IA pierde, Negativo: IA gana
         const loQueFalta = limitePuntaje - Math.max(p1, p2);
-        const posibleModificador = probabilidad.evaluarCartaVista(cartaVistaOponente); // Usar evaluarCartaVista
-        const valor = probabilidad.ponderarPuntos(misPuntosEnvido);
-        let ran = getRandomInt(0, 100);
+        const valorConfianza = probabilidad.ponderarPuntos(misPuntosEnvido); // 0-1
+        const ran = getRandomInt(0, 100); // Variabilidad
     
-        // Lógica especial cerca del final (como en JS)
-        if (p2 >= limitePuntaje - 2) {
-             return Canto.FaltaEnvido;
-        }
+        // --- Modificadores ---
+        const modCartaVista = probabilidad.evaluarCartaVista(cartaVistaOponente); // Más directo que antes?
+        let modAgresividad = 0; // Igual que en Canto Inicial
+        if (diff > 5) modAgresividad = 10;
+        else if (diff > 0) modAgresividad = 5;
+        else if (diff < -10) modAgresividad = -15;
+        else if (diff < -5) modAgresividad = -10;
     
-        // Usar puntosSiNoQuiero del contexto
-        // JS: if (puntos <= 7) return 'N' ; --> Mantener, pero chequear Falta Envido
-        if (misPuntosEnvido <= 7 && ultimoCantoEnvido !== Canto.FaltaEnvido) return Canto.NoQuiero;
-    
-        // JS: if (p2 > p1 && acumulado > loQueFalta && puntosNoQuerido > loQueFalta && ultimo !== 'F') return 'F';
-        // Usar puntosEnvidoAcumulados (puntos si quiero) y puntosSiNoQuiero
-        if (p2 > p1 && puntosEnvidoAcumulados > loQueFalta && puntosSiNoQuiero > loQueFalta && ultimoCantoEnvido !== Canto.FaltaEnvido) {
-             return Canto.FaltaEnvido;
-        }
-    
-        // JS: if (acumulado > loQueFalta && p2 > p1 && ultimo !== 'F') { ... } -> Considerar Falta
-        if (puntosEnvidoAcumulados > loQueFalta && p2 > p1 && ultimoCantoEnvido !== Canto.FaltaEnvido) {
-             // Usar statsEnvidoOponente
-             const pHistorialOponenteRE = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.realEnvido.concat(statsEnvidoOponente.envidoS, statsEnvidoOponente.revire));
-             const pREFactor = pHistorialOponenteRE === null ? 0 : -(15 - pHistorialOponenteRE);
-             // JS: if(ran + posible + diff + acumulado + pRE < valor * 100) return 'F'; -> 'acumulado' era nro cantos?
-             // Adaptación TS: Usamos puntosEnvidoAcumulados. ¿Ponderar el factor?
-             if (ran + posibleModificador - diff + puntosEnvidoAcumulados + pREFactor < valor * 100) return Canto.FaltaEnvido;
-        }
-    
-        // JS: if (puntosNoQuerido + p1 > 30) return 'S'; -> Acepto si no querer me hace perder
-        if (puntosSiNoQuiero + p1 >= limitePuntaje) return Canto.Quiero;
-    
-    
+        // Modificador basado en historial del oponente para ESTE canto específico
         let pHistorialOponente: number | null = null;
-        let pHistorialFactor = 0;
-    
+        let modHistorial = 0;
         switch (ultimoCantoEnvido) {
             case Canto.Envido:
-                // Usar statsEnvidoOponente
                 pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.envidoS);
-                pHistorialFactor = pHistorialOponente === null ? 0 : -(15 - pHistorialOponente);
-                // JS: if (ran + posible + diff + acumulado + pRE < valor * 100) -> acumulado = 1?
-                // Adaptación TS: usar puntos acumulados (serían 2 si quiero).
-                 if (ran + posibleModificador - diff + puntosEnvidoAcumulados + pHistorialFactor < valor * 100) {
-                     return (misPuntosEnvido >= 30) ? Canto.EnvidoEnvido : Canto.Quiero;
-                } else {
-                     return (misPuntosEnvido >= 30) ? Canto.Quiero : Canto.NoQuiero;
-                }
-            case Canto.EnvidoEnvido: // Asume vino de E -> EE
-                 if (misPuntosEnvido >= 30) ran = 0; // Mantener lógica JS?
-                 // Usar statsEnvidoOponente
-                 pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.revire.concat(statsEnvidoOponente.envidoS));
-                 pHistorialFactor = pHistorialOponente === null ? 0 : -(15 - pHistorialOponente);
-                 // JS: if (ran + posible + diff + acumulado + pRE < valor * 100) -> acumulado = 2?
-                 // Adaptación TS: Puntos si quiero serían 4.
-                 if (ran + posibleModificador - diff + puntosEnvidoAcumulados + pHistorialFactor < valor * 100) {
-                     return Canto.Quiero;
-                 } else {
-                     return Canto.NoQuiero;
-                 }
+                break;
+            case Canto.EnvidoEnvido: // Asume vino de E->EE
+                pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.revire.concat(statsEnvidoOponente.envidoS)); // Combinar?
+                break;
             case Canto.RealEnvido:
-                 if (misPuntosEnvido >= 31) ran = 0; // Mantener lógica JS?
-                  // Usar statsEnvidoOponente
-                 pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.realEnvido.concat(statsEnvidoOponente.envidoS, statsEnvidoOponente.revire));
-                 pHistorialFactor = pHistorialOponente === null ? 0 : -(15 - pHistorialOponente);
-                 // JS: if (ran + posible + diff + acumulado * 2 + pRE * 2 < valor * 100) -> acumulado = 1 o 2? pRE * 2?
-                 // Adaptación TS: Puntos si quiero serían 3 (si vino de E->R) o 5 (E->EE->R?). Ponderar más.
-                 if (ran + posibleModificador - diff + (puntosEnvidoAcumulados * 1.5) + (pHistorialFactor * 1.5) < valor * 100) {
-                      return Canto.Quiero;
-                 } else {
-                      return Canto.NoQuiero;
-                 }
+                pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.realEnvido.concat(statsEnvidoOponente.envidoS, statsEnvidoOponente.revire));
+                break;
             case Canto.FaltaEnvido:
-                 // JS: if (ran + posible + diff + acumulado * 2 < valor * 100) -> acumulado nro cantos?
-                 // Adaptación TS: Puntos si quiero son la falta. Ponderar mucho.
-                 if (ran + posibleModificador - diff + (puntosEnvidoAcumulados * 2) < valor * 100) {
-                     return Canto.Quiero;
-                 } else {
-                     return Canto.NoQuiero;
+                 pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.faltaEnvido); // Podría incluir todo?
+                 break;
+        }
+        if (pHistorialOponente !== null) {
+            // Si la mediana del oponente es alta, tener menos confianza; si es baja, tener más.
+            // Ajustar el valor (p.ej., 28 como punto medio). Escala de +/- 15
+            modHistorial = Math.max(-15, Math.min(15, (28 - pHistorialOponente)));
+        }
+    
+        // --- Decisiones Críticas ---
+    
+        // 1. ¿Aceptar me hace perder el partido si el oponente gana el envido? Si es así, y tengo puntos MUY malos, quizás rechazar sea mejor que aceptar sí o sí.
+        if (p2 + puntosSiNoQuiero < limitePuntaje && p1 + puntosEnvidoAcumulados >= limitePuntaje) {
+             if (misPuntosEnvido < 24 && valorConfianza < 0.2) { // Solo si mis puntos son realmente bajos
+                 console.log(`[IA ${this.nombre}] Evitando perder por Envido aunque no querer me complique.`);
+                 return Canto.NoQuiero;
+             }
+        }
+        // 2. ¿No querer hace que el oponente gane? Si es así, DEBO aceptar (salvo el caso anterior extremo).
+        if (p1 + puntosSiNoQuiero >= limitePuntaje) {
+            // ¿Debería considerar cantar Falta aquí si tengo buenos puntos y p2 también está cerca?
+            if (p2 > p1 && puntosEnvidoAcumulados > loQueFalta && misPuntosEnvido >=30 && ultimoCantoEnvido !== Canto.FaltaEnvido) {
+                 console.log(`[IA ${this.nombre}] Contra-atacando con Falta Envido forzado.`);
+                 return Canto.FaltaEnvido; // Oportunidad de ganar todo
+            }
+             console.log(`[IA ${this.nombre}] Aceptando forzado para no perder.`);
+             return Canto.Quiero; // Aceptar para seguir en juego
+        }
+         // 3. Lógica de Falta Envido cerca del final (similar a la original, pero integrada)
+         if (p2 > p1 && puntosEnvidoAcumulados > loQueFalta && puntosSiNoQuiero < loQueFalta && ultimoCantoEnvido !== Canto.FaltaEnvido) {
+             // Si gano el partido queriendo, pero no lo gano no queriendo, y voy ganando la partida...
+             // Evaluar si vale la pena cantar Falta Envido. Necesito buenos puntos.
+             const umbralFalta = 75 - modAgresividad; // Necesita alta confianza para escalar a Falta
+             if (valorConfianza * 100 + ran / 2 + modHistorial > umbralFalta && misPuntosEnvido > 29) {
+                 console.log(`[IA ${this.nombre}] Cantando Falta Envido para ganar.`);
+                 return Canto.FaltaEnvido;
+             }
+             // Si no, simplemente aceptar para ganar.
+             console.log(`[IA ${this.nombre}] Aceptando para ganar el partido.`);
+             return Canto.Quiero;
+         }
+    
+    
+        // --- Decisión Principal: Aceptar, Rechazar o Subir ---
+    
+        // Calcular un umbral de aceptación base
+        let umbralAceptar = 50; // Punto de partida neutro
+    
+        // Ajustar umbral base según el canto (más alto para cantos más caros)
+        switch (ultimoCantoEnvido) {
+            case Canto.EnvidoEnvido: umbralAceptar += 5; break;
+            case Canto.RealEnvido: umbralAceptar += 10; break;
+            case Canto.FaltaEnvido: umbralAceptar += 20; break; // Mucho más cauto para aceptar Falta
+        }
+    
+        // Aplicar modificadores al umbral
+        umbralAceptar -= modAgresividad; // Más agresividad baja el umbral
+        umbralAceptar -= modCartaVista; // Vista mala del rival baja el umbral
+        umbralAceptar -= modHistorial; // Historial bajo del rival baja el umbral
+    
+        // Calcular la confianza final
+        const confianzaFinal = valorConfianza * 100 + ran / 3; // Ponderar random
+    
+        // Decidir
+        if (confianzaFinal >= umbralAceptar) {
+            // Decidió ACEPTAR o SUBIR
+            // ¿Subir la apuesta?
+            if (ultimoCantoEnvido === Canto.Envido) {
+                if (misPuntosEnvido >= 30) { // Umbral alto para Real directo
+                    const umbralSubirReal = 80 - modAgresividad;
+                    if (confianzaFinal > umbralSubirReal) {
+                         console.log(`[IA ${this.nombre}] Respondiendo Envido con Real Envido!`);
+                         return Canto.RealEnvido;
+                    }
+                }
+                 if (misPuntosEnvido >= 29) { // Umbral para EnvidoEnvido
+                     const umbralSubirEE = 70 - modAgresividad;
+                     if (confianzaFinal > umbralSubirEE) {
+                         console.log(`[IA ${this.nombre}] Respondiendo Envido con Envido Envido!`);
+                         return Canto.EnvidoEnvido;
+                     }
                  }
-            default: return Canto.NoQuiero;
+            }
+             // Si no sube, acepta.
+             console.log(`[IA <span class="math-inline">\{this\.nombre\}\] Decision\: Quiero \[</span>{ultimoCantoEnvido}] (Conf: ${confianzaFinal.toFixed(1)} vs Umbral: ${umbralAceptar.toFixed(1)})`);
+             return Canto.Quiero;
+        } else {
+             // Decidió RECHAZAR
+             console.log(`[IA <span class="math-inline">\{this\.nombre\}\] Decision\: No Quiero \[</span>{ultimoCantoEnvido}] (Conf: ${confianzaFinal.toFixed(1)} vs Umbral: ${umbralAceptar.toFixed(1)})`);
+             return Canto.NoQuiero;
         }
     }
-
 
     // --- Decisión TRUCO (Traducción Fiel JS Mantenida con Ajustes Contexto) ---
     public truco(resp: boolean, contexto: TrucoContext): Canto {
@@ -964,22 +975,9 @@ private esRespuesta(canto: Canto): boolean {
              }
          }
     }
-    // ia.ts (o desarrolloia.ts)
 
     // --- Método Principal para Jugar Carta ---
     public jugarCarta(ronda: Ronda): Naipe { // Recibe la ronda actual
-
-        // Determinar si se debe cambiar la estrategia (basado en la lógica de truco JS)
-        // Ejemplo simplificado (la lógica original en JS estaba más dispersa):
-        // const contextoTruco = ronda.crearContextoTruco(this); // Necesitamos un método en Ronda para esto
-        // if (contextoTruco.nroMano === 1 && contextoTruco.resultadoMano0 > 0) {
-        //     // Si gané primera, podría aplicar estrategia1
-        //     // La lógica original la activaba DENTRO de truco, revisar si es mejor aquí
-        // } else {
-        //     this.estrategiaDeJuego = this.estrategiaClasica; // Volver a la clásica por defecto
-        // }
-
-        // Llama a la estrategia actual para obtener el ÍNDICE
         const indice = this.estrategiaDeJuego(ronda); // Pasar la ronda a la estrategia
 
         if (indice < 0 || indice >= this.cartasEnMano.length) {
@@ -993,9 +991,6 @@ private esRespuesta(canto: Canto): boolean {
         }
 
         const carta = this.cartasEnMano[indice];
-
-        // Registrar la carta jugada (eliminarla de la mano y añadirla a jugadas)
-        // La lógica original de JS hacía splice directo. Usaremos el método heredado.
         const registrada = this.registrarCartaJugadaIA(carta);
         if (!registrada) {
             // Esto no debería pasar si el índice es válido
@@ -1006,102 +1001,126 @@ private esRespuesta(canto: Canto): boolean {
              return cartaFallback;
         }
 
-
-        // Log (esto podría hacerlo Ronda o UIHandler)
-        // console.log(`[IA ${this.nombre}] Juega: ${carta.getNombre()}`);
-
         return carta;
     }
-
-    // --- Estrategias (Traducción de JS) ---
-
-    /** Estrategia Clásica: Lógica por defecto */
-    private estrategiaClasica(ronda: Ronda): number {
-        const equipoIA = ronda.getEquipo(this);
-        if (!equipoIA) throw new Error("No se encontró el equipo de la IA en la ronda.");
-        const oponente = ronda.getOponente(equipoIA);
-
-        // Ajuste: Determinar si soy el primero en jugar en esta mano
-        const esPrimeroEnMano = ronda.jugadasEnMano === 0 || ronda.jugadasEnMano === equipoIA.jugador.cartasJugadasRonda.length;
-        const nroManoActual = ronda.numeroDeMano;
-        let cartaOponenteMano: Naipe | undefined;
-
-        // Obtener carta del oponente si ya jugó en esta mano
-        if (!esPrimeroEnMano && oponente.jugador.cartasJugadasRonda.length > equipoIA.jugador.cartasJugadasRonda.length) {
-            cartaOponenteMano = getLast(oponente.jugador.cartasJugadasRonda);
-        }
-
-        let indice = -1;
-        const clasif = this.clasificarCartas(this.cartasEnMano);
-
-        if (cartaOponenteMano) { // Oponente ya jugó en esta mano
-            indice = this.elegir(1, cartaOponenteMano); // Busca la más chica que mate
-            if (indice < 0) {
-                indice = this.elegir(0); // No puedo matar, juego la más baja
-            } else {
-                const cartaQueMata = this.cartasEnMano[indice];
-                if (nroManoActual === 0 && cartaQueMata.valor >= 11 && cartaOponenteMano.valor <= 7) {
-                    // Heurística mano 0: Guardo carta alta si mato a una baja
-                    const indiceBaja = this.elegir(0); // Intentar jugar la más baja
-                    if (indiceBaja !== -1) indice = indiceBaja; // Jugar la baja si existe
-                }
-            }
-        } else { // Soy primero en jugar en esta mano (o el oponente no ha jugado aún)
-            switch (nroManoActual) {
-                case 0: // Primera mano
-                    if (clasif.alta >= 2) {
-                        indice = this.elegir(0); // Tengo >=2 Altas, juego la más baja
-                    } else if (clasif.alta >= 1) {
-                        indice = this.elegir(1, null, 1); // Tengo 1 Alta, juego la más alta de las Medias
-                        if (indice < 0) indice = this.elegir(1, null, 0); // Si no hay Medias, juego la más alta de las Bajas
-                        if (indice < 0) indice = this.elegir(1); // Fallback si solo queda la alta
-                    } else {
-                        indice = this.elegir(1); // No tengo Altas, juego la más alta que tenga
-                    }
-                    break;
-                case 1: // Segunda mano
-                    // Comparar manos ganadas hasta ahora
-                    const manosIA = equipoIA.manosGanadasRonda; // Necesita esta propiedad en Equipo
-                    const manosOp = oponente.manosGanadasRonda; // Necesita esta propiedad en Equipo
-
-                    if (manosIA > manosOp) { // Gané primera
-                        indice = this.elegir(0); // Juego la más baja
-                    } else { // Perdí o empardé primera
-                        indice = this.elegir(1); // Juego la más alta
-                    }
-                    break;
-                case 2: // Tercera mano
-                    indice = 0; // Solo queda una carta
-                    break;
-            }
-        }
-
-        // Fallback final
-        if (indice === -1 && this.cartasEnMano.length > 0) {
-            console.warn(`[IA ${this.nombre}] Estrategia Clásica no pudo decidir. Jugando índice 0.`);
-            indice = 0;
-        } else if (indice === -1 && this.cartasEnMano.length === 0) {
-            throw new Error(`[IA ${this.nombre}] Error en estrategia: No hay cartas en mano y el índice es -1.`);
-        }
-
-        return indice;
+ private estrategiaClasica(ronda: Ronda): number { // Cambiamos el tipo de retorno a number
+    // 1. Verificación inicial: ¿Tenemos cartas?
+    if (this.noTieneCartas()) {
+        console.warn(`[IA ${this.nombre}] Estrategia Clásica: No hay cartas en mano.`);
+        return -1; // Devolvemos -1 si no hay cartas. Otra opción es lanzar un error.
+        // throw new Error(`[IA ${this.nombre}] Error: No hay cartas en mano.`);
     }
 
-    /** Estrategia 1: Usada en circunstancias específicas (ganar primera mano) */
-    private estrategia1(ronda: Ronda): number { // Recibe la ronda
-        // Esta estrategia se activaba en JS dentro de truco() si ganaba primera.
-        // Su lógica principal parece ser jugar la carta más alta si tiene una baja y una media.
-        const clasif = this.clasificarCartas(this.cartasEnMano);
+    // 2. Obtener información relevante de la ronda y nuestras cartas
+    const mano = this.esMano(ronda);
+    const cartaOpuesta = this.getCartaOpuesta(ronda);
+    const clasificacionCartas = this.clasificarCartas(this.cartasEnMano);
+    const ultimoCantoTruco = this.getUltimoCantoTruco(ronda);
+    const infoRonda = this.getInfoRonda(ronda); // Información de la ronda
 
-        // JS: if(clasif.baja === 1 && clasif.media === 1){ return (this.cartasEnMano[0].valor < this.cartasEnMano[1].valor) ? 1 : 0; }
-        if (this.cartasEnMano.length === 2 && clasif.baja === 1 && clasif.media === 1) {
-            // Si tengo exactamente una baja y una media, juego la media (la más alta)
-            return (this.cartasEnMano[0].valor < this.cartasEnMano[1].valor) ? 1 : 0; // Devuelve índice de la de mayor valor
+    // 3. Determinar el índice de la carta a jugar
+    let indice = this.determinarIndiceCarta(mano, cartaOpuesta, clasificacionCartas, ronda, ultimoCantoTruco, infoRonda);
+
+    // 4. Validación final del índice
+    indice = this.validarIndice(indice);
+
+    return indice;
+}
+
+// --- Métodos Helper ---
+
+private noTieneCartas(): boolean {
+    return this.cartasEnMano.length === 0;
+}
+
+private esMano(ronda: Ronda): boolean {
+    return ronda.equipoMano.jugador === this;
+}
+
+private getCartaOpuesta(ronda: Ronda): Naipe | null {
+    // Si no somos Mano, obtenemos la carta jugada por Mano en esta mano
+    return !this.esMano(ronda) ? ronda.getCartasMesa()[ronda.jugadasEnMano * 2] : null;
+}
+
+private getUltimoCantoTruco(ronda: Ronda): Canto | undefined {
+    // Obtiene el último canto de Truco no respondido
+    return getLast(ronda.trucoHandler.cantosTruco.filter(c => !this.esRespuesta(c.canto)))?.canto;
+}
+
+private getInfoRonda(ronda: Ronda): { manosGanadasPropias: number; manosGanadasOponente: number; manosRestantes: number } {
+    // Recopila información sobre el estado de la ronda
+    const manosGanadasPropias = ronda.getManosGanadas(this);
+    const manosGanadasOponente = ronda.getManosGanadas(ronda.getOtroJugador(this));
+    const manosRestantes = 3 - ronda.numeroDeMano; // Asumiendo 3 manos por ronda
+    return { manosGanadasPropias, manosGanadasOponente, manosRestantes };
+}
+
+private determinarIndiceCarta(
+    mano: boolean,
+    cartaOpuesta: Naipe | null,
+    clasificacion: { baja: number; media: number; alta: number },
+    ronda: Ronda,
+    ultimoCantoTruco: Canto | undefined,
+    infoRonda: { manosGanadasPropias: number; manosGanadasOponente: number; manosRestantes: number }
+): number {
+    let indice = -1;
+
+    if (mano) {
+        // Estrategia para cuando somos Mano
+        indice = this.estrategiaMano(clasificacion, infoRonda);
+    } else {
+        // Estrategia para cuando somos Pie
+        indice = this.estrategiaPie(cartaOpuesta, clasificacion, infoRonda);
+
+        // Considerar estrategia de Truco (puede sobreescribir la elección anterior)
+        const indiceTruco = this.estrategiaTruco(ronda, ultimoCantoTruco, clasificacion);
+        if (indiceTruco !== undefined) {
+            indice = indiceTruco;
         }
+    }
 
-        // JS: return this.estrategiaClasica();
-        // Si no se cumple la condición, usa la estrategia clásica
-        return this.estrategiaClasica(ronda);
+    return indice;
+}
+
+private estrategiaMano(clasificacion: { baja: number; media: number; alta: number }, infoRonda: { manosGanadasPropias: number; manosGanadasOponente: number; manosRestantes: number }): number {
+    // Estrategia de Mano: Considera las manos restantes
+    if (clasificacion.alta > 0 && infoRonda.manosRestantes > 1) {
+        return this.elegir(1); // Si quedan manos, arriesgamos con la más alta
+    } else {
+        return this.elegir(0); // Si no, vamos a lo seguro con la más baja
     }
 }
-// --- Fin Implementación Helpers Cantar/Escalar Truco (Traducción JS) ---
+
+private estrategiaPie(cartaOpuesta: Naipe | null, clasificacion: { baja: number; media: number; alta: number }, infoRonda: { manosGanadasPropias: number; manosGanadasOponente: number; manosRestantes: number }): number {
+    if (cartaOpuesta) {
+        const indiceMato = this.laMato(cartaOpuesta);
+        if (indiceMato !== -1) {
+            return indiceMato;
+        } else if (infoRonda.manosGanadasOponente > 0) { // Si el oponente ya ganó una mano
+            return this.elegir(0); // Vamos a lo seguro
+        }
+    }
+    return this.elegir(0);
+}
+
+private estrategiaTruco(ronda: Ronda, ultimoCantoTruco: Canto | undefined, clasificacion: { baja: number; media: number; alta: number }): number | undefined {
+    // Estrategia adicional para el Truco (si ganamos la mano anterior)
+    if (ronda.numeroDeMano > 0 && this.gane( ronda.numeroDeMano - 1,ronda.trucoHandler.crearContextoTruco(this)) > 0) {
+        if (ultimoCantoTruco === Canto.Truco && clasificacion.baja === 1 && clasificacion.media === 1) {
+            return this.elegir(1); // Jugamos la más alta
+        }
+    }
+    return undefined; // No se aplica la estrategia de Truco
+}
+
+private validarIndice(indice: number): number {
+    // Validación final para asegurar un índice válido
+    if (indice === -1 && this.cartasEnMano.length > 0) {
+        console.warn(`[IA ${this.nombre}] Estrategia Clásica no pudo decidir. Jugando índice 0.`);
+        return 0;
+    } else if (indice === -1 && this.noTieneCartas()) {
+        throw new Error(`[IA ${this.nombre}] Error en estrategia: No hay cartas en mano y el índice es -1.`);
+    }
+    return indice;
+}
+}

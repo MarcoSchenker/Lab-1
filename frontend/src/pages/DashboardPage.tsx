@@ -18,7 +18,7 @@ const DashboardPage: React.FC = () => {
         </Link>
       </div>
       <div className="game-modes">
-        <Link to="/elegir-dificultad" className="game-mode">
+        <Link to="/game-page" className="game-mode">
           <div>Jugar Offline</div>
         </Link>
         <Link to="/torneo" className="game-mode">

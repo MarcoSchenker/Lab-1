@@ -3,8 +3,7 @@ import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
 import StatsPage from './pages/StatsPage';
 import DashboardPage from './pages/DashboardPage';
-import ElegirDificultad from './pages/ElegirDificultad';
-import AuthRoute from './AuthRoute'; // Importa el componente AuthRoute
+import AuthRoute from './components/AuthRoute'; // Importa el componente AuthRoute
 import GamePage from './pages/GamePage';
 import AddFriendsPage from './pages/AddFriendsPage';
 
@@ -31,14 +30,6 @@ function App() {
           element={
             <AuthRoute>
               <StatsPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/elegir-dificultad"
-          element={
-            <AuthRoute>
-              <ElegirDificultad />
             </AuthRoute>
           }
         />

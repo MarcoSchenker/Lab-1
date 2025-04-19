@@ -1,5 +1,4 @@
-// types.ts
-
+import { Jugador } from './jugador';
 /** Representa los palos de la baraja española */
 export enum Palo {
     Oro = 'oro',
@@ -54,10 +53,3 @@ export enum Palo {
     esMano: boolean;
     manosGanadasRonda: number;
   }
-  
-  // Se necesita importar Jugador aquí, puede generar dependencia cíclica.
-  // Mejor definirlo en los archivos que lo usan o refinar la estructura.
-  // Por simplicidad ahora, asumimos que Jugador está definido globalmente
-  // en el contexto de este archivo, pero en una implementación real,
-  // se manejaría con interfaces o importaciones cuidadosas.
-  import { Jugador } from './jugador';

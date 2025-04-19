@@ -1,4 +1,3 @@
-// naipe.ts
 import { Palo } from './types';
 import { Ronda } from './ronda'; // Necesario para probGanar si accede a Ronda
 
@@ -19,7 +18,7 @@ export class Naipe {
   getImageSrc(basePath: string = '../cartas/mazoOriginal'): string {
     // Mapea el número a la parte del nombre del archivo (ej. 1->1, 10->10, 11->11, 12->12)
     const numeroArchivo = this.numero;
-    return `${basePath}/${this.palo}${numeroArchivo}.png`;
+    return `${basePath}/${numeroArchivo}${this.palo}.png`;
   }
 
    /**
@@ -51,7 +50,6 @@ export class Naipe {
    */
   static generarBarajaCompleta(): Naipe[] {
       // Reutilizamos la lógica de Ronda.generarBaraja aquí
-      // (o podríamos mover generarBaraja a Naipe como método estático)
       const baraja: Naipe[] = [];
       baraja.push(new Naipe(14, 1, 1, Palo.Espada));
       baraja.push(new Naipe(13, 1, 1, Palo.Basto));
@@ -59,7 +57,6 @@ export class Naipe {
       baraja.push(new Naipe(11, 7, 7, Palo.Oro));
       baraja.push(new Naipe(10, 3, 3, Palo.Espada));
       baraja.push(new Naipe(10, 3, 3, Palo.Basto));
-      // ... (añadir todas las 40 cartas como en el original) ...
       baraja.push(new Naipe(10, 3, 3, Palo.Oro));
       baraja.push(new Naipe(10, 3, 3, Palo.Copa));
       baraja.push(new Naipe(9, 2, 2, Palo.Espada));
@@ -80,8 +77,8 @@ export class Naipe {
       baraja.push(new Naipe(5, 0, 10, Palo.Basto));
       baraja.push(new Naipe(5, 0, 10, Palo.Oro));
       baraja.push(new Naipe(5, 0, 10, Palo.Copa));
-      baraja.push(new Naipe(4, 7, 7, Palo.Basto)); // 7 Basto
-      baraja.push(new Naipe(4, 7, 7, Palo.Copa)); // 7 Copa
+      baraja.push(new Naipe(4, 7, 7, Palo.Basto));
+      baraja.push(new Naipe(4, 7, 7, Palo.Copa)); 
       baraja.push(new Naipe(3, 6, 6, Palo.Espada));
       baraja.push(new Naipe(3, 6, 6, Palo.Basto));
       baraja.push(new Naipe(3, 6, 6, Palo.Oro));

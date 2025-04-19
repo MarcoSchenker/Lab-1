@@ -2,6 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .animate-carta-aparece {
+    animation: carta-aparece 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .animate-carta-desliza-arriba {
+    animation: carta-desliza-arriba 1s cubic-bezier(0.4,0,0.2,1);
+  }
+  .animate-carta-desliza-abajo {
+    animation: carta-desliza-abajo 2s cubic-bezier(0.4,0,0.2,1);
+  }
+}
+
+@keyframes carta-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes carta-desliza-arriba {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes carta-desliza-abajo {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
