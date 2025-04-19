@@ -1,0 +1,34 @@
+.friendRequestContainer {
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .friendRequestItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .acceptIcon {
+    color: green;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: transform 0.2s ease;
+  }
+  
+  .acceptIcon:hover {
+    transform: scale(1.2);
+  }
+  
+  .rejectIcon {
+    color: red;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: transform 0.2s ease;
+  }
+  
+  .rejectIcon:hover {
+    transform: scale(1.2);
+  }

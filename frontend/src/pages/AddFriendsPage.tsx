@@ -1,12 +1,13 @@
-import React, { useState, useEffect, ChangeEventHandler } from "react";
+import React, { useState, useEffect } from "react";
 import "./AddFriendsPage.css";
-import api from "../services/api"; // Importa el cliente API configurado
+import api from "../services/api";
 import { FaMagnifyingGlass } from "react-icons/fa6";
-
+import { FaUserPlus } from "react-icons/fa"; // Ícono para agregar amigo
+import { useNavigate } from "react-router-dom";
 
 interface SearchTermProps {
   value: string;
-  searchHandler: ChangeEventHandler<HTMLInputElement>;
+  searchHandler: React.ChangeEventHandler<HTMLInputElement>;
   placeholder: string;
 }
 
@@ -30,16 +31,19 @@ const AddFriendsPage: React.FC = () => {
   const [users, setUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // Función para obtener usuarios desde la base de datos
+  const loggedInUser = localStorage.getItem("username") || ""; // Usuario logueado
+  console.log("Usuario logueado:", loggedInUser);
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Realiza una solicitud GET al backend para obtener los usuarios
-        const response = await api.get("/usuarios"); // Cambia la ruta si es necesario
+        // Obtener usuarios disponibles para agregar
+        const response = await api.get(`/usuarios-disponibles?nombre_usuario=${loggedInUser}`);
         setUsers(response.data.map((user: { nombre_usuario: string }) => user.nombre_usuario));
       } catch (err: any) {
         setError(err.message || "Error desconocido");
@@ -49,23 +53,35 @@ const AddFriendsPage: React.FC = () => {
     };
 
     fetchUsers();
-  }, []);
+  }, [loggedInUser]);
 
-  const handleSearchChange: ChangeEventHandler<HTMLInputElement> = (e) => {
-    setSearchTerm(e.target.value);
+  const handleSendFriendRequest = async (friendUsername: string) => {
+    try {
+      await api.post("/amigos", { from: loggedInUser, to: friendUsername });
+      alert(`Solicitud de amistad enviada a ${friendUsername}`);
+      setUsers(users.filter((user) => user !== friendUsername)); // Actualizar lista
+    } catch (err) {
+      console.error("Error al enviar solicitud de amistad:", err);
+      alert("Error al enviar solicitud de amistad");
+    }
   };
-
-  const filteredUsers = users.filter((user) =>
-    user.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="dashboardContainer">
+      {/* Botón de solicitudes de amistad */}
+      <div className="topRightButton">
+        <button
+          className="friendRequestsButton"
+          onClick={() => navigate("/friends-request")}
+        >
+          Solicitudes de Amistad
+        </button>
+      </div>
       <div className="searchHolder">
         <h1 className="searchTitle">Buscar Amigos</h1>
         <SearchBar
           value={searchTerm}
-          searchHandler={handleSearchChange}
+          searchHandler={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar usuarios..."
         />
         <div className="searchData">
@@ -75,15 +91,18 @@ const AddFriendsPage: React.FC = () => {
             <p className="error">{error}</p>
           ) : (
             <ul>
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((user, index) => (
+              {users
+                .filter((user) => user.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map((user, index) => (
                   <li key={index} className="searchItem">
-                    {user}
+                    <span className="userName">{user}</span>
+                    <FaUserPlus
+                      className="addFriendIcon"
+                      title="Agregar amigo"
+                      onClick={() => handleSendFriendRequest(user)}
+                    />
                   </li>
-                ))
-              ) : (
-                <li className="searchItem">No se encontraron usuarios</li>
-              )}
+                ))}
             </ul>
           )}
         </div>

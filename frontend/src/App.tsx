@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import AuthRoute from './components/AuthRoute'; // Importa el componente AuthRoute
 import GamePage from './pages/GamePage';
 import AddFriendsPage from './pages/AddFriendsPage';
+import FriendRequestPage from './pages/FriendRequestPage';
 
 function App() {
   return (
@@ -48,7 +49,15 @@ function App() {
               <AddFriendsPage />
             </AuthRoute>
           }
-          />
+        />
+        <Route
+          path="/friends-request"
+          element={
+            <AuthRoute>
+              <FriendRequestPage />
+            </AuthRoute>
+          }
+        />
       </Routes>
     </Router>
   );

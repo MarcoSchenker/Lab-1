@@ -12,6 +12,7 @@
   position: relative;
   overflow: hidden;
   padding-top: 50px; /* Espaciado superior */
+  padding: 20px;
 }
 
 /* Título del buscador */
@@ -20,7 +21,7 @@
   font-weight: bold;
   text-align: center;
   margin-bottom: 20px;
-  color: black;
+  color: black  ;
 }
 
 /* Contenedor de la barra de búsqueda con el ícono */
@@ -91,4 +92,57 @@
 
 .searchData li:hover {
   background-color: rgba(0, 0, 255, 0.1); /* Fondo azul claro al pasar el mouse */
+}
+
+/* Ícono para agregar amigo */
+.addFriendIcon {
+  font-size: 1.5rem;
+  color: green;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.addFriendIcon:hover {
+  transform: scale(1.2);
+  color: darkgreen;
+}
+
+/* Botón de solicitudes de amistad */
+.friendRequestsButton {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.friendRequestsButton:hover {
+  background-color: #0056b3;
+}
+
+/* Botón de solicitudes de amistad en la esquina superior derecha */
+.topRightButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+/* Lista de usuarios */
+.searchItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.userName {
+  font-size: 1rem;
+  color: #333;
 }
