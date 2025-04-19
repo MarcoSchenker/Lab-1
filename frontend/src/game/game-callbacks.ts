@@ -2,7 +2,8 @@
 // Ajusta las rutas si tu estructura es diferente (ej: './jugador' si están en la misma carpeta)
 import { Jugador } from './iaPro/jugador';
 import { Naipe } from './iaPro/naipe';
-import { AccionesPosibles, Equipo, Canto } from './iaPro/types';
+import { AccionesPosibles, Equipo} from './iaPro/types';
+export type LogType = 'public' | 'debug';
 
 /**
  * Define la interfaz de comunicación desde la lógica del juego (Partida, Ronda)
@@ -13,7 +14,7 @@ export interface GameCallbacks {
     setPartidaTerminada: () => void;
     setTurno: (equipo: Equipo) => void; // Informa qué equipo tiene el próximo turno
     setNumeroMano: (mano: number) => void; // <--- AÑADIDO: Informa qué mano se está jugando (0, 1, 2)
-    displayLog: (message: string) => void; // Añade un mensaje al log del juego
+    displayLog: (message: string, type:LogType) => void; // Añade un mensaje al log del juego
     clearLog: () => void; // Limpia el log
 
     // Actualizaciones del Estado Visual del Juego

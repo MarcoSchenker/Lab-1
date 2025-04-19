@@ -42,22 +42,21 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
             </h2>
 
             {/* Cartas en Mano */}
-            <div className="flex justify-center items-end space-x-[-20px] sm:space-x-[-25px] md:space-x-[-30px] h-32"> {/* Solapamiento negativo */}
+            <div className="flex justify-center items-end space-x-[-20px] sm:space-x-[-25px] md:space-x-[-30px] h-32">
                 {cartas.map((carta, index) => (
                     <Card
-                        key={carta ? `${carta.palo}-${carta.numero}` : `dorso-${index}`} // Key única
+                        key={carta ? `${carta.palo}-${carta.numero}` : `dorso-${index}`}
                         carta={carta}
-                        bocaAbajo={!esHumano} // IA siempre boca abajo
-                        onClick={() => esHumano && onCardClick(carta)} // Solo clickeable si es humano
-                        disabled={!esHumano || !puedeJugarCarta || !esTurno || !carta} // Deshabilitada si no es humano, no puede jugar, o no es su turno
+                        bocaAbajo={!esHumano}
+                        onClick={() => esHumano && puedeJugarCarta && esTurno && carta && onCardClick(carta)}
+                        disabled={!esHumano || !puedeJugarCarta || !esTurno || !carta}
                         imageBasePath={imageBasePath}
-                        className={`z-${index * 10}`} // Añadir z-index para solapamiento correcto
+                        className={`z-${index * 10}`}
                     />
                 ))}
-                {/* Mostrar placeholders si no hay cartas (ej, al inicio) */}
-                 {cartas.length === 0 && Array.from({ length: 3 }).map((_, index) => (
-                    <Card key={`placeholder-${index}`} carta={null} bocaAbajo={!esHumano} className={`z-${index*10} opacity-30`} />
-                 ))}
+                {cartas.length === 0 && Array.from({ length: 3 }).map((_, index) => (
+                    <Card key={`placeholder-${index}`} carta={null} bocaAbajo={!esHumano} className={`z-${index*10} opacity-30`} disabled={true} />
+                ))}
             </div>
 
             {/* Globo de Canto (opcional) */}

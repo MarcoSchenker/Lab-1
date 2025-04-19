@@ -33,7 +33,7 @@ export class Probabilidad {
   }
 
    /** Calcula la mediana de puntos de envido cantados por el oponente */
-   medianaEnvidoOponente(puntosCantados: number[]): number | null {
+   medianaEnvidoOponente(puntosCantados: number[] = []): number | null {
        if (puntosCantados.length === 0) return null;
 
        const sorted = [...puntosCantados].sort((a, b) => a - b); // Clonar antes de ordenar

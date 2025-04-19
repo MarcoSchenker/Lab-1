@@ -15,7 +15,7 @@ export function calcularAccionesPosiblesParaTurno(ronda: Ronda): AccionesPosible
     const envidoPosible = getPosiblesCantosEnvido(ronda);
     const trucoPosible = getPosiblesCantosTruco(ronda);
     // Simplificación: Siempre se puede ir al mazo si no se ha resuelto el truco o la ronda no ha terminado por envido no querido
-    const puedeMazo = ronda.estadoRonda !== EstadoRonda.RondaTerminada && !ronda.trucoNoQueridoPor;
+    const puedeMazo = ronda.estadoRonda !== EstadoRonda.RondaTerminada && !ronda.trucoHandler.trucoNoQueridoPor;
 
     return {
         puedeJugarCarta: puedeJugar,
@@ -27,7 +27,7 @@ export function calcularAccionesPosiblesParaTurno(ronda: Ronda): AccionesPosible
 }
 
 export function calcularAccionesPosiblesParaRespuestaEnvido(ronda: Ronda): AccionesPosibles {
-    if (ronda.equipoEnTurno !== ronda.equipoDebeResponderEnvido) {
+    if (ronda.equipoEnTurno !== ronda.envidoHandler.equipoDebeResponderEnvido) {
         return { puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false };
     }
     return {
@@ -40,7 +40,7 @@ export function calcularAccionesPosiblesParaRespuestaEnvido(ronda: Ronda): Accio
 }
 
 export function calcularAccionesPosiblesParaRespuestaTruco(ronda: Ronda): AccionesPosibles {
-    if (ronda.equipoEnTurno !== ronda.equipoDebeResponderTruco) {
+    if (ronda.equipoEnTurno !== ronda.trucoHandler.equipoDebeResponderTruco) {
          return { puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false };
     }
     return {
@@ -55,7 +55,7 @@ export function calcularAccionesPosiblesParaRespuestaTruco(ronda: Ronda): Accion
 // --- Funciones de obtención de cantos/respuestas específicas ---
 
 export function getPosiblesCantosEnvido(ronda: Ronda): Canto[] {
-    if (!ronda.puedeEnvido || ronda.envidoResuelto || ronda.equipoDebeResponderEnvido || ronda.equipoDebeResponderTruco) return [];
+    if (!ronda.envidoHandler.puedeEnvido || ronda.envidoHandler.envidoResuelto || ronda.envidoHandler.equipoDebeResponderEnvido || ronda.trucoHandler.equipoDebeResponderTruco) return [];
     if (ronda.numeroDeMano !== 0) return [];
     // Validar jugadas en mano
     if (ronda.equipoEnTurno === ronda.equipoMano && ronda.jugadasEnMano > 0) return [];
@@ -65,26 +65,34 @@ export function getPosiblesCantosEnvido(ronda: Ronda): Canto[] {
 }
 
 export function getPosiblesRespuestasEnvido(ronda: Ronda): Canto[] {
-    if (!ronda.equipoDebeResponderEnvido || ronda.equipoEnTurno !== ronda.equipoDebeResponderEnvido) return [];
+    console.log("[getPosiblesRespuestasEnvido] Estado:", ronda.estadoRonda, "Turno:", ronda.equipoEnTurno.jugador.nombre, "Debe responder:", ronda.envidoHandler.equipoDebeResponderEnvido?.jugador.nombre);
 
-    const ultimo = getLast(ronda.cantosEnvido.filter(c => !esRespuesta(c.canto)))?.canto;
+    if (!ronda.envidoHandler.equipoDebeResponderEnvido || ronda.equipoEnTurno !== ronda.envidoHandler.equipoDebeResponderEnvido) {
+        console.log("[getPosiblesRespuestasEnvido] No corresponde responder envido.");
+        return [];
+    }
+
+    const ultimo = getLast(ronda.envidoHandler.cantosEnvido.filter(c => !esRespuesta(c.canto)))?.canto;
     const respuestas: Canto[] = [Canto.Quiero, Canto.NoQuiero];
-    if (!ultimo) return [];
+    if (!ultimo) {
+        console.log("[getPosiblesRespuestasEnvido] No hay último canto.");
+        return [];
+    }
 
     switch (ultimo) {
         case Canto.Envido: respuestas.push(Canto.EnvidoEnvido, Canto.RealEnvido, Canto.FaltaEnvido); break;
         case Canto.EnvidoEnvido: respuestas.push(Canto.RealEnvido, Canto.FaltaEnvido); break;
         case Canto.RealEnvido: respuestas.push(Canto.FaltaEnvido); break;
-        // No se puede contra-cantar Falta Envido
     }
+    console.log("[getPosiblesRespuestasEnvido] Respuestas posibles:", respuestas);
     return respuestas;
 }
 
 export function puedeCantarTruco(ronda: Ronda, equipo: Equipo): boolean {
-    if (ronda.equipoDebeResponderEnvido || ronda.trucoResuelto) return false;
-    if (ronda.equipoDebeResponderTruco === equipo) return false; // No puede cantar si debe responder
+    if (ronda.envidoHandler.equipoDebeResponderEnvido || ronda.trucoHandler.trucoResuelto) return false;
+    if (ronda.trucoHandler.equipoDebeResponderTruco === equipo) return false; // No puede cantar si debe responder
 
-    const ultimoCantoObj = getLast(ronda.cantosTruco);
+    const ultimoCantoObj = getLast(ronda.trucoHandler.cantosTruco);
     if (!ultimoCantoObj) return true; // Nadie cantó, puede Truco
 
     if (esRespuesta(ultimoCantoObj.canto)) {
@@ -101,10 +109,10 @@ export function getPosiblesCantosTruco(ronda: Ronda): Canto[] {
     if (!puedeCantarTruco(ronda, ronda.equipoEnTurno)) return [];
 
     // Último canto NO respondido
-    const ultimoCantoNoRespondido = getLast(ronda.cantosTruco.filter(c => !esRespuesta(c.canto)))?.canto;
+    const ultimoCantoNoRespondido = getLast(ronda.trucoHandler.cantosTruco.filter(c => !esRespuesta(c.canto)))?.canto;
 
     // Si no hay cantos previos O el último fue respondido con Quiero por el equipo en turno
-    const ultimoReal = getLast(ronda.cantosTruco);
+    const ultimoReal = getLast(ronda.trucoHandler.cantosTruco);
     const puedeEscalar = !ultimoReal || (ultimoReal.canto === Canto.Quiero && ultimoReal.equipo === ronda.equipoEnTurno);
 
     if (puedeEscalar) {
@@ -120,9 +128,9 @@ export function getPosiblesCantosTruco(ronda: Ronda): Canto[] {
 }
 
 export function getPosiblesRespuestasTruco(ronda: Ronda): Canto[] {
-    if (!ronda.equipoDebeResponderTruco || ronda.equipoEnTurno !== ronda.equipoDebeResponderTruco) return [];
+    if (!ronda.trucoHandler.equipoDebeResponderTruco || ronda.equipoEnTurno !== ronda.trucoHandler.equipoDebeResponderTruco) return [];
 
-    const ultimo = getLast(ronda.cantosTruco.filter(c => !esRespuesta(c.canto)))?.canto;
+    const ultimo = getLast(ronda.trucoHandler.cantosTruco.filter(c => !esRespuesta(c.canto)))?.canto;
     const respuestas: Canto[] = [Canto.Quiero, Canto.NoQuiero];
     if (!ultimo) return []; // No debería pasar
 

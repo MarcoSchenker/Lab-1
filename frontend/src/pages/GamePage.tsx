@@ -1,40 +1,32 @@
-// src/components/GamePage.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-
-// --- Importar Lógica del Juego ---
-// Ajusta estas rutas si tu estructura es diferente
+import React, { useState, useMemo, useCallback } from 'react';
 import { Partida } from '../game/iaPro/partida';
 import { Jugador } from '../game/iaPro/jugador';
 import { Naipe } from '../game/iaPro/naipe';
 import { Canto, AccionesPosibles, Equipo } from '../game/iaPro/types';
-import { GameCallbacks } from '../game/game-callbacks'; // Asegúrate que esta ruta es correcta
-
-
-// --- Importar Componentes de UI ---
-// Ajusta estas rutas si tu estructura es diferente
+import { GameCallbacks } from '../game/game-callbacks';
 import PlayerArea from '../components/PlayerArea';
 import GameBoard from '../components/GameBoard';
 import Scoreboard from '../components/ScoreBoard';
 import ActionButtons from '../components/ActionButtons';
 import GameLog from '../components/GameLog';
 
-// --- Interfaz para el Estado de React ---
 interface GameState {
     partidaTerminada: boolean;
-    equipoPrimero: Equipo | null; // Humano
-    equipoSegundo: Equipo | null; // IA
+    partidaIniciada: boolean;
+    equipoPrimero: Equipo | null;
+    equipoSegundo: Equipo | null;
     cartasManoJugador: Naipe[];
     cartasMesa: (Naipe | null)[];
     turnoActual: Equipo | null;
     accionesPosibles: AccionesPosibles;
     mensajeLog: string[];
     ultimoCanto: { jugador: Jugador | null, mensaje: string } | null;
-    numeroManoActual: number; // Para saber qué mano se está jugando
+    numeroManoActual: number;
 }
 
-// --- Estado Inicial ---
 const initialState: GameState = {
     partidaTerminada: false,
+    partidaIniciada: false,
     equipoPrimero: null,
     equipoSegundo: null,
     cartasManoJugador: [],
@@ -45,183 +37,191 @@ const initialState: GameState = {
     },
     mensajeLog: [],
     ultimoCanto: null,
-    numeroManoActual: 0, // Empieza en mano 0
+    numeroManoActual: 0,
 };
 
-// --- Constante para la ruta de las imágenes ---
-// ¡IMPORTANTE! Asegúrate que esta ruta sea correcta desde la RAÍZ PÚBLICA de tu servidor web
-const IMAGE_BASE_PATH = 'cartas/mazoOriginal'; // Ejemplo si 'cartas' está dentro de 'public'
+const IMAGE_BASE_PATH = 'cartas/mazoOriginal';
 
-// --- Componente Principal de la Página del Juego ---
 const GamePage: React.FC = () => {
     const [gameState, setGameState] = useState<GameState>(initialState);
 
-    // --- Instancia de la Partida y Bridge UI<->Lógica ---
     const partida = useMemo(() => {
-        // Objeto que contiene los callbacks que la lógica del juego usará para actualizar React
         const reactUIBridge: GameCallbacks = {
-             setPartidaTerminada: () => setGameState(prev => ({ ...prev, partidaTerminada: true })),
-             setTurno: (equipo) => setGameState(prev => ({ ...prev, turnoActual: equipo })),
-             displayLog: (message) => setGameState(prev => ({ ...prev, mensajeLog: [message, ...prev.mensajeLog.slice(0, 99)] })), // Limita el log a 100 mensajes
-             clearLog: () => setGameState(prev => ({ ...prev, mensajeLog: [] })),
-             updateScores: (score1, score2) => setGameState(prev => ({
-                 ...prev,
-                 equipoPrimero: prev.equipoPrimero ? { ...prev.equipoPrimero, puntos: score1 } : null,
-                 equipoSegundo: prev.equipoSegundo ? { ...prev.equipoSegundo, puntos: score2 } : null,
-             })),
-             updatePlayerNames: (name1, name2) => { /* Se maneja al asignar jugadores */ },
-             displayPlayerCards: (jugador) => {
-                 if (jugador.esHumano) {
-                     setGameState(prev => ({ ...prev, cartasManoJugador: [...jugador.cartasEnMano] })); // Importante clonar array
-                 }
-             },
-             clearPlayedCards: () => setGameState(prev => ({ ...prev, cartasMesa: Array(6).fill(null) })),
-             displayPlayedCard: (jugador, carta, manoNumero, jugadaEnMano) => {
-                 setGameState(prev => {
-                     const nuevaMesa = [...prev.cartasMesa];
-                     // Determinar índice correcto en la mesa [J1M0, J2M0, J1M1, J2M1, J1M2, J2M2]
-                     // Necesita saber quién es Jugador 1 (índice par) y Jugador 2 (índice impar)
-                     // Asumiendo que equipoPrimero es SIEMPRE el índice par (0, 2, 4)
-                     const playerIndex = prev.equipoPrimero?.jugador === jugador ? 0 : 1;
-                     const mesaIndex = manoNumero * 2 + playerIndex;
+            setPartidaTerminada: () => setGameState(prev => ({ ...prev, partidaTerminada: true })),
+            setTurno: (equipo) => setGameState(prev => ({ ...prev, turnoActual: equipo })),
+            setNumeroMano: (mano) => setGameState(prev => ({ ...prev, numeroManoActual: mano })),
+            clearLog: () => setGameState(prev => ({ ...prev, mensajeLog: [] })),
+            displayLog: (message) => setGameState(prev => ({
+                ...prev,
+                mensajeLog: [message, ...prev.mensajeLog.slice(0, 99)],
+            })),
+            updateScores: (score1, score2) => setGameState(prev => ({
+                ...prev,
+                equipoPrimero: prev.equipoPrimero ? { ...prev.equipoPrimero, puntos: score1 } : null,
+                equipoSegundo: prev.equipoSegundo ? { ...prev.equipoSegundo, puntos: score2 } : null,
+            })),
+            updatePlayerNames: (name1, name2) => { /* No necesita acción en el estado aquí */ },
+            displayPlayerCards: (jugador) => {
+                if (jugador.esHumano) {
+                    setGameState(prev => ({
+                        ...prev,
+                        cartasManoJugador: [...jugador.cartasEnMano], // Siempre copia el array actualizado
+                    }));
+                }
+            },
+            clearPlayedCards: () => setGameState(prev => ({ ...prev, cartasMesa: Array(6).fill(null) })),
+            displayPlayedCard: (jugador, carta, manoNumero, jugadaEnMano) => {
+                setGameState(prev => {
+                    const nuevaMesa = [...prev.cartasMesa];
+                    const playerIndex = prev.equipoPrimero?.jugador === jugador ? 0 : 1;
+                    const mesaIndex = manoNumero * 2 + playerIndex;
 
-                     if (mesaIndex < nuevaMesa.length) {
+                    if (mesaIndex < nuevaMesa.length) {
                         nuevaMesa[mesaIndex] = carta;
-                     } else {
-                         console.error(`Índice de mesa inválido ${mesaIndex} calculado en callback displayPlayedCard para mano ${manoNumero}, jugador ${playerIndex}`);
-                     }
-                     return { ...prev, cartasMesa: nuevaMesa };
-                 });
-             },
-             showPlayerCall: (jugador, mensaje) => {
-                 const cantoTraducido = Object.entries(Canto).find(([key, val]) => val === mensaje)?.[0] ?? mensaje;
-                 setGameState(prev => ({ ...prev, ultimoCanto: { jugador, mensaje: cantoTraducido } }));
-                 setTimeout(() => {
-                     setGameState(prev => prev.ultimoCanto?.mensaje === cantoTraducido ? { ...prev, ultimoCanto: null } : prev);
-                 }, 2500); // Tiempo para leer el canto
-             },
-             actualizarAccionesPosibles: (acciones) => {
-                 if (process.env.NODE_ENV === 'development') { // Log solo en desarrollo
-                     console.log("Acciones Posibles:", acciones);
-                 }
-                 setGameState(prev => ({ ...prev, accionesPosibles: acciones }));
-             },
-             setNumeroMano: (mano) => { // Implementar callback para número de mano
-                  if (process.env.NODE_ENV === 'development') {
-                      console.log("Actualizando número de mano a:", mano);
-                  }
-                  setGameState(prev => ({...prev, numeroManoActual: mano}))
-             },
-             // Opcionales (puedes añadir la implementación si los necesitas)
-             // highlightWinningCard: (ganador, manoNumero, jugadaEnManoGanadora) => { /* Lógica para resaltar visualmente */ },
-             // displayRoundWinner: (winnerName) => { /* Lógica para mostrar mensaje destacado */ },
+                    } else {
+                        console.error(`Índice de mesa inválido ${mesaIndex}`);
+                    }
+                    return { ...prev, cartasMesa: nuevaMesa };
+                });
+            },
+            showPlayerCall: (jugador, mensaje) => {
+                setGameState(prev => ({ ...prev, ultimoCanto: { jugador, mensaje } }));
+                setTimeout(() => {
+                    setGameState(prev => prev.ultimoCanto?.mensaje === mensaje ? { ...prev, ultimoCanto: null } : prev);
+                }, 2500);
+            },
+            actualizarAccionesPosibles: (acciones) => setGameState(prev => ({ ...prev, accionesPosibles: acciones })),
         };
 
-        // Crear instancia de la lógica del juego, pasándole los callbacks
-        const p = new Partida(reactUIBridge, true); // Debug mode activado por defecto
-        return p;
+        return new Partida(reactUIBridge, true);
+    }, []);
 
-    }, []); // El array vacío asegura que la instancia de Partida se cree solo una vez
-
-    // --- Efecto para iniciar la partida al montar el componente ---
-    useEffect(() => {
-        // Asigna referencias iniciales a los equipos en el estado
+    const iniciarPartida = useCallback(() => {
         setGameState(prev => ({
             ...prev,
             equipoPrimero: partida.equipoPrimero,
             equipoSegundo: partida.equipoSegundo,
         }));
-        // Inicia la lógica de la partida
-        partida.iniciar("Humano", "IA Pro", 15); // Puedes cambiar nombres y límite
+        partida.iniciar("Username", "IA", 30);
+        setGameState(prev => ({ ...prev, partidaIniciada: true }));
+    }, [partida]);
 
-    }, [partida]); // Depende de la instancia de partida
-
-    // --- Handlers para acciones del usuario que llaman a la lógica ---
     const handlePlayCard = useCallback((carta: Naipe) => {
-        // Validar si la acción es permitida ANTES de llamar a la lógica
-        if (!gameState.partidaTerminada && gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre && gameState.accionesPosibles.puedeJugarCarta) {
+        const esTurnoJugadorHumano = gameState.turnoActual?.jugador.esHumano === true;
+        if (
+            gameState.partidaIniciada &&
+            !gameState.partidaTerminada &&
+            esTurnoJugadorHumano &&
+            gameState.accionesPosibles.puedeJugarCarta
+        ) {
             partida.handleHumanPlayCard(carta);
-        } else {
-            console.warn("Intento de jugar carta bloqueado por UI (fuera de turno o acción no permitida).");
-            // Opcional: Mostrar feedback al usuario
         }
-    }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.equipoPrimero, gameState.accionesPosibles]);
+    }, [partida, gameState]);
 
     const handleCanto = useCallback((canto: Canto) => {
-        // Validar si la acción es permitida ANTES de llamar a la lógicas
-        if (!gameState.partidaTerminada && gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre) {
+        const esTurnoJugadorHumano = gameState.turnoActual?.jugador.esHumano === true;
+
+        if (
+            gameState.partidaIniciada &&
+            !gameState.partidaTerminada &&
+            esTurnoJugadorHumano
+        ) {
             const acciones = gameState.accionesPosibles;
-            const esCantoValido = acciones.puedeCantarEnvido.includes(canto) || acciones.puedeCantarTruco.includes(canto) || (canto === Canto.IrAlMazo && acciones.puedeMazo);
+            const esCantoValido = acciones.puedeCantarEnvido.includes(canto) || acciones.puedeCantarTruco.includes(canto);
             const esRespuestaValida = acciones.puedeResponder.includes(canto);
+            const esMazoValido = canto === Canto.IrAlMazo && acciones.puedeMazo;
 
-            if (esCantoValido || esRespuestaValida) {
+            if (esCantoValido || esRespuestaValida || esMazoValido) {
                 partida.handleHumanCanto(canto);
-            } else {
-                console.warn(`Intento de canto/respuesta ${canto} bloqueado por UI (acción no permitida).`);
-                // Opcional: Mostrar feedback al usuario
             }
-        } else {
-            console.warn("Intento de cantar bloqueado por UI (fuera de turno).");
-             // Opcional: Mostrar feedback al usuario
         }
-    }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.equipoPrimero, gameState.accionesPosibles]);
+    }, [partida, gameState]);
 
-    // --- Renderizado de la Interfaz ---
     return (
-        <div className="flex flex-col items-center min-h-screen bg-gradient-to-b from-green-800 to-green-900 text-white p-4 font-sans selection:bg-yellow-300 selection:text-black">
-
-            <Scoreboard
-                equipoPrimero={gameState.equipoPrimero}
-                equipoSegundo={gameState.equipoSegundo}
-                limitePuntaje={partida.limitePuntaje}
-                className="mb-4"
-            />
-
-            <div className="w-full max-w-5xl bg-green-700 bg-opacity-80 p-4 md:p-6 rounded-xl shadow-2xl border-4 border-yellow-800 border-opacity-60 backdrop-blur-sm">
-                <div className="space-y-4 md:space-y-6">
-
-                    <PlayerArea
-                        jugador={gameState.equipoSegundo?.jugador ?? null}
-                        cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? 3).fill(null)}
-                        esTurno={gameState.turnoActual === gameState.equipoSegundo}
-                        ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoSegundo?.jugador ? gameState.ultimoCanto.mensaje : null}
-                        onCardClick={() => {}}
-                        puedeJugarCarta={false}
-                        imageBasePath={IMAGE_BASE_PATH}
-                    />
-
-                    <GameBoard
-                        cartasMesa={gameState.cartasMesa}
-                        equipoPrimero={gameState.equipoPrimero}
-                        equipoSegundo={gameState.equipoSegundo}
-                        numeroManoActual={gameState.numeroManoActual} // Usa el estado actualizado
-                        imageBasePath={IMAGE_BASE_PATH}
-                    />
-
-                    <PlayerArea
-                        jugador={gameState.equipoPrimero?.jugador ?? null}
-                        cartas={gameState.cartasManoJugador}
-                        esTurno={gameState.turnoActual === gameState.equipoPrimero} 
-                        ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoPrimero?.jugador ? gameState.ultimoCanto.mensaje : null}
-                        onCardClick={handlePlayCard}
-                        puedeJugarCarta={!gameState.partidaTerminada && gameState.turnoActual === gameState.equipoPrimero && gameState.accionesPosibles.puedeJugarCarta} // <-- Comparación Humano
-                        imageBasePath={IMAGE_BASE_PATH}
-                    />
-                </div>
+        <div className="flex h-screen bg-gradient-to-b from-green-800 to-green-900 text-white p-2 overflow-hidden">
+            {/* Game Log - Side Panel (Left, 1/3 width) */}
+            <div className="w-1/3 pr-2 flex flex-col h-full">
+                <div className="text-lg font-bold mb-1 text-yellow-300">Historial del juego</div>
+                <GameLog
+                    mensajes={gameState.mensajeLog}
+                    className="flex-1 bg-black bg-opacity-40 rounded-lg shadow-md overflow-y-auto"
+                />
             </div>
 
-            <ActionButtons
-                acciones={gameState.accionesPosibles}
-                onCanto={handleCanto}
-                partidaTerminada={gameState.partidaTerminada}
-                className="mt-4 w-full max-w-4xl" // Hacer que ocupe ancho
-            />
+            {/* Main Game Area (Right, 2/3 width) */}
+            <div className="w-2/3 flex flex-col h-full overflow-y-auto">
+                {/* Scoreboard at the top */}
+                <Scoreboard
+                    equipoPrimero={gameState.equipoPrimero}
+                    equipoSegundo={gameState.equipoSegundo}
+                    limitePuntaje={partida.limitePuntaje}
+                    className="mb-2"
+                />
 
-            <GameLog
-                mensajes={gameState.mensajeLog}
-                className="w-full max-w-4xl mt-4"
-            />
+                {/* Game content */}
+                {!gameState.partidaIniciada ? (
+                    <div className="flex-1 flex items-center justify-center">
+                        <button 
+                            onClick={iniciarPartida} 
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-4 px-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50 shadow-lg transform transition hover:scale-105"
+                        >
+                            Iniciar Partida de Truco
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex flex-col flex-1 max-h-full">
+                        <div className="flex-1 bg-green-700 bg-opacity-80 rounded-xl shadow-xl border-2 border-yellow-800 border-opacity-60 backdrop-blur-sm p-3 mb-2">
+                            {/* Compact Game Layout */}
+                            <div className="flex flex-col h-full">
+                                {/* Opponent Area - reduced size */}
+                                <div className="mb-2">
+                                    <PlayerArea
+                                        jugador={gameState.equipoSegundo?.jugador ?? null}
+                                        cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? 3).fill(null)}
+                                        esTurno={gameState.turnoActual?.jugador.nombre === gameState.equipoSegundo?.jugador.nombre}
+                                        ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoSegundo?.jugador ? gameState.ultimoCanto.mensaje : null}
+                                        onCardClick={() => {}}
+                                        puedeJugarCarta={false}
+                                        imageBasePath={IMAGE_BASE_PATH}
+                                    />
+                                </div>
 
+                                {/* Game Board (Center) - maintain decent size */}
+                                <div className="flex-1 mb-2">
+                                    <GameBoard
+                                        cartasMesa={gameState.cartasMesa}
+                                        numeroManoActual={gameState.numeroManoActual}
+                                        imageBasePath={IMAGE_BASE_PATH}
+                                    />
+                                </div>
+
+                                {/* Player Area - reduced size */}
+                                <div className="mb-1">
+                                    <PlayerArea
+                                        jugador={gameState.equipoPrimero?.jugador ?? null}
+                                        cartas={gameState.cartasManoJugador}
+                                        esTurno={gameState.turnoActual?.jugador.nombre === gameState.equipoPrimero?.jugador.nombre}
+                                        ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoPrimero?.jugador ? gameState.ultimoCanto.mensaje : null}
+                                        onCardClick={handlePlayCard}
+                                        puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
+                                        imageBasePath={IMAGE_BASE_PATH}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons at the bottom - ensure visibility */}
+                        <div className="mb-2">
+                            <ActionButtons
+                                acciones={gameState.accionesPosibles}
+                                onCanto={handleCanto}
+                                partidaTerminada={gameState.partidaTerminada}
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
