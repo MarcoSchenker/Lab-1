@@ -202,7 +202,16 @@ async function initializeDatabase() {
     if (!skinOriginalId) {
       throw new Error("No se pudo encontrar la skin Original");
     }
+    // Verificar si la columna skin_id ya existe en la tabla perfiles
+    const [columnasPerfiles] = await connection.query(`SHOW COLUMNS FROM perfiles LIKE 'skin_id'`);
     
+    if (columnasPerfiles.length === 0) {
+    
+      await connection.query(`ALTER TABLE perfiles ADD COLUMN skin_id INT`);
+    console.log("Columna skin_id añadida a la tabla perfiles");
+    } else {
+    console.log("Columna skin_id ya existe en la tabla perfiles");
+    }
     // Actualizar los perfiles existentes que no tengan skin asignada
     await connection.query(`
       UPDATE perfiles SET skin_id = ? WHERE skin_id IS NULL
