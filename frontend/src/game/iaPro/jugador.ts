@@ -67,9 +67,7 @@ export class Jugador {
  * @returns `true` si la carta se encontró y se jugó, `false` en caso contrario.
  */
 registrarCartaJugadaPorObjeto(carta: Naipe): boolean {
-  const index = this.cartasEnMano.findIndex(c => 
-      c.numero === carta.numero && c.palo === carta.palo
-  );
+  const index = this.cartasEnMano.findIndex(c => c.numero === carta.numero && c.palo === carta.palo);
   if (index > -1) {
       // Eliminar la carta de la mano usando splice
       this.cartasEnMano.splice(index, 1);

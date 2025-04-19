@@ -21,6 +21,7 @@ export class Ronda {
     public numeroDeMano: number = 0; // 0, 1, 2
     public estadoRonda: EstadoRonda = EstadoRonda.InicioMano;
     public jugadasEnMano: number = 0; // Contador de jugadas en la mano actual
+    private flujoEnEjecucion: boolean = false; // 🔐 Protección contra doble ejecución
 
     // Handlers especializados
     public envidoHandler: RondaEnvidoHandler;
@@ -107,81 +108,92 @@ export class Ronda {
 
    /** Motor principal de estados de la ronda - REFACTORIZADO FINAL */
    private continuarFlujo(enEsperaHumano: boolean = false): void {
-    if (enEsperaHumano) {
-         this.actualizarAccionesParaTurnoActual();
-        return;
-    }
-
-    // Bucle principal
-    while (this.estadoRonda !== EstadoRonda.RondaTerminada) {
-        this.callbacks.setTurno(this.equipoEnTurno);
-
-        if (this.debugMode) {
-            // Usar jugadasEnManoActual de turnoHandler para el log
-            this.callbacks.displayLog(`Estado=${EstadoRonda[this.estadoRonda]}, Turno=${this.equipoEnTurno.jugador.nombre}, Mano=${this.numeroDeMano}, JugadaMano=${this.turnoHandler.jugadasEnManoActual}`, 'debug');
-        }
-
-         let esperarHumano = false;
-        const jugadorActual = this.equipoEnTurno.jugador;
-        const esHumano = jugadorActual.esHumano;
-
-         // Deshabilitar UI para IA
-         if (!esHumano) {
-             this.callbacks.actualizarAccionesPosibles({ puedeJugarCarta: false, puedeCantarEnvido: [], puedeCantarTruco: [], puedeResponder: [], puedeMazo: false });
-             // Considerar delay aquí si se desea
-         }
-
-         // Procesar según el estado
-        switch (this.estadoRonda) {
-            case EstadoRonda.EsperandoRespuestaEnvido:
-                // Humano espera, IA procesa respuesta Envido
-                esperarHumano = esHumano || !this.envidoHandler.registrarRespuesta(this.decidirRespuestaIAEnvido(), this.equipoEnTurno);
-                esperarHumano = esHumano ? true : !this.procesarRespuestaIAEnvido();
-                break;
-
-            case EstadoRonda.EsperandoRespuestaTruco:
-                // Humano espera, IA procesa respuesta Truco
-                esperarHumano = esHumano ? true : !this.trucoHandler.procesarRespuestaTruco(); // procesarRespuestaTruco ahora maneja la lógica IA
-                break;
-
-            case EstadoRonda.InicioMano:
-            case EstadoRonda.EsperandoJugadaNormal:
-                if (esHumano) {
-                    esperarHumano = true; // Esperar acción humana (jugar o cantar)
-                } else {
-                    // IA decide: Envido? Truco? Jugar Carta?
-                    if (!this.procesarCantoIAEnvido()) {       // Intenta cantar Envido
-                       if (!this.procesarCantoIATruco()) {     // Si no, intenta cantar Truco
-                           this.turnoHandler.procesarTurnoNormalIA(); // Si no, juega carta
-                       }
-                    }
-                    esperarHumano = false; // IA actuó
-                }
-                break;
-
-            case EstadoRonda.ManoTerminada:
-                // Delegar a RondaTurnoHandler para resolver la mano y preparar la siguiente/fin
-                this.turnoHandler.procesarFinDeMano(); // Actualizará estadoRonda
-                continue; // Volver al inicio del while con el nuevo estado
-
-            default:
-                console.error("Estado de ronda desconocido:", this.estadoRonda);
-                this.estadoRonda = EstadoRonda.RondaTerminada;
-                continue;
-        }
-
-        // Salir si se debe esperar al humano
-        if (esperarHumano) {
-            this.actualizarAccionesParaTurnoActual();
+        // Evitar múltiples ejecuciones simultáneas
+        if (this.flujoEnEjecucion) {
+            if (this.debugMode) console.log("Flujo ya en ejecución, se ignora nueva llamada.");
             return;
         }
-    } // Fin while
 
-    // Finalizar ronda si terminó
-    if (this.estadoRonda === EstadoRonda.RondaTerminada) {
-        this.finalizarRondaLogica();
+        this.flujoEnEjecucion = true;
+
+        try {
+            if (enEsperaHumano) {
+                this.actualizarAccionesParaTurnoActual();
+                return;
+            }
+
+            while (this.estadoRonda !== EstadoRonda.RondaTerminada) {
+                this.callbacks.setTurno(this.equipoEnTurno);
+
+                if (this.debugMode) {
+                    this.callbacks.displayLog(
+                        `Estado=${EstadoRonda[this.estadoRonda]}, Turno=${this.equipoEnTurno.jugador.nombre}, Mano=${this.numeroDeMano}, JugadaMano=${this.turnoHandler.jugadasEnManoActual}`,
+                        'debug'
+                    );
+                }
+
+                let esperarHumano = false;
+                const jugadorActual = this.equipoEnTurno.jugador;
+                const esHumano = jugadorActual.esHumano;
+
+                if (!esHumano) {
+                    this.callbacks.actualizarAccionesPosibles({
+                        puedeJugarCarta: false,
+                        puedeCantarEnvido: [],
+                        puedeCantarTruco: [],
+                        puedeResponder: [],
+                        puedeMazo: false
+                    });
+                }
+
+                switch (this.estadoRonda) {
+                    case EstadoRonda.EsperandoRespuestaEnvido:
+                        esperarHumano = esHumano || !this.envidoHandler.registrarRespuesta(this.decidirRespuestaIAEnvido(), this.equipoEnTurno);
+                        esperarHumano = esHumano ? true : !this.procesarRespuestaIAEnvido();
+                        break;
+
+                    case EstadoRonda.EsperandoRespuestaTruco:
+                        esperarHumano = esHumano ? true : !this.trucoHandler.procesarRespuestaTruco();
+                        break;
+
+                    case EstadoRonda.InicioMano:
+                    case EstadoRonda.EsperandoJugadaNormal:
+                        if (esHumano) {
+                            esperarHumano = true;
+                        } else {
+                            if (!this.procesarCantoIAEnvido()) {
+                                if (!this.procesarCantoIATruco()) {
+                                    this.turnoHandler.procesarTurnoNormalIA();
+                                }
+                            }
+                            esperarHumano = false;
+                        }
+                        break;
+
+                    case EstadoRonda.ManoTerminada:
+                        this.turnoHandler.procesarFinDeMano();
+                        continue;
+
+                    default:
+                        console.error("Estado de ronda desconocido:", this.estadoRonda);
+                        this.estadoRonda = EstadoRonda.RondaTerminada;
+                        continue;
+                }
+
+                if (esperarHumano) {
+                    this.actualizarAccionesParaTurnoActual();
+                    return;
+                }
+            }
+
+            if (this.estadoRonda === EstadoRonda.RondaTerminada) {
+                this.finalizarRondaLogica();
+            }
+        } finally {
+            this.flujoEnEjecucion = false; // Liberar flag cuando termina
+        }
     }
-}
+
 private decidirRespuestaIAEnvido(): Canto {
     const ia = this.equipoEnTurno.jugador as IA; //  Obtiene la instancia de la IA
     const contextoEnvido = this.envidoHandler.crearContextoEnvido(ia); //  Crea el contexto para la IA
