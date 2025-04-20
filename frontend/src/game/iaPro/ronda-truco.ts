@@ -105,11 +105,14 @@ export class RondaTrucoHandler {
         this.cantosTruco.push({ canto, equipo: equipoQueCanta });
         this.equipoDebeResponderTruco = this.ronda.getOponente(equipoQueCanta);
         this.ronda.envidoHandler.equipoDebeResponderEnvido = null;
-        
+    
         this.ronda.estadoRonda = EstadoRonda.EsperandoRespuestaTruco;
+    
         this.ronda.equipoEnTurno = this.equipoDebeResponderTruco;
+    
         return true;
     }
+    
     
 
     public registrarRespuesta(respuesta: Canto, equipoQueResponde: Equipo): boolean {
@@ -137,6 +140,7 @@ export class RondaTrucoHandler {
         }
         return true;
     }
+    
     
 
     private resolverTruco(querido: boolean, equipoQueRespondio: Equipo): void {

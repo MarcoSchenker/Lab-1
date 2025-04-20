@@ -1,16 +1,16 @@
 // src/components/PlayerArea.tsx
 import React from 'react';
-import { Jugador } from '../game/iaPro/jugador'; // Ajusta la ruta
-import { Naipe } from '../game/iaPro/naipe'; // Ajusta la ruta
-import Card from './Card'; // Importar el componente Card
+import { Jugador } from '../game/iaPro/jugador';
+import { Naipe } from '../game/iaPro/naipe';
+import Card from './Card';
 
 interface PlayerAreaProps {
     jugador: Jugador | null;
-    cartas: Naipe[]; // Cartas en mano de este jugador
+    cartas: Naipe[];
     esTurno: boolean;
-    ultimoCanto: string | null; // El mensaje del último canto de este jugador
-    onCardClick: (naipe : Naipe) => void; // Callback al hacer clic en una carta
-    puedeJugarCarta: boolean; // Si las cartas son clickeables ahora
+    ultimoCanto: string | null;
+    onCardClick: (naipe: Naipe) => void;
+    puedeJugarCarta: boolean;
     imageBasePath?: string;
 }
 
@@ -24,42 +24,54 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
     imageBasePath = './cartas/mazoOriginal',
 }) => {
     if (!jugador) {
-        // Podríamos mostrar un placeholder o nada si el jugador aún no está definido
-        return <div className="h-48 border border-dashed border-gray-500 rounded flex items-center justify-center text-gray-400">Esperando jugador...</div>;
+        return (
+            <div className="h-48 border border-dashed border-gray-500 rounded flex items-center justify-center text-gray-400">
+                Esperando jugador...
+            </div>
+        );
     }
 
     const esHumano = jugador.esHumano;
+    const animationClass = esHumano ? 'animate-carta-desliza-abajo' : 'animate-carta-desliza-arriba';
 
-    // Estilos condicionales para indicar el turno
-    const turnoIndicatorClasses = esTurno ? 'ring-2 ring-offset-2 ring-offset-green-800 ring-yellow-400' : '';
-    const areaClasses = `relative p-4 rounded-lg shadow-xl min-h-[12rem] md:min-h-[14rem] flex flex-col items-center ${turnoIndicatorClasses} ${esHumano ? 'bg-blue-900' : 'bg-red-900'}`; // Colores distintos para humano/IA
+    const turnoIndicatorClasses = esTurno
+        ? 'ring-2 ring-offset-2 ring-offset-green-800 ring-yellow-400'
+        : '';
+    const areaClasses = `relative p-4 rounded-lg shadow-xl min-h-[12rem] md:min-h-[14rem] flex flex-col items-center ${turnoIndicatorClasses} ${
+        esHumano ? 'bg-blue-900' : 'bg-red-900'
+    }`;
 
     return (
         <div className={areaClasses}>
-            {/* Nombre del Jugador */}
             <h2 className={`text-lg font-semibold mb-2 ${esTurno ? 'text-yellow-300' : 'text-white'}`}>
                 {jugador.nombre} {esTurno ? '(Tu Turno)' : ''}
             </h2>
 
-            {/* Cartas en Mano */}
             <div className="flex justify-center items-end space-x-[-20px] sm:space-x-[-25px] md:space-x-[-30px] h-32">
                 {cartas.map((carta, index) => (
                     <Card
                         key={carta ? `${carta.palo}-${carta.numero}` : `dorso-${index}`}
                         carta={carta}
                         bocaAbajo={!esHumano}
-                        onClick={() => esHumano && puedeJugarCarta && esTurno && carta && onCardClick(carta)}
+                        onClick={() => esHumano && puedeJugarCarta && esTurno && carta && onCardClick(carta)
+                        }
                         disabled={!esHumano || !puedeJugarCarta || !esTurno || !carta}
                         imageBasePath={imageBasePath}
-                        className={`z-${index * 10}`}
+                        className={`z-${index * 10} ${animationClass}`}
                     />
                 ))}
-                {cartas.length === 0 && Array.from({ length: 3 }).map((_, index) => (
-                    <Card key={`placeholder-${index}`} carta={null} bocaAbajo={!esHumano} className={`z-${index*10} opacity-30`} disabled={true} />
-                ))}
+                {cartas.length === 0 &&
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <Card
+                            key={`placeholder-${index}`}
+                            carta={null}
+                            bocaAbajo={!esHumano}
+                            className={`z-${index * 10} opacity-30`}
+                            disabled={true}
+                        />
+                    ))}
             </div>
 
-            {/* Globo de Canto (opcional) */}
             {ultimoCanto && (
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-white text-black rounded-full shadow-lg text-sm font-medium whitespace-nowrap">
                     {ultimoCanto}

@@ -55,7 +55,7 @@ export function calcularAccionesPosiblesParaRespuestaTruco(ronda: Ronda): Accion
 // --- Funciones de obtención de cantos/respuestas específicas ---
 
 export function getPosiblesCantosEnvido(ronda: Ronda): Canto[] {
-    if (!ronda.envidoHandler.puedeEnvido || ronda.envidoHandler.envidoResuelto || ronda.envidoHandler.equipoDebeResponderEnvido || ronda.trucoHandler.equipoDebeResponderTruco) return [];
+    if (!ronda.envidoHandler.puedeEnvido || ronda.envidoHandler.envidoResuelto || ronda.envidoHandler.equipoDebeResponderEnvido || ronda.trucoHandler.equipoDebeResponderTruco || ronda.trucoHandler.trucoQuerido) return [];
     if (ronda.numeroDeMano !== 0) return [];
     // Validar jugadas en mano
     if (ronda.equipoEnTurno === ronda.equipoMano && ronda.jugadasEnMano > 0) return [];
