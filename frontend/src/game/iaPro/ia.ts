@@ -670,7 +670,7 @@ private esRespuesta(canto: Canto): boolean {
                         // JS: if(posiblesCartas !== undefined && ...){ if(posiblesCartas[0].valor < miMesa.valor) return 'S'; else return 'N'; } -> Si estimo que su mejor carta pierde, Quiero
                         if (posiblesCartasOp && posiblesCartasOp.length > 0 && posiblesCartasOp[0].valor < miCartaJugada.valor) return Canto.Quiero;
                         // JS: if(miMesa.valor >= 12) return 'RT';
-                        if (miCartaJugada.valor >= 12) return Canto.ReTruco; // Si gané con >=7 Espada, RT
+                        if (miCartaJugada.valor >= 10) return Canto.ReTruco; // Si gané con >=7 Espada, RT
                         // JS: if(miMesa.valor >= 9) return 'S';
                         if (miCartaJugada.valor >= 9) return Canto.Quiero; // Si gané con >=2, S
                         // JS: if(miMesa.valor >= 6){ if(this.puntosGanadosEnvido >= 3) return 'N'; else if(ran <= 33) return 'S'; } --> Error JS? Debería ser N si ran > 33?
@@ -682,7 +682,7 @@ private esRespuesta(canto: Canto): boolean {
                     case Canto.ReTruco: // Oponente cantó ReTruco
                          const ranRT = getRandomInt(0, 100);
                          // JS: if(miMesa.valor >= 13) return 'V';
-                         if (miCartaJugada.valor >= 13) return Canto.ValeCuatro; // Si gané con Anchos, V4
+                         if (miCartaJugada.valor >= 12) return Canto.ValeCuatro; // Si gané con Anchos, V4
                          // JS: if(miMesa.valor >= 9) return 'S';
                          if (miCartaJugada.valor >= 9) return Canto.Quiero; // Si gané con >=2, S
                          // JS: if(miMesa.valor >= 6){ if(this.puntosGanadosEnvido >= 3) return 'N'; else if(ran <= 33) return 'S'; } --> Igual que Truco
@@ -697,7 +697,7 @@ private esRespuesta(canto: Canto): boolean {
                     default: return Canto.Quiero; // Ya gané, acepto
                  }
              }
-         } else if (resultadoMano1 === 0) { // Empardamos mano 1
+         } else if (resultadoMano1 === 0) { // Empate mano 1
             // JS: if ( this.gane(1) === 0 ) { ... } -> Usa la lógica de Parda en mano 1
             // La resolución depende de quien ganó la mano 0.
             // Reutilizar lógica de respuestaTrucoMano1 simulando Parda en mano 0
@@ -707,7 +707,6 @@ private esRespuesta(canto: Canto): boolean {
          } else { // IA Perdió mano 1 (y por ende, la ronda)
              const cartaOp = cartaOponenteEnMesa; // Carta con la que me ganaron mano 1
              if (!cartaOp) {
-                 console.error("Error lógico: IA perdió mano 1 pero oponente no tiene carta en mesa?");
                  return Canto.NoQuiero;
              }
              // Verificar resultado de Mano 0 desde el contexto
@@ -977,31 +976,16 @@ private esRespuesta(canto: Canto): boolean {
     }
 
     // --- Método Principal para Jugar Carta ---
-    public jugarCarta(ronda: Ronda): Naipe { // Recibe la ronda actual
-        const indice = this.estrategiaDeJuego(ronda); // Pasar la ronda a la estrategia
+    public jugarCarta(ronda: Ronda): Naipe {
+        const indice = this.estrategiaDeJuego(ronda);
 
         if (indice < 0 || indice >= this.cartasEnMano.length) {
             console.error(`[IA ${this.nombre}] Estrategia devolvió índice inválido: ${indice}. Jugando la primera carta.`);
             if (this.cartasEnMano.length === 0) throw new Error("IA no tiene cartas para jugar.");
-             const cartaFallback = this.cartasEnMano[0];
-             // Registrar la carta jugada
-             this.registrarCartaJugadaIA(cartaFallback); // Llama al método de Jugador
-             return cartaFallback;
-
+            return this.cartasEnMano[0]; // Solo retorna, NO registra
         }
 
-        const carta = this.cartasEnMano[indice];
-        const registrada = this.registrarCartaJugadaIA(carta);
-        if (!registrada) {
-            // Esto no debería pasar si el índice es válido
-             console.error(`[IA ${this.nombre}] Error al registrar carta ${carta.getNombre()} con índice ${indice}. Jugando la primera.`);
-             if (this.cartasEnMano.length === 0) throw new Error("IA no tiene cartas para jugar.");
-             const cartaFallback = this.cartasEnMano[0];
-             this.registrarCartaJugadaIA(cartaFallback);
-             return cartaFallback;
-        }
-
-        return carta;
+        return this.cartasEnMano[indice]; // Solo retorna, NO registra
     }
  private estrategiaClasica(ronda: Ronda): number { // Cambiamos el tipo de retorno a number
     // 1. Verificación inicial: ¿Tenemos cartas?
