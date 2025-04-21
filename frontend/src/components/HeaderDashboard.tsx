@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FaCoins, FaSignOutAlt, FaMedal } from 'react-icons/fa';
+import { useNavigate, Link } from 'react-router-dom';import { FaCoins, FaSignOutAlt, FaMedal } from 'react-icons/fa';
 import './HeaderDashboard.css';
 
 const Header: React.FC = () => {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false); // Estado para controlar el menú desplegable
-
+  const navigate = useNavigate();
   const userImage = '/foto_anonima.jpg'; // Ruta de imagen anónima
   const userElo = 1200;
   const userCoins = 500;
@@ -18,6 +17,11 @@ const Header: React.FC = () => {
 
   const toggleDropdown = () => {
     setIsDropdownVisible(!isDropdownVisible); // Alterna la visibilidad del menú
+  };
+
+  const handleSignOut = () => {
+    localStorage.clear(); // Limpiamos el local storage
+    navigate('/'); // Redirige a la página de inicio
   };
 
   return (
@@ -39,7 +43,7 @@ const Header: React.FC = () => {
           <div className="icon-text">
             <FaMedal /> {userElo}
           </div>
-          <Link to="/" className="icon-link">
+          <Link to="/" className="icon-link" onClick={handleSignOut}>
             <FaSignOutAlt className="icon" title="Cerrar sesión" />
           </Link>
         </div>

@@ -7,16 +7,29 @@ import AuthRoute from './components/AuthRoute'; // Importa el componente AuthRou
 import GamePage from './pages/GamePage';
 import AddFriendsPage from './pages/AddFriendsPage';
 import FriendRequestPage from './pages/FriendRequestPage';
+import AuthRedirect from './components/AuthRedirect';
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Rutas públicas */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/agregar-amigo" element={<AddFriendsPage />} />
-
+        {/* Rutas públicas protegidas con AuthRedirect */}
+        <Route
+          path="/"
+          element={
+            <AuthRedirect>
+              <HomePage />
+            </AuthRedirect>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthRedirect>
+              <RegisterPage />
+            </AuthRedirect>
+          }
+        />
         {/* Rutas protegidas */}
         <Route
           path="/dashboard"

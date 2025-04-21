@@ -76,7 +76,7 @@ const HomePage = () => {
     <div className="h-screen w-screen bg-[url('/Fondo.png')] bg-cover bg-center relative flex items-center justify-center">
       {/* Capa oscura sobre fondo */}
       <div className="absolute inset-0 bg-black/10 z-0" />
-
+    
       {/* Contenido sobre fondo */}
       <div className="relative z-10 w-full h-full flex">
         {/* Panel Izquierdo - Descripción */}
@@ -106,6 +106,7 @@ const HomePage = () => {
 
         {/* Panel Derecho - Login */}
         <div className="w-1/2 h-full flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        
           {/* Caja de login */}
           <div className="bg-[#1a1a1a] rounded-xl shadow-xl w-full max-w-md p-8 text-gray-200">
             {successMessage ? ( // Mostrar el mensaje de éxito si existe
@@ -129,8 +130,10 @@ const HomePage = () => {
                   />
                   <FaUser className="text-gray-400 ml-2" />
                 </div>
+                
 
                 <div className="mb-6 flex items-center bg-transparent border-b border-gray-500 relative">
+                
                   <input
                     type={showPassword ? 'text' : 'password'} // Mostrar u ocultar contraseña
                     id="password"
@@ -141,7 +144,7 @@ const HomePage = () => {
                   />
                   <FaLock className="text-gray-400 ml-2" />
                   <div
-                    className="absolute right-8 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                    className="absolute right-10 top-1/2 transform -translate-y-1/2 cursor-pointer"
                     onClick={() => setShowPassword(!showPassword)} // Cambiar estado al hacer clic
                   >
                     {showPassword ? (
