@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./AddFriendsPage.css";
 import api from "../services/api";
 import { FaMagnifyingGlass } from "react-icons/fa6";
-import { FaUserPlus } from "react-icons/fa"; // Ícono para agregar amigo
+import { FaUserPlus, FaHome } from "react-icons/fa"; // Ícono para agregar amigo
 import { useNavigate } from "react-router-dom";
 
 interface SearchTermProps {
@@ -57,16 +57,28 @@ const AddFriendsPage: React.FC = () => {
 
   const handleSendFriendRequest = async (friendUsername: string) => {
     try {
-      await api.post("/amigos", { from: loggedInUser, to: friendUsername });
+      const from = localStorage.getItem('username'); // Usuario logueado
+      if (!from) {
+        alert('Error: No se encontró el usuario logueado.');
+        return;
+      }
+  
+      console.log(`Enviando solicitud de amistad: from=${from}, to=${friendUsername}`);
+  
+      await api.post('/amigos', { from, to: friendUsername });
       alert(`Solicitud de amistad enviada a ${friendUsername}`);
       setUsers(users.filter((user) => user !== friendUsername)); // Actualizar lista
     } catch (err) {
-      console.error("Error al enviar solicitud de amistad:", err);
-      alert("Error al enviar solicitud de amistad");
+      console.error('Error al enviar solicitud de amistad:', err);
+      alert('Error al enviar solicitud de amistad');
     }
   };
 
   return (
+    <div className="dashboardContainer">
+    <div className="homeIcon" onClick={() => navigate("/dashboard")}>
+      <FaHome title="Volver al Dashboard" />
+    </div>
     <div className="dashboardContainer">
       {/* Botón de solicitudes de amistad */}
       <div className="topRightButton">
@@ -107,6 +119,7 @@ const AddFriendsPage: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };

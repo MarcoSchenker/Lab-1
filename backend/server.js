@@ -425,26 +425,105 @@ app.post('/amigos', async (req, res) => {
   const { from, to } = req.body;
 
   if (!from || !to) {
+    console.error('Error: Los campos "from" y "to" son obligatorios');
     return res.status(400).json({ error: 'Los campos "from" y "to" son obligatorios' });
   }
 
   try {
+    console.log(`Solicitud de amistad: from=${from}, to=${to}`);
+
+        // Obtener los IDs de los usuarios
+    const [fromUser] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [from]);
+    const [toUser] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [to]);
+
+    if (fromUser.length === 0 || toUser.length === 0) {
+      console.error('Error: Uno o ambos usuarios no existen');
+      return res.status(404).json({ error: 'Uno o ambos usuarios no existen' });
+    }
+
+    const fromId = fromUser[0].id;
+    const toId = toUser[0].id;
+
     // Verificar si ya existe una relación de amistad
     const [existing] = await pool.query(
       'SELECT * FROM amigos WHERE (usuario_id = ? AND amigo_id = ?) OR (usuario_id = ? AND amigo_id = ?)',
-      [from, to, to, from]
+      [fromId, toId, toId, fromId]
     );
 
     if (existing.length > 0) {
+      console.error('Error: Ya existe una relación de amistad o solicitud pendiente');
       return res.status(400).json({ error: 'Ya existe una relación de amistad o solicitud pendiente' });
     }
 
     // Crear la solicitud de amistad
-    await pool.query('INSERT INTO amigos (usuario_id, amigo_id, estado) VALUES (?, ?, ?)', [from, to, 'pendiente']);
+    await pool.query('INSERT INTO amigos (usuario_id, amigo_id, estado) VALUES (?, ?, ?)', [fromId, toId, 'pendiente']);
+    console.log('Solicitud de amistad creada exitosamente');
     res.status(201).json({ message: 'Solicitud de amistad enviada' });
   } catch (err) {
     console.error('Error al enviar solicitud de amistad:', err.message);
     res.status(500).json({ error: 'Error al enviar solicitud de amistad' });
+  }
+});
+
+// Endpoint para obtener solicitudes de amistad pendientes
+app.get('/friend-requests', async (req, res) => {
+  const { to } = req.query;
+
+  if (!to) {
+    return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
+  }
+
+  try {
+    // Obtener el ID del usuario logueado
+    const [toUser] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [to]);
+
+    if (toUser.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const toId = toUser[0].id;
+
+    // Obtener solicitudes de amistad pendientes
+    const [rows] = await pool.query(
+      `
+      SELECT a.id, u.nombre_usuario AS from_user
+      FROM amigos a
+      JOIN usuarios u ON a.usuario_id = u.id
+      WHERE a.amigo_id = ? AND a.estado = 'pendiente'
+      `,
+      [toId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener solicitudes de amistad:', err.message);
+    res.status(500).json({ error: 'Error al obtener solicitudes de amistad' });
+  }
+});
+
+app.post('/friend-requests/:id/accept', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Cambiar el estado de la solicitud a "aceptado"
+    await pool.query('UPDATE amigos SET estado = ? WHERE id = ?', ['aceptado', id]);
+    res.json({ message: 'Solicitud de amistad aceptada' });
+  } catch (err) {
+    console.error('Error al aceptar solicitud de amistad:', err.message);
+    res.status(500).json({ error: 'Error al aceptar solicitud de amistad' });
+  }
+});
+
+app.post('/friend-requests/:id/reject', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Cambiar el estado de la solicitud a "rechazado"
+    await pool.query('UPDATE amigos SET estado = ? WHERE id = ?', ['rechazado', id]);
+    res.json({ message: 'Solicitud de amistad rechazada' });
+  } catch (err) {
+    console.error('Error al rechazar solicitud de amistad:', err.message);
+    res.status(500).json({ error: 'Error al rechazar solicitud de amistad' });
   }
 });
 

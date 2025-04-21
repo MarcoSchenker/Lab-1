@@ -1,34 +1,131 @@
+.friendRequestPage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background: url('/FondoAmigos.jpg') no-repeat center center fixed;
+  background-size: cover; /* Asegura que el fondo cubra toda la pantalla */
+  background-attachment: fixed; /* Fija el fondo para que no se mueva al hacer scroll */
+  position: relative;
+}
+
+.friendRequestPage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Capa oscura con opacidad */
+  z-index: 0;
+}
+
 .friendRequestContainer {
-    padding: 20px;
-    text-align: center;
-  }
-  
-  .friendRequestItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .acceptIcon {
-    color: green;
-    cursor: pointer;
-    margin-left: 10px;
-    transition: transform 0.2s ease;
-  }
-  
-  .acceptIcon:hover {
-    transform: scale(1.2);
-  }
-  
-  .rejectIcon {
-    color: red;
-    cursor: pointer;
-    margin-left: 10px;
-    transition: transform 0.2s ease;
-  }
-  
-  .rejectIcon:hover {
-    transform: scale(1.2);
-  }
+  padding: 20px;
+  text-align: center;
+  max-width: 800px; /* Ajustado para pantallas grandes */
+  width: 90%; /* Para que sea responsive */
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco con opacidad */
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+}
+
+.homeIcon {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+
+.homeIcon:hover {
+  transform: scale(1.2);
+}
+
+.title {
+  font-size: 2rem; /* Más grande para pantallas grandes */
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.friendRequestList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.friendRequestItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.friendRequestItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.friendInfo {
+  display: flex;
+  align-items: center;
+}
+
+.userIcon {
+  font-size: 2rem;
+  color: #007bff;
+  margin-right: 10px;
+}
+
+.friendName {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.acceptIcon {
+  font-size: 1.5rem;
+  color: green;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.acceptIcon:hover {
+  transform: scale(1.2);
+}
+
+.rejectIcon {
+  font-size: 1.5rem;
+  color: red;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.rejectIcon:hover {
+  transform: scale(1.2);
+}
+
+.noRequests {
+  font-size: 1.2rem;
+  color: #666;
+  margin-top: 20px;
+}

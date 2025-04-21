@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { FaCheck, FaTimes } from "react-icons/fa"; // Íconos para aceptar y rechazar
+import { FaCheck, FaTimes, FaUserCircle, FaHome } from "react-icons/fa"; // Íconos para aceptar y rechazar
 import "./FriendRequestPage.css";
 import api from "../services/api";
+import { useNavigate } from "react-router-dom";
 
 const FriendRequestPage: React.FC = () => {
   const [friendRequests, setFriendRequests] = useState<any[]>([]);
   const loggedInUser = localStorage.getItem("username"); // Usuario logueado
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchFriendRequests = async () => {
@@ -39,29 +41,40 @@ const FriendRequestPage: React.FC = () => {
   };
 
   return (
+    <div className="friendRequestPage">
+      <div className="homeIcon" onClick={() => navigate("/dashboard")}>
+        <FaHome title="Volver al Dashboard" />
+      </div>
+
     <div className="friendRequestContainer">
-      <h1>Solicitudes de Amistad</h1>
+      <h1 className="title">Solicitudes de Amistad</h1>
       {friendRequests.length > 0 ? (
-        <ul>
+        <ul className="friendRequestList">
           {friendRequests.map((request) => (
             <li key={request.id} className="friendRequestItem">
-              <span>{request.from}</span>
-              <FaCheck
-                className="acceptIcon"
-                title="Aceptar solicitud"
-                onClick={() => handleAcceptRequest(request.id)}
-              />
-              <FaTimes
-                className="rejectIcon"
-                title="Rechazar solicitud"
-                onClick={() => handleRejectRequest(request.id)}
-              />
+              <div className="friendInfo">
+                <FaUserCircle className="userIcon" />
+                <span className="friendName">{request.from_user}</span>
+              </div>
+              <div className="actionButtons">
+                <FaCheck
+                  className="acceptIcon"
+                  title="Aceptar solicitud"
+                  onClick={() => handleAcceptRequest(request.id)}
+                />
+                <FaTimes
+                  className="rejectIcon"
+                  title="Rechazar solicitud"
+                  onClick={() => handleRejectRequest(request.id)}
+                />
+              </div>
             </li>
           ))}
         </ul>
       ) : (
-        <p>No tienes solicitudes de amistad pendientes.</p>
+        <p className="noRequests">No tienes solicitudes de amistad pendientes.</p>
       )}
+    </div>
     </div>
   );
 };

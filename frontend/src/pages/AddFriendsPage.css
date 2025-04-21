@@ -3,54 +3,70 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; /* Cambiar para que los elementos estén más arriba */
+  justify-content: flex-start;
   min-height: 100vh;
   width: 100vw;
-  background: url('Fondo Azul.jpg') no-repeat center center fixed; /* Imagen de fondo */
-  background-size: cover; /* Escala la imagen para cubrir el ancho */
+  background: url('Fondo Azul.jpg') no-repeat center center fixed;
+  background-size: cover;
   color: #fff;
   position: relative;
   overflow: hidden;
-  padding-top: 50px; /* Espaciado superior */
+  padding-top: 50px;
   padding: 20px;
+}
+
+/* Ícono de casita para volver al dashboard */
+.homeIcon {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+
+.homeIcon:hover {
+  transform: scale(1.2);
 }
 
 /* Título del buscador */
 .searchTitle {
-  font-size: 2rem; /* Más grande */
+  font-size: 2rem;
   font-weight: bold;
   text-align: center;
   margin-bottom: 20px;
-  color: black  ;
+  color: black;
 }
 
 /* Contenedor de la barra de búsqueda con el ícono */
 .searchBarContainer {
   display: flex;
   align-items: center;
-  width: 80%; /* Más ancho */
-  max-width: 800px; /* Límite máximo */
+  width: 80%;
+  max-width: 800px;
   border-bottom: 4px solid #000;
-  margin-bottom: 20px; /* Espaciado inferior */
-  padding: 5px 10px; /* Espaciado interno */
-  background-color: #fff; /* Fondo blanco */
+  margin-bottom: 20px;
+  padding: 5px 10px;
+  background-color: #fff;
   border-radius: 16px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Ícono de la lupa */
 .searchIcon {
-  font-size: 1.5rem; /* Tamaño del ícono */
-  color: #000; /* Color del ícono */
-  margin-right: 10px; /* Espaciado entre el ícono y el input */
+  font-size: 1.5rem;
+  color: #000;
+  margin-right: 10px;
 }
 
 /* Estilos del input */
 .searchBar {
-  flex: 1; /* Ocupa el resto del espacio disponible */
+  flex: 1;
   border: none;
-  font-size: 1.2rem; /* Texto más grande */
-  outline: none; /* Eliminar borde al hacer foco */
+  font-size: 1.2rem;
+  outline: none;
 }
 
 /* Contenedor del buscador */
@@ -59,9 +75,9 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 800px; /* Más ancho */
+  max-width: 800px;
   margin: 0 auto;
-  background-color: rgba(255, 255, 255, 0.8); /* Fondo blanco translúcido */
+  background-color: rgba(255, 255, 255, 0.8);
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
@@ -69,29 +85,29 @@
 
 /* Lista de resultados */
 .searchData {
-  width: 100%; /* Ocupa todo el ancho del contenedor */
+  width: 100%;
   margin-top: 20px;
 }
 
 .searchData ul {
   padding: 0;
   margin: 0;
-  list-style: none; /* Eliminar viñetas */
+  list-style: none;
 }
 
 .searchData li {
-  font-size: 1.5rem; /* Texto más grande */
-  padding: 12px 20px; /* Más espacio interno */
+  font-size: 1.5rem;
+  padding: 12px 20px;
   border-bottom: 1px solid #ddd;
   cursor: pointer;
-  background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco translúcido */
-  color: #000; /* Texto negro */
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #000;
   border-radius: 8px;
-  margin-bottom: 10px; /* Espaciado entre elementos */
+  margin-bottom: 10px;
 }
 
 .searchData li:hover {
-  background-color: rgba(0, 0, 255, 0.1); /* Fondo azul claro al pasar el mouse */
+  background-color: rgba(0, 0, 255, 0.1);
 }
 
 /* Ícono para agregar amigo */
