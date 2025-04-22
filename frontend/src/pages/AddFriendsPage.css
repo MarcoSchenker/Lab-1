@@ -1,18 +1,38 @@
-/* Fondo del Dashboard */
-.dashboardContainer {
+.AddFriendsPage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   min-height: 100vh;
   width: 100vw;
-  background: url('Fondo Azul.jpg') no-repeat center center fixed;
-  background-size: cover;
-  color: #fff;
+  background: url('/FondoAmigos.jpg') no-repeat center center fixed;
+  background-size: cover; /* Asegura que el fondo cubra toda la pantalla */
+  background-attachment: fixed; /* Fija el fondo para que no se mueva al hacer scroll */
   position: relative;
-  overflow: hidden;
-  padding-top: 50px;
+}
+
+.AddFriendsPage::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Capa oscura con opacidad */
+  z-index: 0;
+}
+
+.AddFriendsContainer {
   padding: 20px;
+  text-align: center;
+  max-width: 800px; /* Ajustado para pantallas grandes */
+  width: 90%; /* Para que sea responsive */
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco con opacidad */
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
 }
 
 /* Ícono de casita para volver al dashboard */

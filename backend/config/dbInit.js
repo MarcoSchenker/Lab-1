@@ -1,6 +1,10 @@
 // config/dbInit.js
 const mysql = require('mysql2/promise');
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+const defaultImagePath = path.join(__dirname, '../public/foto_anonima.jpg');
+const defaultImage = fs.readFileSync(defaultImagePath);
 
 async function initializeDatabase() {
   let connection;
@@ -254,6 +258,14 @@ async function initializeDatabase() {
         VALUES (NEW.id, skin_original_id);
       END
     `);
+    await connection.query(`
+      INSERT INTO imagenes_perfil (usuario_id, imagen)
+      SELECT id, ? FROM usuarios
+      WHERE id NOT IN (SELECT usuario_id FROM imagenes_perfil)
+    `, [defaultImage]);
+    
+    console.log('Imagen por defecto asignada a todos los usuarios sin imagen');
+    
     console.log('Trigger after_usuario_insert creado o actualizado');
 
     console.log('Inicialización de la base de datos completada exitosamente');

@@ -8,6 +8,7 @@ import GamePage from './pages/GamePage';
 import AddFriendsPage from './pages/AddFriendsPage';
 import FriendRequestPage from './pages/FriendRequestPage';
 import AuthRedirect from './components/AuthRedirect';
+import FriendsPage from './pages/FriendsPage';
 
 function App() {
   return (
@@ -68,6 +69,14 @@ function App() {
           element={
             <AuthRoute>
               <FriendRequestPage />
+            </AuthRoute>
+          }
+        />
+        <Route
+          path="/friends"
+          element={
+            <AuthRoute>
+              <FriendsPage />
             </AuthRoute>
           }
         />

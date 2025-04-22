@@ -3,9 +3,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const multer = require('multer');
 require('dotenv').config();
 const pool = require('./config/db');
 const { initializeDatabase } = require('./config/dbInit');
+
 
 // Inicializar Express
 const app = express();
@@ -15,6 +17,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
 // Inicializar la base de datos antes de arrancar el servidor
 (async () => {
@@ -393,7 +396,7 @@ app.get('/usuarios/:usuario_id/monedas', async (req, res) => {
   }
 });
 
-// Endpoint para añadir monedas a un usuario (por ejemplo, al ganar partidas)
+// Endpoint para añadir monedas a un usuario
 app.post('/usuarios/:usuario_id/monedas', async (req, res) => {
   const { usuario_id } = req.params;
   const { cantidad } = req.body;
@@ -465,6 +468,44 @@ app.post('/amigos', async (req, res) => {
   }
 });
 
+app.get('/amigos', async (req, res) => {
+  const { nombre_usuario } = req.query;
+
+  if (!nombre_usuario) {
+    return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        u.nombre_usuario, 
+        IFNULL(
+          CONCAT('${process.env.SERVER_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
+          '${process.env.SERVER_URL || 'http://localhost:3001'}/foto_anonima.jpg'
+        ) AS foto_perfil
+      FROM amigos a
+      JOIN usuarios u ON (a.usuario_id = u.id OR a.amigo_id = u.id)
+      LEFT JOIN imagenes_perfil ip ON u.id = ip.usuario_id
+      WHERE (a.usuario_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?) 
+      OR a.amigo_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?))
+      AND a.estado = 'aceptado'
+      AND u.nombre_usuario != ?
+      `,
+      [nombre_usuario, nombre_usuario, nombre_usuario]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No se encontraron amigos' });
+    }
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener amigos:', err.message);
+    res.status(500).json({ error: 'Error al obtener amigos' });
+  }
+});
+
 // Endpoint para obtener solicitudes de amistad pendientes
 app.get('/friend-requests', async (req, res) => {
   const { to } = req.query;
@@ -527,6 +568,74 @@ app.post('/friend-requests/:id/reject', async (req, res) => {
   }
 });
 
+
+// Configuración de multer para manejar archivos en memoria
+const storage = multer.memoryStorage(); // Almacena los archivos en memoria
+const upload = multer({ storage });
+
+// Endpoint para subir una foto de perfil
+app.post('/usuarios/:usuario_nombre_usuario/foto-perfil', upload.single('foto'), async (req, res) => {
+  const { usuario_nombre_usuario } = req.params;
+
+  if (!req.file) {
+    console.error('Error: No se subió ninguna imagen');
+    return res.status(400).json({ error: 'No se subió ninguna imagen' });
+  }
+
+  try {
+    // Leer el archivo como un buffer
+    const imageBuffer = req.file.buffer;
+
+    // Obtener el ID del usuario
+    const [user] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [usuario_nombre_usuario]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const usuario_id = user[0].id;
+
+    // Eliminar la fila existente (si existe)
+    await pool.query('DELETE FROM imagenes_perfil WHERE usuario_id = ?', [usuario_id]);
+
+    // Insertar la nueva imagen en la base de datos
+    await pool.query('INSERT INTO imagenes_perfil (usuario_id, imagen) VALUES (?, ?)', [usuario_id, imageBuffer]);
+
+    res.json({ message: 'Foto de perfil subida exitosamente' });
+  } catch (err) {
+    console.error('Error al subir la foto de perfil:', err.message);
+    res.status(500).json({ error: 'Error al subir la foto de perfil' });
+  }
+});
+
+app.get('/usuarios/:usuario_nombre_usuario/foto-perfil', async (req, res) => {
+  const { usuario_nombre_usuario } = req.params;
+
+  try {
+    // Obtener el ID del usuario
+    const [user] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [usuario_nombre_usuario]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const usuario_id = user[0].id;
+
+    // Obtener la imagen de la base de datos
+    const [rows] = await pool.query('SELECT imagen FROM imagenes_perfil WHERE usuario_id = ?', [usuario_id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Foto de perfil no encontrada' });
+    }
+
+    const imageBuffer = rows[0].imagen;
+
+    // Enviar la imagen como respuesta
+    res.set('Content-Type', 'image/jpeg'); // Cambia el tipo MIME si es necesario
+    res.send(imageBuffer);
+  } catch (err) {
+    console.error('Error al obtener la foto de perfil:', err.message);
+    res.status(500).json({ error: 'Error al obtener la foto de perfil' });
+  }
+});
 
 // WebSocket básico
 io.on('connection', (socket) => {

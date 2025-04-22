@@ -75,20 +75,20 @@ const AddFriendsPage: React.FC = () => {
   };
 
   return (
-    <div className="dashboardContainer">
+    <div className="AddFriendsPage">
     <div className="homeIcon" onClick={() => navigate("/dashboard")}>
       <FaHome title="Volver al Dashboard" />
     </div>
-    <div className="dashboardContainer">
       {/* Botón de solicitudes de amistad */}
       <div className="topRightButton">
         <button
-          className="friendRequestsButton"
-          onClick={() => navigate("/friends-request")}
+        className="friendRequestsButton"
+        onClick={() => navigate("/friends-request")}
         >
           Solicitudes de Amistad
         </button>
       </div>
+    <div className="AddFriendsContainer">
       <div className="searchHolder">
         <h1 className="searchTitle">Buscar Amigos</h1>
         <SearchBar

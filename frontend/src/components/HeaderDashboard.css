@@ -107,3 +107,30 @@
 .icon:hover {
   transform: scale(1.1);
 }
+
+.upload-section {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upload-section input[type="file"] {
+  margin-bottom: 10px;
+}
+
+.upload-section button {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-section button:hover {
+  background-color: #0056b3;
+}
