@@ -62,25 +62,45 @@ app.post('/usuarios', async (req, res) => {
     return res.status(400).json({ error: 'El email no tiene un formato válido' });
   }
 
-  /// Validar la longitud de la contraseña (solo si no es fromGoogle)
+  // Validar la longitud de la contraseña (solo si no es fromGoogle)
   if (contraseña.length < 6 && !fromGoogle) {
-  return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
   }
 
   try {
     const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash(contraseña, 10);
-    // Insertar el usuario en la base de datos sin encriptar la contraseña
+
+    // Insertar el usuario en la base de datos
     const [result] = await pool.query(
       'INSERT INTO usuarios (nombre_usuario, email, contraseña) VALUES (?, ?, ?)',
       [nombre_usuario, email, hashedPassword]
     );
 
-    res.status(201).json({ message: 'Usuario registrado exitosamente', userId: result.insertId });
+    const userId = result.insertId;
+
+    // Leer la imagen por defecto desde el sistema de archivos
+    const fs = require('fs');
+    const path = require('path');
+    const defaultImagePath = path.join(__dirname, './public/foto_anonima.jpg');
+    let defaultImage;
+
+    try {
+      defaultImage = fs.readFileSync(defaultImagePath);
+    } catch (err) {
+      console.error('Error al leer foto_anonima.jpg:', err.message);
+      return res.status(500).json({ error: 'Error al asignar la imagen por defecto' });
+    }
+
+    // Insertar la imagen por defecto en la tabla imagenes_perfil
+    await pool.query('INSERT INTO imagenes_perfil (usuario_id, imagen) VALUES (?, ?)', [userId, defaultImage]);
+
+    res.status(201).json({ message: 'Usuario registrado exitosamente', userId });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'El nombre de usuario o email ya está en uso' });
     }
+    console.error('Error al registrar usuario:', err.message);
     res.status(500).json({ error: 'Error al registrar usuario' });
   }
 });

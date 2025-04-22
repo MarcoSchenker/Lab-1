@@ -37,22 +37,19 @@ const Header: React.FC = () => {
           const coinsResponse = await api.get(`/usuarios/${loggedInUser}/monedas`);
           setUserCoins(coinsResponse.data.monedas);
     
-          // Obtener foto de perfil
-          const imageResponse = await api.get(`/usuarios/${loggedInUser}/foto-perfil`, {
-            responseType: 'blob',
-          });
-          const imageUrl = URL.createObjectURL(imageResponse.data);
-          setUserImage(imageUrl);
-        } catch (err) {
-          console.error('Error al obtener datos del usuario:', err);
-          setUserImage('/foto_anonima.jpg'); // Imagen por defecto en caso de error
-        }
-      };
-    
-      if (loggedInUser) {
-        fetchUserData();
-      }
-    }, [loggedInUser]);
+         // Obtener foto de perfil
+         const imageUrl = `/usuarios/${loggedInUser}/foto-perfil?t=${new Date().getTime()}`; // Evitar caché
+         setUserImage(imageUrl);
+       } catch (err) {
+         console.error('Error al obtener datos del usuario:', err);
+         setUserImage('/foto_anonima.jpg'); // Imagen por defecto en caso de error
+       }
+     };
+   
+     if (loggedInUser) {
+       fetchUserData();
+     }
+   }, [loggedInUser]);
 
   const toggleDropdown = () => {
     setIsDropdownVisible(!isDropdownVisible); // Alterna la visibilidad del menú
