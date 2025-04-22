@@ -61,7 +61,7 @@ const Card: React.FC<CardProps> = ({
     // Clases de Tailwind (ajusta tamaños si es necesario)
     const baseClasses = 'w-16 h-auto md:w-20 lg:w-24 rounded shadow-md transition-all duration-200 ease-in-out border border-black'; // Añadido borde negro sutil
     const clickableClasses = esClickeable ? 'cursor-pointer hover:scale-105 hover:-translate-y-1 hover:shadow-lg' : '';
-    const disabledClasses = disabled && carta ? 'opacity-50 cursor-not-allowed grayscale' : ''; // Añadido grayscale para deshabilitadas
+    const disabledClasses = disabled && carta ? 'cursor-not-allowed' : '';
 
     return (
         <div

@@ -285,19 +285,26 @@ private esRespuesta(canto: Canto): boolean {
         // Modificador basado en historial del oponente para ESTE canto específico
         let pHistorialOponente: number | null = null;
         let modHistorial = 0;
+        const envidoS_Opp = statsEnvidoOponente?.envidoS ?? [];
+        const revire_Opp = statsEnvidoOponente?.revire ?? [];
+        const realEnvido_Opp = statsEnvidoOponente?.realEnvido ?? [];
+        const faltaEnvido_Opp = statsEnvidoOponente?.faltaEnvido ?? [];
+
         switch (ultimoCantoEnvido) {
             case Canto.Envido:
-                pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.envidoS);
+                pHistorialOponente = probabilidad.medianaEnvidoOponente(envidoS_Opp); // Usar variable segura
                 break;
-            case Canto.EnvidoEnvido: // Asume vino de E->EE
-                pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.revire.concat(statsEnvidoOponente.envidoS)); // Combinar?
+            case Canto.EnvidoEnvido:
+                pHistorialOponente = probabilidad.medianaEnvidoOponente(revire_Opp.concat(envidoS_Opp)); // Usar variables seguras
                 break;
             case Canto.RealEnvido:
-                pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.realEnvido.concat(statsEnvidoOponente.envidoS, statsEnvidoOponente.revire));
+                pHistorialOponente = probabilidad.medianaEnvidoOponente(
+                    realEnvido_Opp.concat(envidoS_Opp, revire_Opp) // Usar variables seguras
+                );
                 break;
             case Canto.FaltaEnvido:
-                 pHistorialOponente = probabilidad.medianaEnvidoOponente(statsEnvidoOponente.faltaEnvido); // Podría incluir todo?
-                 break;
+                pHistorialOponente = probabilidad.medianaEnvidoOponente(faltaEnvido_Opp); // Usar variable segura
+                break;
         }
         if (pHistorialOponente !== null) {
             // Si la mediana del oponente es alta, tener menos confianza; si es baja, tener más.

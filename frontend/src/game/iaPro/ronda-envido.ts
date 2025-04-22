@@ -202,9 +202,15 @@ import { Naipe } from './naipe';
          //  TODO: Implementar extracción de stats del oponente (IA o Humano)
          let statsOponente: any = { envidoS: [], revire: [], realEnvido: [], faltaEnvido: [] };
          if (oponente.jugador instanceof IA) {
-             statsOponente = { /* extraer de oponente.jugador */ };
+            const oponenteIA = oponente.jugador as IA;
+            statsOponente = {
+                envidoS: oponenteIA.envidoS ?? [],
+                revire: oponenteIA.revire ?? [],
+                realEnvido: oponenteIA.realEnvido ?? [],
+                faltaEnvido: oponenteIA.faltaEnvido ?? [],
+            };
          } else {
-             statsOponente = { /* extraer de oponente.jugador (clase base) */ };
+             statsOponente = { };
          }
 
          return {

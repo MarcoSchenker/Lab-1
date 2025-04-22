@@ -70,7 +70,8 @@ registrarCartaJugadaPorObjeto(carta: Naipe): boolean {
   const index = this.cartasEnMano.findIndex(c => c.numero === carta.numero && c.palo === carta.palo);
   if (index > -1) {
       // Eliminar la carta de la mano usando splice
-      this.cartasEnMano.splice(index, 1);
+      const nuevaMano = this.cartasEnMano.filter(c => c !== carta);
+      this.cartasEnMano = nuevaMano;
       // Añadir la carta a las jugadas de la ronda
       this.cartasJugadasRonda.push(carta);
       console.log(`${this.nombre} jugó ${carta.getNombre()}. Mano restante: ${this.cartasEnMano.map(c=>c.getNombre()).join(', ')}`)

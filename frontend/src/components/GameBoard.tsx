@@ -6,7 +6,6 @@ const GameBoard = ({ cartasMesa, numeroManoActual, className = "", imageBasePath
     <div className={`flex justify-around items-center bg-green-800 rounded p-4 border border-yellow-600 border-opacity-30 min-h-[10rem] md:min-h-[12rem] ${className}`}>
       {cartasMesa.map((mano, manoIndex) => {
         if (!Array.isArray(mano)) return null;
-
         const cartaHumano = mano[0] || null;
         const cartaIA = mano[1] || null;
         const esManoActiva = manoIndex === numeroManoActual;
