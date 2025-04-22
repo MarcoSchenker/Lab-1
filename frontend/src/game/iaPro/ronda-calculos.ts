@@ -71,7 +71,7 @@ export function calcularPuntosTruco(
         case Canto.Truco: return { querido: 2, noQuerido: 1 };
         case Canto.ReTruco: return { querido: 3, noQuerido: 2 };
         case Canto.ValeCuatro: return { querido: 4, noQuerido: 3 };
-        default: return { querido: 1, noQuerido: 0 };
+        default: return { querido: 1, noQuerido: 1};
     }
 }
 

@@ -188,7 +188,7 @@ export class Ronda {
                     continue; // Revalúa el nuevo estado
 
                 default:
-                    console.error("❌ Estado de ronda desconocido:", this.estadoRonda);
+                    console.error("Estado de ronda desconocido:", this.estadoRonda);
                     this.estadoRonda = EstadoRonda.RondaTerminada;
                     continue;
             }
@@ -410,17 +410,17 @@ export class Ronda {
         return equipo === this.equipoPrimero ? this.equipoSegundo : this.equipoPrimero;
     }
     public getManosGanadas(jugador: Jugador): number {
-        if (this.equipoPrimero.jugador === jugador) {
+        if (this.equipoPrimero.jugador.nombre === jugador.nombre) {
         return this.equipoPrimero.manosGanadasRonda;
-        } else if (this.equipoSegundo.jugador === jugador) {
+        } else if (this.equipoSegundo.jugador.nombre === jugador.nombre) {
         return this.equipoSegundo.manosGanadasRonda;
         }
         return 0; // O quizás lanzar un error si el jugador no pertenece a la ronda
         }
         public getOtroJugador(jugador: Jugador): Jugador {
-        if (this.equipoPrimero.jugador === jugador) {
+        if (this.equipoPrimero.jugador.nombre === jugador.nombre) {
         return this.equipoSegundo.jugador;
-        } else if (this.equipoSegundo.jugador === jugador) {
+        } else if (this.equipoSegundo.jugador.nombre === jugador.nombre) {
         return this.equipoPrimero.jugador;
         }
         // Manejar el caso en que el jugador no pertenece a la ronda (lanzar error o devolver null)
@@ -428,8 +428,8 @@ export class Ronda {
         }
 
     public getEquipo(jugador: Jugador): Equipo | null {
-        if (this.equipoPrimero.jugador === jugador) return this.equipoPrimero;
-        if (this.equipoSegundo.jugador === jugador) return this.equipoSegundo;
+        if (this.equipoPrimero.jugador.nombre === jugador.nombre) return this.equipoPrimero;
+        if (this.equipoSegundo.jugador.nombre === jugador.nombre) return this.equipoSegundo;
         return null;
     }
 
