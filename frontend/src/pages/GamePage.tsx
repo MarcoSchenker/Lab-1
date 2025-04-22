@@ -129,7 +129,6 @@ const GamePage: React.FC = () => {
                 // para mostrar los dorsos correctamente, si PlayerArea lo soporta.
             },
 
-             // ✨ displayPlayedCard recibe la carta CON info 'esHumano' desde RondaTurnoHandler ✨
             displayPlayedCard: (jugador, carta, manoNumero, jugadaEnMano) => {
                  console.log(`UI Callback: Carta jugada por ${jugador.nombre} en mano ${manoNumero + 1}`, carta);
                  setGameState(prev => {
@@ -140,13 +139,7 @@ const GamePage: React.FC = () => {
                     if (!nuevasCartasMesa[manoNumero]) {
                         nuevasCartasMesa[manoNumero] = [];
                     }
-
-                     // Añadir la carta CON la información `esHumano` a la mano correcta
-                     // RondaTurnoHandler ya debe añadir la propiedad 'esHumano' a 'carta'
-                     // El índice 'jugadaEnMano' (0 o 1) determina la posición dentro del array de la mano
-                     // Asumimos que GameBoard puede manejar el orden o identificar por 'esHumano'
-                     // Si GameBoard necesita un orden fijo [cartaEq1, cartaEq2], ajusta aquí:
-                     const indiceEnMano = jugador === prev.equipoPrimero?.jugador ? 0 : 1; // 0 para Eq1, 1 para Eq2
+                     const indiceEnMano = jugador.nombre === prev.equipoPrimero?.jugador.nombre ? 0 : 1; // 0 para Eq1, 1 para Eq2
                      // Asegura que hay placeholders null si es necesario
                      while (nuevasCartasMesa[manoNumero].length <= indiceEnMano) {
                          nuevasCartasMesa[manoNumero].push(null);
@@ -164,7 +157,7 @@ const GamePage: React.FC = () => {
                  setTimeout(() => {
                      // Solo ocultar si el mensaje no ha cambiado mientras tanto
                      setGameState(prev => prev.ultimoCanto?.mensaje === mensaje ? { ...prev, ultimoCanto: null } : prev);
-                 }, 2500); // Duración del mensaje de canto
+                 }, 4000); // Duración del mensaje de canto
             },
             actualizarAccionesPosibles: (acciones) => {
                  // console.log("UI Callback: Actualizando acciones", acciones); // Mucho log, opcional
@@ -308,7 +301,7 @@ const GamePage: React.FC = () => {
                                 jugador={gameState.equipoSegundo?.jugador ?? null}
                                 cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? gameState.cartasManoJugador.length ?? 3).fill(null)} // Muestra dorsos
                                 esTurno={gameState.turnoActual === gameState.equipoSegundo}
-                                ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoSegundo?.jugador ? gameState.ultimoCanto.mensaje : null}
+                                ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador?.nombre === gameState.equipoSegundo?.jugador.nombre ? gameState.ultimoCanto.mensaje : null}
                                 onCardClick={() => {}} // No se puede hacer clic en cartas IA
                                 puedeJugarCarta={false}
                                 imageBasePath={IMAGE_BASE_PATH}
@@ -331,7 +324,7 @@ const GamePage: React.FC = () => {
                                 jugador={gameState.equipoPrimero?.jugador ?? null}
                                 cartas={gameState.cartasManoJugador} // Cartas reales del humano
                                 esTurno={gameState.turnoActual?.jugador?.esHumano === true}
-                                ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador === gameState.equipoPrimero?.jugador ? gameState.ultimoCanto.mensaje : null}
+                                ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador?.nombre === gameState.equipoPrimero?.jugador.nombre ? gameState.ultimoCanto.mensaje : null}
                                 onCardClick={handlePlayCard} // Manejador para jugar carta
                                 puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
                                 imageBasePath={IMAGE_BASE_PATH}
