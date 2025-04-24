@@ -23,8 +23,6 @@ export enum Palo {
     NoQuiero = 'N',
     IrAlMazo = 'M',
     Paso = 'Paso', // Para indicar que no se canta nada
-    // Representación numérica (para puntos de envido)
-    Puntos = 'Puntos' // Usado internamente para loguear puntos
   }
   
   /** Objeto devuelto al calcular puntos de Envido */

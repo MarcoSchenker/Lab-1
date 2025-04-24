@@ -10,6 +10,7 @@ import GameBoard from '../components/GameBoard';
 import Scoreboard from '../components/ScoreBoard';
 import ActionButtons from '../components/ActionButtons';
 import GameLog from '../components/GameLog';
+import CallDisplay from '../components/CallDisplay';
 
 // Interfaz para las cartas que van a la mesa, incluyendo info para la UI
 interface CartaConInfoUI extends Naipe {
@@ -114,8 +115,6 @@ const GamePage: React.FC = () => {
                      equipoSegundo: prev.equipoSegundo ? { ...prev.equipoSegundo, jugador: { ...prev.equipoSegundo.jugador, nombre: name2 } as Jugador } : null,
                  }));
             },
-
-            // ✨ SIMPLIFICADO: Solo actualiza la mano del jugador humano ✨
             displayPlayerCards: (jugador) => {
                 if (jugador.esHumano) {
                      console.log("UI Callback: Mostrando cartas jugador humano", jugador.cartasEnMano);
@@ -295,13 +294,14 @@ const GamePage: React.FC = () => {
                             </div>
                         )}
 
+                            <CallDisplay call={gameState.ultimoCanto} />
+
                         {/* Área del Oponente (IA) */}
                         <div className="mb-2">
                             <PlayerArea
                                 jugador={gameState.equipoSegundo?.jugador ?? null}
                                 cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? gameState.cartasManoJugador.length ?? 3).fill(null)} // Muestra dorsos
                                 esTurno={gameState.turnoActual === gameState.equipoSegundo}
-                                ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador?.nombre === gameState.equipoSegundo?.jugador.nombre ? gameState.ultimoCanto.mensaje : null}
                                 onCardClick={() => {}} // No se puede hacer clic en cartas IA
                                 puedeJugarCarta={false}
                                 imageBasePath={IMAGE_BASE_PATH}
@@ -324,7 +324,6 @@ const GamePage: React.FC = () => {
                                 jugador={gameState.equipoPrimero?.jugador ?? null}
                                 cartas={gameState.cartasManoJugador} // Cartas reales del humano
                                 esTurno={gameState.turnoActual?.jugador?.esHumano === true}
-                                ultimoCanto={gameState.ultimoCanto && gameState.ultimoCanto.jugador?.nombre === gameState.equipoPrimero?.jugador.nombre ? gameState.ultimoCanto.mensaje : null}
                                 onCardClick={handlePlayCard} // Manejador para jugar carta
                                 puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
                                 imageBasePath={IMAGE_BASE_PATH}

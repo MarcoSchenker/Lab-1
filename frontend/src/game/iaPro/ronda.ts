@@ -433,9 +433,24 @@ export class Ronda {
         return null;
     }
 
-    public cantoToString(canto: Canto | number): string {
-        if (typeof canto === 'number') return canto.toString();
-        return Canto[canto] || ""; // Usar el nombre del enum si existe
+    public cantoToString(canto: Canto): string {
+        switch (canto) {
+            // Envido
+            case Canto.Envido: return "Envido";
+            case Canto.EnvidoEnvido: return "Envido envido";
+            case Canto.RealEnvido: return "Real envido";
+            case Canto.FaltaEnvido: return "Falta envido";
+            // Truco
+            case Canto.Truco: return "Truco";
+            case Canto.ReTruco: return "Re truco";
+            case Canto.ValeCuatro: return "Vale cuatro";
+            // Respuestas / Acciones
+            case Canto.Quiero: return "Quiero";
+            case Canto.NoQuiero: return "No quiero";
+            case Canto.IrAlMazo: return "Ir al mazo";
+            case Canto.Paso: return "Paso";
+            default: return "";
+        }
     }
 
     public esRespuesta(canto: Canto): boolean {
