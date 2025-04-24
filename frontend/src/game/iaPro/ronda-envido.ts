@@ -135,11 +135,11 @@ import { Naipe } from './naipe';
                  this.ronda.equipoPie.jugador.cartas
              );
 
-             this.ronda.callbacks.showPlayerCall(this.ronda.equipoMano.jugador, `${this.ronda.cantoToString(pMano)}`);
+             this.ronda.callbacks.showPlayerCall(this.ronda.equipoMano.jugador, `${pMano}`);
              setTimeout(() => {
                  this.ronda.callbacks.showPlayerCall(
                      this.ronda.equipoPie.jugador,
-                     `${this.ronda.cantoToString(pPie)}`
+                     `${pPie}`
                  );
              }, 600);
 

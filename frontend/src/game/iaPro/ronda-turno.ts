@@ -28,8 +28,6 @@ export class RondaTurnoHandler {
     public nuevaRonda(): void {
         this.cartasMesa = Array(6).fill(null);
         this.jugadasEnManoActual = 0;
-        // Asegurarse que los jugadores también resetean sus cartas jugadas, etc.
-        // (Esto ya se hace en Ronda.iniciar -> jugador.nuevaRonda())
     }
 
     /** Reparte 3 cartas a cada jugador */
@@ -112,7 +110,7 @@ export class RondaTurnoHandler {
 
         // Calcular índice en la mesa visual (0-5)
         // playerIndex 0 para equipo1, 1 para equipo2
-        const playerIndex = equipoQueJuega === this.ronda.equipoPrimero ? 0 : 1;
+        const playerIndex = equipoQueJuega.jugador.nombre === this.ronda.equipoPrimero.jugador.nombre ? 0 : 1;
         // Índice basado en la mano actual y quién juega
         const mesaIndex = this.ronda.numeroDeMano * 2 + playerIndex;
 
@@ -131,7 +129,7 @@ export class RondaTurnoHandler {
             esHumano: jugador.esHumano, // Añadir si el jugador es humano o no
             getNombre: carta.getNombre.bind(carta), // Asegurar que los métodos están presentes
             getImageSrc: carta.getImageSrc.bind(carta),
-            probGanar: carta.probGanar, // Asumimos que probGanar ya existe en la carta original
+            probGanar: carta.probGanar,
         };
         // Llamar al callback para que React actualice la mesa
         this.ronda.callbacks.displayPlayedCard(
@@ -417,7 +415,7 @@ export class RondaTurnoHandler {
 
     /** Getter público para las cartas en la mesa */
     public getCartasMesa(): (Naipe | null)[] {
-        return [...this.cartasMesa]; // Devolver una copia para evitar mutaciones externas
+        return [...this.cartasMesa];
     }
 
     /** Logger interno para modo debug */

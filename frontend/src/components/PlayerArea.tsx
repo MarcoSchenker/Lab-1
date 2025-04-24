@@ -8,7 +8,6 @@ interface PlayerAreaProps {
     jugador: Jugador | null;
     cartas: Naipe[];
     esTurno: boolean;
-    ultimoCanto: string | null;
     onCardClick: (naipe: Naipe) => void;
     puedeJugarCarta: boolean;
     imageBasePath?: string;
@@ -18,7 +17,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
     jugador,
     cartas,
     esTurno,
-    ultimoCanto,
     onCardClick,
     puedeJugarCarta,
     imageBasePath = './cartas/mazoOriginal',
@@ -71,12 +69,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
                         />
                     ))}
             </div>
-
-            {ultimoCanto && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-white text-black rounded-full shadow-lg text-sm font-medium whitespace-nowrap">
-                    {ultimoCanto}
-                </div>
-            )}
         </div>
     );
 };
