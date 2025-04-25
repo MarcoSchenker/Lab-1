@@ -30,14 +30,14 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
       fosforos.push(
         <div key={`grupo-${i}`} className="inline-block mr-3 relative">
           <div className="flex">
-            <div className="w-1 h-4 bg-yellow-400 mx-px"></div>
-            <div className="w-1 h-4 bg-yellow-400 mx-px"></div>
-            <div className="w-1 h-4 bg-yellow-400 mx-px"></div>
-            <div className="w-1 h-4 bg-yellow-400 mx-px"></div>
+            <div className="w-1 h-4 bg-yellow-500 mx-px"></div>
+            <div className="w-1 h-4 bg-yellow-500 mx-px"></div>
+            <div className="w-1 h-4 bg-yellow-500 mx-px"></div>
+            <div className="w-1 h-4 bg-yellow-500 mx-px"></div>
           </div>
           {/* Fósforo diagonal cruzado */}
           <div className="absolute top-0 left-1 w-full">
-            <div className="w-full h-1 bg-yellow-00 transform rotate-45 origin-left"></div>
+            <div className="w-full h-1 bg-yellow-300 transform rotate-45 origin-left"></div>
           </div>
         </div>
       );
