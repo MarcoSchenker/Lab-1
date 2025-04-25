@@ -11,7 +11,7 @@ const DashboardPage: React.FC = () => {
       <Header />
 
       <div className="right-add-friend">
-        <Link to="/agregar-amigo" title="Agregar Amigo">
+        <Link to="/friends" title="Amigos">
           <IoPersonAddSharp className="icon" />
         </Link>
       </div>

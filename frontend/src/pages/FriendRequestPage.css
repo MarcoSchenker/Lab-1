@@ -129,3 +129,18 @@
   color: #666;
   margin-top: 20px;
 }
+
+.flechita {
+  position:absolute;
+  width: 60px;
+  height: 80px;
+  top: 18px;
+  left: 60px;
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+
+.flechita:hover {
+  transform: scale(1.2);
+}
