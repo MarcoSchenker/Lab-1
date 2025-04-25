@@ -47,6 +47,17 @@ const FriendsPage: React.FC = () => {
       <div className="homeIcon" onClick={() => navigate("/dashboard")}>
         <FaHome title="Volver al Dashboard" />
       </div>
+      <div className="topRightButton">
+        <button
+        className="friendRequestsButton"
+        onClick={() => navigate("/friends-request")}
+        >
+          Solicitudes de Amistad
+        </button>
+      </div>
+    <div className="flechita" onClick={() => navigate("/dashboard")}>
+      <img src= "/flecha.png"/>
+    </div>
 
       {/* Ícono para ir a AddFriendsPage */}
       <div className="addFriendsIcon" onClick={() => navigate("/agregar-amigo")}>

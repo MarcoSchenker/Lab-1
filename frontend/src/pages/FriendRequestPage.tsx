@@ -45,6 +45,9 @@ const FriendRequestPage: React.FC = () => {
       <div className="homeIcon" onClick={() => navigate("/dashboard")}>
         <FaHome title="Volver al Dashboard" />
       </div>
+      <div className="flechita" onClick={() => navigate("/friends")}>
+        <img src= "/flecha.png"/>
+      </div>
 
     <div className="friendRequestContainer">
       <h1 className="title">Solicitudes de Amistad</h1>

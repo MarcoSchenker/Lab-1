@@ -25,10 +25,10 @@
 .AddFriendsContainer {
   padding: 20px;
   text-align: center;
-  max-width: 800px; /* Ajustado para pantallas grandes */
-  width: 90%; /* Para que sea responsive */
+  max-width: 800px; 
+  width: 90%; 
   margin: 0 auto;
-  background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco con opacidad */
+  background-color: rgba(160, 92, 14, 0.789);
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   position: relative;
@@ -41,7 +41,7 @@
   top: 20px;
   left: 20px;
   font-size: 2rem;
-  color: white;
+  color: rgb(207, 130, 28);
   cursor: pointer;
   z-index: 2;
   transition: transform 0.2s ease;
@@ -57,7 +57,7 @@
   font-weight: bold;
   text-align: center;
   margin-bottom: 20px;
-  color: black;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Contenedor de la barra de búsqueda con el ícono */
@@ -66,7 +66,7 @@
   align-items: center;
   width: 80%;
   max-width: 800px;
-  border-bottom: 4px solid #000;
+  border-bottom: 4px solid #000000;
   margin-bottom: 20px;
   padding: 5px 10px;
   background-color: #fff;
@@ -97,7 +97,7 @@
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-image: url('/mad.jpg');
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
@@ -118,10 +118,10 @@
 .searchData li {
   font-size: 1.5rem;
   padding: 12px 20px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #dddddd;
   cursor: pointer;
   background-color: rgba(255, 255, 255, 0.9);
-  color: #000;
+  color: #189936;
   border-radius: 8px;
   margin-bottom: 10px;
 }
@@ -151,7 +151,7 @@
   font-size: 1rem;
   font-weight: bold;
   color: white;
-  background-color: #007bff;
+  background-color: #bd670c;
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -159,11 +159,11 @@
 }
 
 .friendRequestsButton:hover {
-  background-color: #0056b3;
+  background-color: #874b0b;
 }
 
-/* Botón de solicitudes de amistad en la esquina superior derecha */
-.topRightButton {
+
+.topRight {
   position: absolute;
   top: 20px;
   right: 20px;
@@ -171,14 +171,30 @@
 
 /* Lista de usuarios */
 .searchItem {
+  color: rgb(16, 224, 168);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #c56e05;
 }
 
 .userName {
   font-size: 1rem;
   color: #333;
+}
+
+.flechita {
+  position:absolute;
+  width: 60px;
+  height: 80px;
+  top: 18px;
+  left: 60px;
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+
+.flechita:hover {
+  transform: scale(1.2);
 }
