@@ -109,7 +109,7 @@
 }
 
 .upload-section {
-  margin-top: 200px;
+  margin-top: 20px;
   margin-right: 1000px;
   display: flex;
   flex-direction: column;
@@ -117,7 +117,7 @@
 }
 
 .upload-section input[type="file"] {
-  margin-bottom: 10px;
+  margin-bottom: 30px;
 }
 
 .upload-section button {
@@ -151,4 +151,20 @@
 
 .custom-file-upload:hover {
   background-color: #585b5e;
+}
+
+.modify-profile-button {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.modify-profile-button:hover {
+  background-color: #2980b9;
 }

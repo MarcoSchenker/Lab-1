@@ -219,6 +219,26 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.get('/usuarios/id', async (req, res) => {
+  const { username } = req.query;
+
+  if (!username) {
+    return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [username]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json({ id: rows[0].id });
+  } catch (err) {
+    console.error('Error al obtener el ID del usuario:', err.message);
+    res.status(500).json({ error: 'Error al obtener el ID del usuario' });
+  }
+});
+
 // Endpoint para obtener estadísticas de un usuario
 app.get('/estadisticas/:usuario_id', async (req, res) => {
   const { usuario_id } = req.params;
@@ -541,13 +561,36 @@ app.get('/amigos', async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron amigos' });
+      return res.json({ message: 'No se encontraron amigos', amigos: [] });
     }
 
-    res.json(rows);
+    res.json({ amigos: rows });
   } catch (err) {
     console.error('Error al obtener amigos:', err.message);
     res.status(500).json({ error: 'Error al obtener amigos' });
+  }
+});
+
+// Endpoint para obtener la foto de perfil usando el userId
+app.get('/usuarios/:userId/foto', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Obtener la imagen de la base de datos
+    const [rows] = await pool.query('SELECT imagen FROM imagenes_perfil WHERE usuario_id = ?', [userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Foto de perfil no encontrada' });
+    }
+
+    const imageBuffer = rows[0].imagen;
+
+    // Enviar la imagen como respuesta
+    res.set('Content-Type', 'image/jpeg'); // Cambia el tipo MIME si es necesario
+    res.send(imageBuffer);
+  } catch (err) {
+    console.error('Error al obtener la foto de perfil:', err.message);
+    res.status(500).json({ error: 'Error al obtener la foto de perfil' });
   }
 });
 
@@ -682,6 +725,34 @@ app.get('/usuarios/:usuario_nombre_usuario/foto-perfil', async (req, res) => {
   }
 });
 
+app.get('/usuarios/:usuario_id/foto-perfil', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Obtener el ID del usuario
+    const [user] = await pool.query('SELECT id FROM usuarios WHERE id = ?', [userId]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Obtener la imagen de la base de datos
+    const [rows] = await pool.query('SELECT imagen FROM imagenes_perfil WHERE usuario_id = ?', [userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Foto de perfil no encontrada' });
+    }
+
+    const imageBuffer = rows[0].imagen;
+
+    // Enviar la imagen como respuesta
+    res.set('Content-Type', 'image/jpeg'); // Cambia el tipo MIME si es necesario
+    res.send(imageBuffer);
+  } catch (err) {
+    console.error('Error al obtener la foto de perfil:', err.message);
+    res.status(500).json({ error: 'Error al obtener la foto de perfil' });
+  }
+});
+
 app.get('/estadisticas/:username', async (req, res) => {
   const { username } = req.params;
   
@@ -710,6 +781,84 @@ app.get('/estadisticas/:username', async (req, res) => {
   } catch (err) {
     console.error('Error al obtener estadísticas:', err.message);
     res.status(500).json({ error: 'Error al obtener estadísticas' });
+  }
+});
+
+// Endpoint para actualizar los datos del usuario
+app.put('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombre_usuario, email, contraseña } = req.body;
+
+  if (!nombre_usuario || !email) {
+    return res.status(400).json({ error: 'El nombre de usuario y el email son obligatorios' });
+  }
+
+  try {
+    const bcrypt = require('bcrypt');
+    let hashedPassword = null;
+
+    // Si se proporciona una nueva contraseña, encriptarla
+    if (contraseña) {
+      hashedPassword = await bcrypt.hash(contraseña, 10);
+    }
+
+    // Actualizar los datos del usuario
+    const query = `
+      UPDATE usuarios 
+      SET nombre_usuario = ?, email = ?, ${contraseña ? 'contraseña = ?' : ''}
+      WHERE id = ?
+    `;
+    const params = contraseña
+      ? [nombre_usuario, email, hashedPassword, id]
+      : [nombre_usuario, email, id];
+
+    await pool.query(query, params);
+
+    res.json({ message: 'Usuario actualizado exitosamente' });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'El nombre de usuario o email ya está en uso' });
+    }
+    console.error('Error al actualizar usuario:', err.message);
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+});
+
+// Endpoint para actualizar la contraseña del usuario
+app.put('/usuarios/:id/contraseña', async (req, res) => {
+  const { id } = req.params;
+  const { contraseñaActual, nuevaContraseña } = req.body;
+
+  if (!contraseñaActual || !nuevaContraseña) {
+    return res.status(400).json({ error: 'Ambas contraseñas son obligatorias' });
+  }
+
+  try {
+    const bcrypt = require('bcrypt');
+
+    // Verificar la contraseña actual
+    const [rows] = await pool.query('SELECT contraseña FROM usuarios WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const contraseñaHash = rows[0].contraseña;
+    const isMatch = await bcrypt.compare(contraseñaActual, contraseñaHash);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+    }
+
+    // Encriptar la nueva contraseña
+    const nuevaContraseñaHash = await bcrypt.hash(nuevaContraseña, 10);
+
+    // Actualizar la contraseña
+    await pool.query('UPDATE usuarios SET contraseña = ? WHERE id = ?', [nuevaContraseñaHash, id]);
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (err) {
+    console.error('Error al actualizar la contraseña:', err.message);
+    res.status(500).json({ error: 'Error al actualizar la contraseña' });
   }
 });
 

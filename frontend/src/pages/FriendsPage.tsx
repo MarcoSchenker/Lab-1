@@ -26,20 +26,15 @@ const FriendsPage: React.FC = () => {
 
         // Obtener la lista de amigos del usuario
         const response = await api.get(`/amigos?nombre_usuario=${loggedInUser}`);
-        setFriends(
-          response.data.map((friend: { usuario_id: number, nombre_usuario: string; foto_perfil: string | null }) => ({
-            usuario_id: friend.usuario_id,
-            nombre_usuario: friend.nombre_usuario,
-            foto_perfil: friend.foto_perfil,
-          }))
-        );
+        console.log('Respuesta del backend:', response.data);
+        setFriends(response.data.amigos || []);
       } catch (err: any) {
-        setError(err.message || "Error desconocido");
+        setError(err.message || 'Error desconocido');
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchFriends();
   }, [loggedInUser]);
 

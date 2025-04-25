@@ -66,7 +66,6 @@ const AddFriendsPage: React.FC = () => {
       console.log(`Enviando solicitud de amistad: from=${from}, to=${friendUsername}`);
   
       await api.post('/amigos', { from, to: friendUsername });
-      alert(`Solicitud de amistad enviada a ${friendUsername}`);
       setUsers(users.filter((user) => user !== friendUsername)); // Actualizar lista
     } catch (err) {
       console.error('Error al enviar solicitud de amistad:', err);
@@ -113,7 +112,7 @@ const AddFriendsPage: React.FC = () => {
                     <span className="userName">{user}</span>
                     <FaUserPlus
                       className="addFriendIcon"
-                      title="Agregar amigo"
+                      title="Envíar solicitud de amistad"
                       onClick={() => handleSendFriendRequest(user)}
                     />
                   </li>

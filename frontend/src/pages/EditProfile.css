@@ -1,0 +1,30 @@
+body {
+    font-family: 'Arial', sans-serif;
+  }
+  
+  h2 {
+    color: #fff;
+  }
+  
+  button {
+    transition: background-color 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #2980b9;
+  }
+
+  .flechita {
+    position:absolute;
+    width: 60px;
+    height: 80px;
+    top: 18px;
+    left: 60px;
+    cursor: pointer;
+    z-index: 2;
+    transition: transform 0.2s ease;
+  }
+  
+  .flechita:hover {
+    transform: scale(1.2);
+  }
