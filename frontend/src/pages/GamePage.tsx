@@ -55,7 +55,8 @@ const initialState: GameState = {
     mostrandoCartelReparto: false, // Empieza sin mostrar
 };
 
-const IMAGE_BASE_PATH = '/cartas/mazoOriginal'; // Asegúrate que la ruta es correcta desde public/
+const IMAGE_BASE_PATH = '/cartas/mazoOriginal';
+const GAME_BACKGROUND_IMAGE = '/tablebackground.png'; // Cambia esto a la ruta de tu imagen de fondo
 
 // --- Componente Principal ---
 const GamePage: React.FC = () => {
@@ -247,37 +248,38 @@ const GamePage: React.FC = () => {
              console.warn("Intento de canto inválido (fuera de turno o partida terminada)");
         }
     }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.accionesPosibles]); // Dependencias
-
-    // --- Renderizado del Componente ---
     return (
-        // Clases Tailwind para layout principal
-        <div className="flex h-screen bg-gradient-to-b from-green-700 to-green-900 text-white p-2 overflow-hidden relative font-sans">
-            {/* Columna Izquierda: Log */}
-            <div className="w-1/4 xl:w-1/5 pr-2 flex flex-col h-full">
-                <div className="text-lg font-semibold mb-1 text-yellow-300 tracking-wide">Historial</div>
-                <GameLog
-                    mensajes={gameState.mensajeLog}
-                    className="flex-1 bg-black bg-opacity-50 rounded-lg shadow-lg overflow-y-auto text-sm"
-                 />
-            </div>
-
-            {/* Columna Derecha: Juego Principal */}
-            <div className="w-3/4 xl:w-4/5 flex flex-col h-full overflow-y-auto pl-1">
-                {/* Marcador */}
+        <div className="flex h-screen w-screen text-white p-2 overflow-hidden relative font-sans bg-marron-oscuro">
+            {/* Columna Izquierda: Log y Marcador */}
+            <div className="w-1/4 xl:w-1/3 pr-2 flex flex-col h-full bg-stone-900 bg-opacity-80 rounded-lg p-4">
                 <Scoreboard
                     equipoPrimero={gameState.equipoPrimero}
                     equipoSegundo={gameState.equipoSegundo}
-                    limitePuntaje={partida.limitePuntaje} // Obtener de la instancia de partida
-                    className="mb-2"
+                    limitePuntaje={partida.limitePuntaje}
+                    className="mb-2 text-white"
                 />
+                {/* Título del Log - Mantener amarillo/dorado */}
+                <div className="text-lg font-semibold mb-1 text-yellow-300 tracking-wide">Historial de partida</div>
+                {/* Log de Partida - Mantener fondo oscuro semi-transparente y texto blanco/claro */}
+                <GameLog
+                    mensajes={gameState.mensajeLog}
+                    className="bg-black bg-opacity-50 rounded-lg shadow-lg overflow-y-auto text-sm h-1/2 md:h-40rem] text-gray-200" // Asegura texto claro
+                />
+            </div>
 
+            {/* Columna Derecha: Juego Principal */}
+            <div
+                className="w-3/4 xl:w-4/5 flex flex-col h-full pl-1 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: `url('${GAME_BACKGROUND_IMAGE}')` }}
+            >
                 {/* Área Principal: Botón Iniciar o Tablero de Juego */}
                 {!gameState.partidaIniciada ? (
                     // --- Pantalla de Inicio ---
                     <div className="flex-1 flex items-center justify-center">
                         <button
                             onClick={iniciarPartida}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-green-900 font-bold py-4 px-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 shadow-xl transform transition hover:scale-105 text-xl"
+                            // Mantener fondo amarillo/dorado, cambiar texto a un color oscuro que combine
+                            className="bg-yellow-500 hover:bg-yellow-600 text-stone-900 font-bold py-4 px-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 shadow-xl transform transition hover:scale-105 text-xl"
                         >
                             Iniciar Partida
                         </button>
@@ -285,7 +287,7 @@ const GamePage: React.FC = () => {
                 ) : (
                     // --- Tablero de Juego Activo ---
                     <div className="flex flex-col flex-1 max-h-full relative">
-                        {/* Cartel "Repartiendo..." */}
+                        {/* Cartel "Repartiendo..." - Mantener colores existentes (amarillo/dorado, fondo oscuro) */}
                         {gameState.mostrandoCartelReparto && (
                             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm rounded-lg">
                                 <div className="text-4xl font-bold text-yellow-300 animate-pulse p-6 rounded-lg shadow-xl border-2 border-yellow-500 bg-black bg-opacity-80">
@@ -294,27 +296,29 @@ const GamePage: React.FC = () => {
                             </div>
                         )}
 
-                            <CallDisplay call={gameState.ultimoCanto} />
+                        {/* CallDisplay - Asegurar que el texto se vea sobre el fondo de madera */}
+                        <CallDisplay call={gameState.ultimoCanto} />
 
                         {/* Área del Oponente (IA) */}
                         <div className="mb-2">
                             <PlayerArea
                                 jugador={gameState.equipoSegundo?.jugador ?? null}
-                                cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? gameState.cartasManoJugador.length ?? 3).fill(null)} // Muestra dorsos
+                                cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? gameState.cartasManoJugador.length ?? 3).fill(null)}
                                 esTurno={gameState.turnoActual === gameState.equipoSegundo}
-                                onCardClick={() => {}} // No se puede hacer clic en cartas IA
+                                onCardClick={() => {}}
                                 puedeJugarCarta={false}
                                 imageBasePath={IMAGE_BASE_PATH}
+                                // Ya no tiene fondo propio, hereda el de la mesa
                             />
                         </div>
 
                         {/* Mesa de Juego */}
                         <div className="flex-1 mb-2 min-h-[20vh] md:min-h-[25vh]">
                             <GameBoard
-                                // Pasar el estado actualizado que incluye CartaConInfoUI
                                 cartasMesa={gameState.cartasMesa}
                                 numeroManoActual={gameState.numeroManoActual}
                                 imageBasePath={IMAGE_BASE_PATH}
+                                // Ya no tiene fondo propio, hereda el de la mesa
                             />
                         </div>
 
@@ -322,21 +326,22 @@ const GamePage: React.FC = () => {
                         <div className="mb-1">
                             <PlayerArea
                                 jugador={gameState.equipoPrimero?.jugador ?? null}
-                                cartas={gameState.cartasManoJugador} // Cartas reales del humano
+                                cartas={gameState.cartasManoJugador}
                                 esTurno={gameState.turnoActual?.jugador?.esHumano === true}
-                                onCardClick={handlePlayCard} // Manejador para jugar carta
+                                onCardClick={handlePlayCard}
                                 puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
                                 imageBasePath={IMAGE_BASE_PATH}
+                                // Ya no tiene fondo propio, hereda el de la mesa
                             />
                         </div>
 
-                        {/* Botones de Acción */}
-                        <div className="mt-auto pt-1 pb-1"> {/* Empuja los botones hacia abajo */}
+                        {/* Botones de Acción - Asumimos que los botones internos usarán colores que combinen */}
+                        <div className="mt-auto pt-1 pb-1">
                             <ActionButtons
                                 acciones={gameState.accionesPosibles}
-                                onCanto={handleCanto} // Manejador para cantar/responder
+                                onCanto={handleCanto}
                                 partidaTerminada={gameState.partidaTerminada}
-                                className="w-full" // Ocupar ancho disponible
+                                className="w-full"
                             />
                         </div>
                     </div>

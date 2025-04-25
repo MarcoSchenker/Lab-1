@@ -56,10 +56,9 @@ const Card: React.FC<CardProps> = ({
 
     const imageSrc = `${imageBasePath}/${imageFilename}`;
 
-    const altText = (bocaAbajo || !carta) ? 'Carta' : carta.getNombre(); // altText usa el nombre legible (ej: "1 de Espada")
+    const altText = (bocaAbajo || !carta) ? 'Carta' : carta.getNombre();
 
-    // Clases de Tailwind (ajusta tamaños si es necesario)
-    const baseClasses = 'w-16 h-auto md:w-20 lg:w-24 rounded shadow-md transition-all duration-200 ease-in-out border border-black'; // Añadido borde negro sutil
+    const baseClasses = 'w-36 h-auto md:w-24 lg:w-32 rounded shadow-md transition-all duration-200 ease-in-out border border-black';
     const clickableClasses = esClickeable ? 'cursor-pointer hover:scale-105 hover:-translate-y-1 hover:shadow-lg' : '';
     const disabledClasses = disabled && carta ? 'cursor-not-allowed' : '';
 

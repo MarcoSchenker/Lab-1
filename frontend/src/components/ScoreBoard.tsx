@@ -36,8 +36,8 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
             <div className="w-1 h-4 bg-yellow-400 mx-px"></div>
           </div>
           {/* Fósforo diagonal cruzado */}
-          <div className="absolute top-2 left-0 w-full">
-            <div className="w-full h-1 bg-yellow-400 transform rotate-45 origin-left"></div>
+          <div className="absolute top-0 left-1 w-full">
+            <div className="w-full h-1 bg-yellow-00 transform rotate-45 origin-left"></div>
           </div>
         </div>
       );

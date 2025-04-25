@@ -3,21 +3,22 @@ import Card from './Card';
 
 const GameBoard = ({ cartasMesa, numeroManoActual, className = "", imageBasePath = '/cartas/mazoOriginal' }) => {
   return (
-    <div className={`flex justify-around items-center bg-green-800 rounded p-4 border border-yellow-600 border-opacity-30 min-h-[10rem] md:min-h-[12rem] ${className}`}>
+    <div className={`flex justify-center items-center rounded p-10 min-h-[10rem] md:min-h-[12rem] gap-x-16 ${className}`}>
       {cartasMesa.map((mano, manoIndex) => {
         if (!Array.isArray(mano)) return null;
         const cartaHumano = mano[0] || null;
         const cartaIA = mano[1] || null;
-        const esManoActiva = manoIndex === numeroManoActual;
+        // const esManoActiva = manoIndex === numeroManoActual; // This variable is no longer needed for styling
 
         return (
           <div
             key={`mano-${manoIndex}`}
-            className={`flex flex-col items-center space-y-2 p-2 rounded ${esManoActiva ? 'bg-black bg-opacity-20 ring-1 ring-yellow-500' : ''}`}
+            // Removed the conditional classes for the highlight
+            className={`flex flex-col items-center space-y-14 p-3 rounded`}
             aria-label={`Mano ${manoIndex + 1}`}
           >
             {/* IA */}
-            <div className="h-24 md:h-28 flex items-center justify-center">
+            <div className="h-40 md:h-36 flex items-center justify-center">
               {cartaIA ? (
                 <Card
                   carta={cartaIA}
@@ -27,16 +28,11 @@ const GameBoard = ({ cartasMesa, numeroManoActual, className = "", imageBasePath
                   className="animate-carta-desliza-arriba"
                 />
               ) : (
-                <div className="w-16 h-24 md:w-20 md:h-[6.5rem] border-2 border-dashed border-gray-500 rounded bg-black bg-opacity-10"></div>
+                <div className="w-36 h-auto md:w-24 md:h-[12rem] rounded bg-black bg-opacity-10"></div>
               )}
             </div>
-
-            <span className={`text-xs font-semibold ${esManoActiva ? 'text-yellow-300' : 'text-gray-400'}`}>
-              Mano {manoIndex + 1}
-            </span>
-
             {/* Humano */}
-            <div className="h-24 md:h-28 flex items-center justify-center">
+            <div className="h-40 md:h-36 flex items-center justify-center">
               {cartaHumano ? (
                 <Card
                   carta={cartaHumano}
@@ -46,7 +42,7 @@ const GameBoard = ({ cartasMesa, numeroManoActual, className = "", imageBasePath
                   className="animate-carta-desliza-abajo"
                 />
               ) : (
-                <div className="w-16 h-24 md:w-20 md:h-[6.5rem] border-2 border-dashed border-gray-500 rounded bg-black bg-opacity-10"></div>
+                <div className="w-36 h-auto md:w-24 md:h-[12rem] rounded bg-black bg-opacity-10"></div>
               )}
             </div>
           </div>
