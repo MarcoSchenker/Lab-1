@@ -72,14 +72,8 @@ function App() {
             </AuthRoute>
           }
         />
-        <Route
-          path="/friends"
-          element={
-            <AuthRoute>
-              <FriendsPage />
-            </AuthRoute>
-          }
-        />
+        <Route path="/friends" element={<AuthRoute> <FriendsPage /></AuthRoute>}/>
+        <Route path="/user/:usuario_id" element={<AuthRoute><StatsPage /> </AuthRoute>} />
       </Routes>
     </Router>
   );
