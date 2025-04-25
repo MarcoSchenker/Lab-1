@@ -1,36 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getStats } from '../services/api';
-import Header from '../components/Header';
+import Header from '../components/HeaderDashboard';
+import api from '../services/api';
 
 interface Stats {
   victorias: number;
   derrotas: number;
   partidas_jugadas: number;
   elo: number;
+  username: string;
 }
 
 const StatsPage: React.FC = () => {
-  const { userId } = useParams<{ userId: string }>();
+  const { usuario_id } = useParams<{ usuario_id: string }>();
+  console.log('Usuario ID:', usuario_id);
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
+      console.log(`Intentando obtener estadísticas para usuario_id: ${usuario_id}`);
+      console.log(`URL: /estadisticas/${usuario_id}`);
       try {
-        const response = await getStats(userId!);
+        const response = await api.get(`/estadisticas/${usuario_id}`);
+        console.log('Respuesta del backend:', response.data); 
         setStats(response.data);
       } catch (error) {
         console.error('Error al obtener estadísticas:', error);
       }
     };
     fetchStats();
-  }, [userId]);
+  }, [usuario_id]);
+  
+  useEffect(() => {
+    console.log('Estado de stats actualizado:', stats);
+  }, [stats]);
 
-  if (!stats) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Cargando estadísticas...</div>;
+  if (!stats) return <div style={{ textAlign: 'center', marginTop: '50px' }}>No hay estadísticas disponibles para este usuario.</div>;
 
   return (
     <div>
-      <Header /> {/* Agregamos el Header */}
+      <Header /> 
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
@@ -39,7 +48,7 @@ const StatsPage: React.FC = () => {
         height: '100vh', 
         textAlign: 'center' 
       }}>
-        <h2>Estadísticas del Jugador</h2>
+        <h2>Estadísticas de {stats.username}</h2>
         <div
           style={{
             display: 'flex',

@@ -46,9 +46,5 @@ export const loginUser = async (data: User) => {
   return await api.post('/login', data);
 };
 
-// Función para obtener estadísticas de un usuario
-export const getStats = async (userId: string) => {
-  return await api.get(`/estadisticas/${userId}`);
-};
 
 export default api;

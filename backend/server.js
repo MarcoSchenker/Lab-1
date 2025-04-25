@@ -105,6 +105,23 @@ app.post('/usuarios', async (req, res) => {
   }
 });
 
+app.get("/username", async (req, res) => {
+  const { id } = req.query;
+
+  if (!id) {
+    return res.status(400).json({ error: "El id del usuario es obligatorio" });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT nombre_usuario FROM usuarios WHERE id = ?", [id]
+    );
+  } catch (err) {
+    console.error("Error al ver id:", err.message);
+    res.status(500).json({ error: "Error al ver id" });
+  }
+});
+
 // Endpoint para obtener usuarios excluyendo al usuario logueado y sus amigos
 app.get("/usuarios", async (req, res) => {
   const { nombre_usuario } = req.query;
@@ -207,13 +224,20 @@ app.get('/estadisticas/:usuario_id', async (req, res) => {
   const { usuario_id } = req.params;
 
   try {
-    const [rows] = await pool.query('SELECT * FROM estadisticas WHERE usuario_id = ?', [usuario_id]);
+    const [user] = await pool.query('SELECT nombre_usuario FROM usuarios WHERE id = ?', [usuario_id]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
 
+    const [rows] = await pool.query('SELECT * FROM estadisticas WHERE usuario_id = ?', [usuario_id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Estadísticas no encontradas' });
     }
 
-    res.json(rows[0]);
+    res.json({
+      username: user[0].nombre_usuario,
+      ...rows[0],
+    });
   } catch (err) {
     console.error('Error al obtener estadísticas:', err.message);
     res.status(500).json({ error: 'Error al obtener estadísticas' });
@@ -488,6 +512,7 @@ app.post('/amigos', async (req, res) => {
   }
 });
 
+// Endpoint para obtener la lista de amigos
 app.get('/amigos', async (req, res) => {
   const { nombre_usuario } = req.query;
 
@@ -499,6 +524,7 @@ app.get('/amigos', async (req, res) => {
     const [rows] = await pool.query(
       `
       SELECT 
+        u.id AS usuario_id, 
         u.nombre_usuario, 
         IFNULL(
           CONCAT('${process.env.SERVER_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
@@ -506,7 +532,6 @@ app.get('/amigos', async (req, res) => {
         ) AS foto_perfil
       FROM amigos a
       JOIN usuarios u ON (a.usuario_id = u.id OR a.amigo_id = u.id)
-      LEFT JOIN imagenes_perfil ip ON u.id = ip.usuario_id
       WHERE (a.usuario_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?) 
       OR a.amigo_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?))
       AND a.estado = 'aceptado'
@@ -656,6 +681,38 @@ app.get('/usuarios/:usuario_nombre_usuario/foto-perfil', async (req, res) => {
     res.status(500).json({ error: 'Error al obtener la foto de perfil' });
   }
 });
+
+app.get('/estadisticas/:username', async (req, res) => {
+  const { username } = req.params;
+  
+  try {
+    // Obtener el ID del usuario
+    const [user] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [username]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const usuario_id = user[0].id;
+    console.log('Usuario encontrado, ID:', usuario_id);
+
+    const [rows] = await pool.query('SELECT * FROM estadisticas WHERE usuario_id = ?', [usuario_id]);
+    if (rows.length === 0) {
+      console.log('No se encontraron estadísticas para el usuario:', username);
+      return res.json({
+        victorias: 0,
+        derrotas: 0,
+        partidas_jugadas: 0,
+        elo: 0,
+      });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error al obtener estadísticas:', err.message);
+    res.status(500).json({ error: 'Error al obtener estadísticas' });
+  }
+});
+
 
 // WebSocket básico
 io.on('connection', (socket) => {

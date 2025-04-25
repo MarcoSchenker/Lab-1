@@ -5,6 +5,7 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 interface Friend {
+  usuario_id: number;
   nombre_usuario: string;
   foto_perfil: string | null; // URL de la foto de perfil
 }
@@ -26,7 +27,8 @@ const FriendsPage: React.FC = () => {
         // Obtener la lista de amigos del usuario
         const response = await api.get(`/amigos?nombre_usuario=${loggedInUser}`);
         setFriends(
-          response.data.map((friend: { nombre_usuario: string; foto_perfil: string | null }) => ({
+          response.data.map((friend: { usuario_id: number, nombre_usuario: string; foto_perfil: string | null }) => ({
+            usuario_id: friend.usuario_id,
             nombre_usuario: friend.nombre_usuario,
             foto_perfil: friend.foto_perfil,
           }))
@@ -74,7 +76,11 @@ const FriendsPage: React.FC = () => {
           ) : friends.length > 0 ? (
             <ul>
               {friends.map((friend, index) => (
-                <li key={index} className="friendItem">
+                <li 
+                key={index}
+                className="friendItem"
+                onClick={() => navigate(`/user/${friend.usuario_id}`)} // Redirige al perfil del amigo
+                >
                   <img
                     src={`${friend.foto_perfil}?t=${new Date().getTime()}`} // Agrega un parámetro único para evitar caché
                     alt={`${friend.nombre_usuario} Foto de Perfil`}

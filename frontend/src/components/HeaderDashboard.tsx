@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom'
 import { FaCoins, FaSignOutAlt, FaMedal } from 'react-icons/fa';
 import './HeaderDashboard.css';
@@ -11,6 +11,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null); // Archivo de imagen
   const [isDropdownVisible, setIsDropdownVisible] = useState(false); // Estado para controlar el menú desplegable
+  const dropdownRef = useRef<HTMLDivElement>(null); // Referencia al menú desplegable
   const [userElo, setUserElo] = useState<number>(0); // Elo del usuario
   const [userCoins, setUserCoins] = useState<number>(0); // Monedas del usuario
   const [userStats, setUserStats] = useState({
@@ -19,6 +20,16 @@ const Header: React.FC = () => {
       derrotas: 0,
       elo: 0,
     });
+
+    const toggleDropdown = () => {
+      setIsDropdownVisible(!isDropdownVisible); // Alterna la visibilidad del menú
+    };
+  
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownVisible(false); // Cierra el menú si se hace clic fuera de él
+      }
+    };
 
     useEffect(() => {
       const fetchUserData = async () => {
@@ -45,15 +56,24 @@ const Header: React.FC = () => {
          setUserImage('/foto_anonima.jpg'); // Imagen por defecto en caso de error
        }
      };
-   
-     if (loggedInUser) {
-       fetchUserData();
-     }
-   }, [loggedInUser]);
 
-  const toggleDropdown = () => {
-    setIsDropdownVisible(!isDropdownVisible); // Alterna la visibilidad del menú
-  };
+     if (loggedInUser) {
+      fetchUserData();
+    }
+     
+     if (isDropdownVisible) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+
+     
+   }, [loggedInUser, isDropdownVisible]); // useEffect
+
+   
 
   const handleSignOut = () => {
     localStorage.clear(); // Limpiamos el local storage
@@ -96,7 +116,6 @@ const Header: React.FC = () => {
     <div className="header-component">
       <Link to="/dashboard" className="header-link">
         <img src="/CardLogo.png" alt="Logo" className="logo" />
-        <h1 className="title">Trucho</h1>
       </Link>
       <div className="top-right-icons">
         <div className="profile-info">
@@ -116,14 +135,26 @@ const Header: React.FC = () => {
           </Link>
         </div>
         {isDropdownVisible && ( // Muestra el menú desplegable si el estado es true
-          <div className="dropdown-menu">
-            <p>Partidas Jugadas: {userStats.partidasJugadas}</p>
-            <p>Partidas Ganadas: {userStats.partidasGanadas}</p>
-            <p>Derrotas: {userStats.derrotas}</p>
-            <p>ELO: {userStats.elo}</p>
-          <div className='upload-section'>
-            <input type="file" accept="image/*" onChange={handleFileChange} />
-            <button onClick={handleUpload}>Subir Foto</button>
+          <div className={`dropdown-menu ${isDropdownVisible ? 'open' : ''}`}
+          ref={dropdownRef} // Asigna la referencia al menú
+        >
+          <p>Partidas Jugadas: {userStats.partidasJugadas}</p> <br></br>
+          <p>Partidas Ganadas: {userStats.partidasGanadas}</p> <br></br>
+          <p>Derrotas: {userStats.derrotas}</p> <br></br>
+          <p>ELO: {userStats.elo}</p> <br></br>
+          <div className="upload-section">
+              <label htmlFor="file-upload" className="custom-file-upload">
+                 Seleccionar archivo
+                  </label>
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }} // Oculta el input
+                 />
+                 <br></br>
+              <button onClick={handleUpload}>Subir Foto</button>
             </div>
           </div>
         )}

@@ -8,7 +8,6 @@
   top: 0;
   left: 0;
   width: 100%;
-  background: linear-gradient(to top, rgba(128, 128, 128, 0.8), rgba(128, 128, 128, 0.473), rgba(128, 128, 128, 0.67), rgba(25, 17, 184, 0.777)); /* Degradado */
   z-index: 1000; /* Asegura que el Header esté por encima del contenido */
 }
 
@@ -50,7 +49,6 @@
 .profile-icon {
   width: 50px;
   height: 50px;
-  background-color: #555; /* Color de fondo por defecto */
   border-radius: 50%; /* Hace que sea circular */
   background-size: cover; /* Escala la imagen para cubrir el contenedor */
   background-position: center; /* Centra la imagen */
@@ -60,19 +58,21 @@
 
 /* Menú desplegable */
 .dropdown-menu {
-  position: absolute;
-  top: 70px; /* Ajusta según la altura del Header */
-  right: 20px; /* Alinea a la derecha */
-  background-color: rgba(0, 0, 0, 0.9); /* Fondo oscuro */
+  position: fixed;
+  top: 0;
+  right: -70%; /* Inicialmente fuera de la pantalla */
+  height: 100vh;
+  width: calc(100% - 100px);
+  background-color: rgba(0, 0, 0, 0.9);
   color: #fff;
-  padding: 15px 20px; /* Más espacio interno */
-  border-radius: 10px; /* Bordes redondeados */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra para destacar */
-  z-index: 1100; /* Asegura que esté por encima del Header */
-  width: 250px; /* Ancho del menú */
-  transition: transform 0.3s ease, opacity 0.3s ease; /* Animación de apertura */
-  transform: scale(1); /* Tamaño normal */
-  opacity: 1; /* Totalmente visible */
+  padding: 20px;
+  z-index: 1100;
+  transition: transform 0.3s ease;
+  transform: translateX(100%); /* Oculto inicialmente */
+}
+
+.dropdown-menu.open {
+  transform: translateX(0); /* Muestra el menú */
 }
 
 .dropdown-menu p {
@@ -109,7 +109,8 @@
 }
 
 .upload-section {
-  margin-top: 10px;
+  margin-top: 200px;
+  margin-right: 1000px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -120,7 +121,7 @@
 }
 
 .upload-section button {
-  padding: 5px 10px;
+  left: 100px;
   font-size: 0.9rem;
   font-weight: bold;
   color: white;
@@ -133,4 +134,21 @@
 
 .upload-section button:hover {
   background-color: #0056b3;
+}
+
+.custom-file-upload {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: white;
+  background-color: #92a9c3;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.custom-file-upload:hover {
+  background-color: #585b5e;
 }
