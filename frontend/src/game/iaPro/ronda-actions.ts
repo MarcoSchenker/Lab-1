@@ -107,8 +107,6 @@ export function puedeCantarTruco(ronda: Ronda, equipo: Equipo): boolean {
 
 export function getPosiblesCantosTruco(ronda: Ronda): Canto[] {
     if (!puedeCantarTruco(ronda, ronda.equipoEnTurno)) return [];
-
-    // Último canto NO respondido
     const ultimoCantoNoRespondido = getLast(ronda.trucoHandler.cantosTruco.filter(c => !esRespuesta(c.canto)))?.canto;
 
     // Si no hay cantos previos O el último fue respondido con Quiero por el equipo en turno

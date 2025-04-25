@@ -249,7 +249,9 @@ export class Ronda {
 
         // Solo calcular si es turno del humano
         if (this.equipoEnTurno.jugador.esHumano) {
-            acciones.puedeMazo = true; // Casi siempre se puede ir al mazo (trucoHandler lo gestiona)
+            acciones.puedeMazo = this.estadoRonda !== EstadoRonda.RondaTerminada &&
+                            !this.trucoHandler.trucoNoQueridoPor &&
+                            !this.trucoHandler.trucoQuerido;
 
             switch (this.estadoRonda) {
                 case EstadoRonda.InicioMano:
@@ -376,12 +378,8 @@ export class Ronda {
             if (esEnvido) {
                 accionRealizada = this.envidoHandler.registrarCanto(canto, this.equipoEnTurno);
             } else if (esTruco) {
-                 // ❗ Recordatorio: Dentro de trucoHandler.registrarCanto, si se llama a
-                // this.callbacks.showPlayerCall(jugador, mensaje), pasar el jugador humano.
                 accionRealizada = this.trucoHandler.registrarCanto(canto, this.equipoEnTurno);
             } else if (esMazo) {
-                 // ❗ Recordatorio: Dentro de trucoHandler.registrarMazo, si se llama a
-                // this.callbacks.showPlayerCall(jugador, mensaje), pasar el jugador humano.
                 accionRealizada = this.trucoHandler.registrarMazo(this.equipoEnTurno);
             }
         }

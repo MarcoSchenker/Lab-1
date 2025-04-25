@@ -268,35 +268,76 @@ export class RondaTurnoHandler {
         }
     }
 
-    /** Determina el ganador de la ronda basado en las manos ganadas. */
+    /**
+     * Determina el ganador de la ronda basado en las manos ganadas,
+     * aplicando reglas de parda para terminar la ronda antes si es posible.
+     * Se llama DESPUÉS de que una mano ha sido resuelta.
+     * @returns El Equipo ganador de la ronda, o null si la ronda aún no está definida.
+     */
     public determinarGanadorRonda(): Equipo | null {
         const e1 = this.ronda.equipoPrimero;
         const e2 = this.ronda.equipoSegundo;
-        const manosJugadas = this.ronda.numeroDeMano + 1; // Cuántas manos se completaron
+        // La mano que ACABA de terminar (0, 1, o 2)
+        const manoQueTermino = this.ronda.numeroDeMano;
 
-        // Caso simple: Alguien ganó 2 manos
+        // --- REGLA BÁSICA: Alguien ganó 2 manos ---
+        // Se chequea después de mano 2 (manoQueTermino = 1) o mano 3 (manoQueTermino = 2)
         if (e1.manosGanadasRonda >= 2) return e1;
         if (e2.manosGanadasRonda >= 2) return e2;
 
-        // Casos después de 3 manos jugadas
-        if (manosJugadas >= 3) {
-             // Si es 1 a 1 después de 3 manos (la 3ra fue parda), gana el que ganó la primera mano
-            if (e1.manosGanadasRonda === 1 && e2.manosGanadasRonda === 1) {
-                 // Necesitamos saber quién ganó la PRIMERA mano
-                 const ganadorMano0 = this.getGanadorManoEspecifica(0);
-                 return ganadorMano0; // Si la primera fue parda, gana el mano de la ronda
-             }
-            // Si alguien ganó 1 mano y las otras 2 fueron pardas, gana ese equipo
-            if (e1.manosGanadasRonda === 1 && e2.manosGanadasRonda === 0) return e1;
-            if (e2.manosGanadasRonda === 1 && e1.manosGanadasRonda === 0) return e2;
+        // --- REGLAS DE PARDA (Solo aplican DESPUÉS de terminar la mano 2 o 3) ---
 
-            // Triple parda: gana el mano de la ronda
-            if (e1.manosGanadasRonda === 0 && e2.manosGanadasRonda === 0) {
-                return this.ronda.equipoMano;
-            }
+        // --- Checks después de terminar Mano 2 (manoQueTermino === 1) ---
+        if (manoQueTermino === 1) {
+            const ganadorM0 = this.getGanadorManoEspecifica(0); // Resultado Mano 1
+            const ganadorM1 = this.getGanadorManoEspecifica(1); // Resultado Mano 2 (recién terminada)
+
+            // Regla: Parda Primera, Gana Segunda -> Gana el de la Segunda
+            // (Esto ya está cubierto por el chequeo de >= 2 manos ganadas arriba)
+            // if (ganadorM0 === null && ganadorM1) return ganadorM1;
+
+            // Regla: Gana Primera, Parda Segunda -> Gana el de la Primera
+            if (ganadorM0 && ganadorM1 === null) return ganadorM0;
+
+            // Otros casos (1-1, Parda-Parda) -> La ronda continúa a mano 3
+            return null;
         }
 
-        // Si no se cumplen las condiciones anteriores, la ronda aún no tiene ganador
+        // --- Checks después de terminar Mano 3 (manoQueTermino === 2) ---
+        if (manoQueTermino === 2) {
+            // El chequeo de >= 2 manos ganadas ya cubre Gana-Gana-X, Gana-X-Gana, X-Gana-Gana.
+
+            const ganadorM0 = this.getGanadorManoEspecifica(0);
+            const ganadorM1 = this.getGanadorManoEspecifica(1);
+            const ganadorM2 = this.getGanadorManoEspecifica(2); // Mano 3 recién terminada
+
+            // Regla: 1-1 después de Mano 2, y Mano 3 es Parda -> Gana el que ganó la Primera (M0)
+            // Verificamos contando manos ganadas explícitamente
+            if (e1.manosGanadasRonda === 1 && e2.manosGanadasRonda === 1 && ganadorM2 === null) {
+                this.logDebug("Resolución: 1-1 y Parda en 3ra -> Gana quien ganó la 1ra.");
+                // Si la primera también fue parda, gana el mano de la ronda
+                return ganadorM0 ? ganadorM0 : this.ronda.equipoMano;
+            }
+
+            // Regla: Triple Parda -> Gana Mano
+            if (ganadorM0 === null && ganadorM1 === null && ganadorM2 === null) {
+                this.logDebug("Resolución: Triple Parda -> Gana Mano de Ronda.");
+                return this.ronda.equipoMano;
+            }
+            // Regla: Gana M0, Parda M1, Parda M2 -> Gana M0
+            if (ganadorM0 && ganadorM1 === null && ganadorM2 === null) {
+                this.logDebug("Resolución: Gana M0, Parda M1, Parda M2 -> Gana M0.");
+                return ganadorM0;
+            }
+            // Regla: Parda M0, Gana M1, Parda M2 -> Gana M1
+            if (ganadorM0 === null && ganadorM1 && ganadorM2 === null) {
+                this.logDebug("Resolución: Parda M0, Gana M1, Parda M2 -> Gana M1.");
+                return ganadorM1;
+            }
+            // Si ninguna regla define un ganador claro (no debería pasar después de 3 manos)
+            console.warn("determinarGanadorRonda: No se pudo determinar ganador después de 3 manos, fallback a Mano.");
+            return this.ronda.equipoMano; // Fallback: el mano gana
+        }
         return null;
     }
 

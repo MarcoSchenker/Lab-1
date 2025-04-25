@@ -3,7 +3,6 @@ import { Jugador } from './jugador';
 import { IA } from './ia';
 import { Ronda } from './ronda';
 import { AccionesPosibles, Canto, Equipo } from './types';
-// Asegúrate que GameCallbacks incluye iniciarNuevaRondaUI
 import { GameCallbacks } from '../game-callbacks';
 import { getRandomInt } from './utils';
 import { Naipe } from './naipe';
@@ -12,11 +11,12 @@ export class Partida {
     public equipoPrimero: Equipo;
     public equipoSegundo: Equipo;
     public limitePuntaje: number = 30;
-    private callbacks: GameCallbacks; // Esta interfaz debe incluir iniciarNuevaRondaUI
+    private callbacks: GameCallbacks;
     private debugMode: boolean = false;
     private partidaTerminada: boolean = false;
     private rondaActual: Ronda | null = null;
-    private primeraRonda: boolean = true; // Para manejar la asignación inicial de 'mano'
+    private primeraRonda: boolean = true;
+    private ganadorPartida: Equipo | null;
 
     constructor(gameCallbacks: GameCallbacks, debug: boolean = false) {
         this.callbacks = gameCallbacks;
@@ -25,13 +25,14 @@ export class Partida {
         // Inicializa equipos con placeholders o valores por defecto seguros
         this.equipoPrimero = { jugador: null!, puntos: 0, esMano: false, manosGanadasRonda: 0 };
         this.equipoSegundo = { jugador: null!, puntos: 0, esMano: false, manosGanadasRonda: 0 };
+        this.ganadorPartida = null;
     }
 
     /**
      * Inicia una nueva partida, configurando jugadores, puntajes y la primera ronda.
      */
     public iniciar(nombreJugadorUno: string, nombreJugadorDos: string, limite: number = 30): void {
-        if (this.partidaTerminada && !this.primeraRonda) { // Permite reiniciar si ya terminó
+        if (this.partidaTerminada && !this.primeraRonda) {
             console.warn("Reiniciando una partida ya terminada.");
         }
 
@@ -56,11 +57,9 @@ export class Partida {
         this.callbacks.updatePlayerNames(nombreJugadorUno, nombreJugadorDos);
         this.callbacks.updateScores(0, 0);
         this.callbacks.clearLog();
-        this.callbacks.displayLog("=======================", 'public');
         this.callbacks.displayLog("==   Partida Iniciada  ==", 'public');
-        this.callbacks.displayLog("=======================", 'public');
         if (this.debugMode) {
-            this.callbacks.displayLog(`Debug: ${humanoEsManoPrimero ? nombreJugadorUno : nombreJugadorDos} empieza siendo mano.`, 'debug');
+            this.callbacks.displayLog(`${humanoEsManoPrimero ? nombreJugadorUno : nombreJugadorDos} empieza siendo mano.`, 'debug');
         }
 
         // Iniciar la lógica de la primera ronda llamando a continuar
@@ -76,14 +75,10 @@ export class Partida {
             console.warn("Intento de continuar una partida ya terminada.");
             return;
         }
-
-        // Verificar si alguien alcanzó el puntaje límite
         if (this.equipoPrimero.puntos >= this.limitePuntaje || this.equipoSegundo.puntos >= this.limitePuntaje) {
             this.finalizarPartida();
             return;
         }
-
-        // Actualizar puntajes en la UI (se hace aquí y en onRondaTerminadaCallback para reflejar cambios)
         this.callbacks.updateScores(this.equipoPrimero.puntos, this.equipoSegundo.puntos);
 
         // Alternar quién es mano, EXCEPTO en la primera ronda (ya se asignó en iniciar)
@@ -99,10 +94,7 @@ export class Partida {
             this.primeraRonda = false;
         }
         this.callbacks.iniciarNuevaRondaUI();
-        this.callbacks.displayLog("-----------------------", 'public');
         this.callbacks.displayLog(`Iniciando Ronda (Mano: ${this.equipoPrimero.esMano ? this.equipoPrimero.jugador.nombre : this.equipoSegundo.jugador.nombre})`, 'public');
-        this.callbacks.displayLog("-----------------------", 'public');
-        // -----------------------------------------------------------------------
 
         // Crear e iniciar la nueva instancia de Ronda
         const nuevaRonda = new Ronda(
@@ -115,7 +107,7 @@ export class Partida {
             this.debugMode
         );
         this.rondaActual = nuevaRonda;
-        this.rondaActual.iniciar(); // Este método dentro de Ronda debería repartir y llamar a displayPlayerCards, etc.
+        this.rondaActual.iniciar();
     }
 
     /**
@@ -132,17 +124,10 @@ export class Partida {
             this.callbacks.displayLog(`Debug: Fin Ronda. Puntos Ronda: ${this.equipoPrimero.jugador.nombre}=${puntosEq1}, ${this.equipoSegundo.jugador.nombre}=${puntosEq2}.`, 'debug');
         }
         this.callbacks.displayLog(`Puntaje Total: ${this.equipoPrimero.jugador.nombre}=${this.equipoPrimero.puntos}, ${this.equipoSegundo.jugador.nombre}=${this.equipoSegundo.puntos}`, 'public');
-
-
-        // Esperar un poco antes de continuar a la siguiente ronda (o finalizar)
         setTimeout(() => {
-            this.continuar(); // Llama a continuar para verificar fin de partida o iniciar nueva ronda
-        }, 1800); // Delay para que el jugador vea el resultado de la ronda
+            this.continuar();
+        }, 2000);
     }
-
-    /**
-     * Finaliza la partida, muestra el ganador y deshabilita acciones.
-     */
     private finalizarPartida(): void {
         this.partidaTerminada = true;
         this.rondaActual = null; // Asegurarse de que no hay ronda activa
@@ -156,6 +141,7 @@ export class Partida {
 
         // Determinar ganador y perdedor
         const ganador = this.equipoPrimero.puntos >= this.limitePuntaje ? this.equipoPrimero : this.equipoSegundo;
+        this.ganadorPartida = ganador;
         const perdedor = ganador === this.equipoPrimero ? this.equipoSegundo : this.equipoPrimero;
 
         // Mostrar mensajes de fin de partida
@@ -166,10 +152,6 @@ export class Partida {
         this.callbacks.displayLog("=======================", 'public');
 
     }
-
-    // --- Métodos para manejar acciones del Jugador Humano ---
-    // Estos métodos simplemente delegan la acción a la ronda actual si existe.
-
     /**
      * Delega el manejo de una carta jugada por el humano a la ronda actual.
      * @param carta El Naipe que el jugador humano seleccionó.
@@ -202,9 +184,6 @@ export class Partida {
             this.callbacks.displayLog("Error: No hay una ronda activa para cantar.", 'debug');
         }
     }
-
-    // --- Otros Métodos ---
-
     public setLimitePuntaje(limite: number): void {
         this.limitePuntaje = Math.max(1, limite); // Evitar límites inválidos
         this.callbacks.displayLog(`Límite de puntaje cambiado a: ${this.limitePuntaje}`, 'public');
@@ -218,11 +197,10 @@ export class Partida {
             this.rondaActual.setDebugMode(activado);
         }
     }
-
-    /**
-     * Devuelve la instancia de la ronda actual (puede ser null).
-     */
     public getRondaActual(): Ronda | null {
         return this.rondaActual;
+    }
+    public getGanadorPartida(): Equipo | null {
+        return this.ganadorPartida;
     }
 }

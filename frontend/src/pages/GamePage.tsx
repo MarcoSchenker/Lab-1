@@ -1,5 +1,5 @@
-// src/pages/GamePage.tsx
 import React, { useState, useMemo, useCallback } from 'react'; // Quité useRef
+import { useNavigate } from 'react-router-dom';
 import { Partida } from '../game/iaPro/partida';
 import { Jugador } from '../game/iaPro/jugador';
 import { Naipe } from '../game/iaPro/naipe';
@@ -11,32 +11,35 @@ import Scoreboard from '../components/ScoreBoard';
 import ActionButtons from '../components/ActionButtons';
 import GameLog from '../components/GameLog';
 import CallDisplay from '../components/CallDisplay';
+import StartGameScreen from '../components/StartGameScreen';
+import EndGameScreen from '../components/GameOverScreen';
 
-// Interfaz para las cartas que van a la mesa, incluyendo info para la UI
-interface CartaConInfoUI extends Naipe {
-  esHumano?: boolean;
-}
+interface CartaConInfoUI extends Naipe { esHumano?: boolean;}
 
-// Interfaz actualizada para GameState
 interface GameState {
     partidaTerminada: boolean;
     partidaIniciada: boolean;
     equipoPrimero: Equipo | null;
     equipoSegundo: Equipo | null;
-    cartasManoJugador: Naipe[]; // La mano solo necesita Naipe normal
-    cartasMesa: (CartaConInfoUI | null)[][]; // La mesa necesita saber quién jugó
+    ganadorPartida: Equipo | null;
+    cartasManoJugador: Naipe[];
+    cartasMesa: (CartaConInfoUI | null)[][];
     turnoActual: Equipo | null;
     accionesPosibles: AccionesPosibles;
-    mensajeLog: string[]; // Podrías hacer un tipo más complejo { message: string, type: LogType }
+    mensajeLog: string[];
     ultimoCanto: { jugador: Jugador | null, mensaje: string } | null;
     numeroManoActual: number; // Mano 0, 1, 2
     mostrandoCartelReparto: boolean;
+    estadoJuego: 'seleccionando_puntos' | 'jugando' | 'terminado'; // Nuevo estado para flujo
+    limitePuntosSeleccionado: number | null; // Para guardar 15 o 30
+    mostrandoConfirmacionSalir: boolean;
 }
-
-// Estado inicial actualizado
 const initialState: GameState = {
+    ganadorPartida: null,
     partidaTerminada: false,
     partidaIniciada: false,
+    estadoJuego: 'seleccionando_puntos', // Empezamos en la selección
+    limitePuntosSeleccionado: null,
     equipoPrimero: null,
     equipoSegundo: null,
     cartasManoJugador: [],
@@ -53,28 +56,27 @@ const initialState: GameState = {
     ultimoCanto: null,
     numeroManoActual: 0,
     mostrandoCartelReparto: false, // Empieza sin mostrar
+    mostrandoConfirmacionSalir: false,
 };
 
 const IMAGE_BASE_PATH = '/cartas/mazoOriginal';
-const GAME_BACKGROUND_IMAGE = '/tablebackground.png'; // Cambia esto a la ruta de tu imagen de fondo
-
-// --- Componente Principal ---
+const GAME_BACKGROUND_IMAGE = '/tablebackground.png';
 const GamePage: React.FC = () => {
     const [gameState, setGameState] = useState<GameState>(initialState);
-
-    // La ref yaMostroRepartoRef ya no es necesaria
-
+    const navigate = useNavigate();
     const partida = useMemo(() => {
-        // --- Implementación de los Callbacks para la Lógica del Juego ---
         const reactUIBridge: GameCallbacks = {
-
-            // --- Callbacks de Estado General ---
-            setPartidaTerminada: () => {
-                console.log("UI Callback: Partida Terminada");
-                setGameState(prev => ({ ...prev, partidaTerminada: true }));
+            setPartidaTerminada: (ganador?: Equipo | null) => {
+                console.log("UI Callback: Partida Terminada", ganador);
+                setGameState(prev => ({
+                    ...prev,
+                    estadoJuego: 'terminado', // Cambia el estado del juego
+                    ganadorPartida: partida.getGanadorPartida(),
+                    accionesPosibles: initialState.accionesPosibles,
+                    turnoActual: null,
+                }));
             },
             setTurno: (equipo) => {
-                // console.log("UI Callback: Turno de", equipo.jugador.nombre); // Mucho log, opcional
                 setGameState(prev => ({ ...prev, turnoActual: equipo }));
             },
             setNumeroMano: (mano) => {
@@ -85,19 +87,15 @@ const GamePage: React.FC = () => {
                 console.log("UI Callback: Limpiando Log");
                 setGameState(prev => ({ ...prev, mensajeLog: [] }));
             },
-             // Ajustado para simplificar, asumiendo que LogType no se usa visualmente aún
             displayLog: (message, type: LogType = 'public') => {
-                // Podrías filtrar por type aquí si quieres logs separados
-                if (type === 'debug' && !true /* Podrías tener un estado para modo debug UI */) {
-                     return; // No mostrar logs de debug si no está activo
+                if (type === 'debug' && !true) {
+                     return;
                 }
                  setGameState(prev => ({
                      ...prev,
-                     mensajeLog: [`(${type}) ${message}`, ...prev.mensajeLog.slice(0, 99)], // Añadir tipo al mensaje
+                     mensajeLog: [`${message}`, ...prev.mensajeLog.slice(0, 99)],
                  }));
             },
-
-             // --- Callbacks de Estado Visual ---
             updateScores: (score1, score2) => {
                 console.log("UI Callback: Actualizando Scores", score1, score2);
                 setGameState(prev => ({
@@ -108,8 +106,6 @@ const GamePage: React.FC = () => {
             },
             updatePlayerNames: (name1, name2) => {
                  console.log("UI Callback: Actualizando Nombres", name1, name2);
-                 // Esto debería idealmente ocurrir antes de que los equipos se creen en el estado
-                 // Si los equipos ya existen, actualizarlos (cuidado con la inmutabilidad)
                  setGameState(prev => ({
                      ...prev,
                      equipoPrimero: prev.equipoPrimero ? { ...prev.equipoPrimero, jugador: { ...prev.equipoPrimero.jugador, nombre: name1 } as Jugador } : null,
@@ -121,7 +117,6 @@ const GamePage: React.FC = () => {
                      console.log("UI Callback: Mostrando cartas jugador humano", jugador.cartasEnMano);
                     setGameState(prev => ({
                         ...prev,
-                        // Asegura que se actualiza con una nueva referencia de array
                         cartasManoJugador: [...jugador.cartasEnMano],
                     }));
                 }
@@ -132,7 +127,6 @@ const GamePage: React.FC = () => {
             displayPlayedCard: (jugador, carta, manoNumero, jugadaEnMano) => {
                  console.log(`UI Callback: Carta jugada por ${jugador.nombre} en mano ${manoNumero + 1}`, carta);
                  setGameState(prev => {
-                    // Copia profunda del array de manos
                     const nuevasCartasMesa = prev.cartasMesa.map(mano => mano ? [...mano] : []);
 
                     // Asegurarse de que el array para la mano específica existe
@@ -192,24 +186,25 @@ const GamePage: React.FC = () => {
         }; // Fin de reactUIBridge
 
         // Crear instancia de Partida con los callbacks y modo debug
-        return new Partida(reactUIBridge, true); // true para activar debug en Partida
+        return new Partida(reactUIBridge, false); // true para activar debug en Partida
 
     }, []); // El array vacío asegura que partida se crea solo una vez
 
     // --- Manejadores de Eventos de la UI ---
 
-    const iniciarPartida = useCallback(() => {
+    const handleStartGame = useCallback((puntosLimite: 15 | 30) => {
         console.log("Iniciando Partida desde UI...");
         // Resetear estado visual principal ANTES de iniciar la lógica
         setGameState(prev => ({
              ...initialState, // Volver al estado inicial limpio
+             estadoJuego: 'jugando',
              partidaIniciada: true, // Marcar como iniciada para mostrar el tablero
+             limitePuntosSeleccionado: puntosLimite,
              equipoPrimero: partida.equipoPrimero || null,
              equipoSegundo: partida.equipoSegundo || null,
         }));
-        partida.iniciar("Humano", "IA", 30); // Nombres y límite de puntos
-    }, [partida]); // Depende de la instancia de partida
-
+        partida.iniciar("Humano", "IA", puntosLimite); // Nombres y límite de puntos
+    }, [partida]);
     const handlePlayCard = useCallback((carta: Naipe) => {
         // Validaciones básicas en UI (Turno, estado, acción posible)
         const esTurnoJugadorHumano = gameState.turnoActual?.jugador.esHumano === true;
@@ -248,101 +243,180 @@ const GamePage: React.FC = () => {
              console.warn("Intento de canto inválido (fuera de turno o partida terminada)");
         }
     }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.accionesPosibles]); // Dependencias
+    const handleExitGame = useCallback(() => {
+        console.log("UI Event: Saliendo del juego...");
+        navigate('/dashboard');
+         setGameState(initialState); // Vuelve a la pantalla de selección de puntos
+    }, [navigate]);
+
+    // --- MANEJADORES PARA SALIR ---
+    const handleRequestExit = useCallback(() => {
+        setGameState(prev => ({ ...prev, mostrandoConfirmacionSalir: true }));
+    }, []);
+
+    const handleConfirmExit = useCallback(() => {
+        console.log("Navegando a /dashboard");
+        setGameState(prev => ({ ...prev, mostrandoConfirmacionSalir: false })); // Ocultar modal
+        navigate('/dashboard'); // Realizar la navegación
+    }, [navigate]);
+
+    const handleCancelExit = useCallback(() => {
+        setGameState(prev => ({ ...prev, mostrandoConfirmacionSalir: false })); // Simplemente ocultar modal
+    }, []);
+
+    // Determina qué pantalla mostrar
+    const renderScreen = () => {
+        switch (gameState.estadoJuego) {
+            case 'seleccionando_puntos': // O 'seleccionando_puntos' si prefieres
+                 // La pantalla de inicio/selección de puntos
+                return <StartGameScreen onStartGame={handleStartGame} onExit={handleExitGame} />; // Pasa onExit
+            case 'jugando':
+                // El tablero de juego y elementos de UI de la partida
+                return (
+                     <div className="flex flex-col flex-1 max-h-full relative">
+                         {/* ... Contenido del juego (Cartel Repartiendo, CallDisplay, PlayerAreas, GameBoard, ActionButtons) ... */}
+                          {gameState.mostrandoCartelReparto && (
+                             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm rounded-lg">
+                                 <div className="text-4xl font-bold text-yellow-300 animate-pulse p-6 rounded-lg shadow-xl border-2 border-yellow-500 bg-black bg-opacity-80">
+                                     Repartiendo Cartas...
+                                 </div>
+                             </div>
+                          )}
+
+                          {/* CallDisplay */}
+                          <CallDisplay call={gameState.ultimoCanto} />
+
+                          {/* Área del Oponente (IA) */}
+                          <div className="mb-2">
+                              <PlayerArea
+                                  jugador={gameState.equipoSegundo?.jugador ?? null}
+                                  cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? 3).fill(null)}
+                                  esTurno={gameState.turnoActual === gameState.equipoSegundo}
+                                  onCardClick={() => {}}
+                                  puedeJugarCarta={false}
+                                  imageBasePath={IMAGE_BASE_PATH}
+                              />
+                          </div>
+
+                          {/* Mesa de Juego */}
+                          <div className="flex-1 mb-2 min-h-[20vh] md:min-h-[25vh]">
+                              <GameBoard
+                                  cartasMesa={gameState.cartasMesa}
+                                  numeroManoActual={gameState.numeroManoActual}
+                                  imageBasePath={IMAGE_BASE_PATH}
+                              />
+                          </div>
+
+                          {/* Área del Jugador Humano */}
+                          <div className="mb-1">
+                              <PlayerArea
+                                  jugador={gameState.equipoPrimero?.jugador ?? null}
+                                  cartas={gameState.cartasManoJugador}
+                                  esTurno={gameState.turnoActual?.jugador?.esHumano === true}
+                                  onCardClick={handlePlayCard}
+                                  puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
+                                  imageBasePath={IMAGE_BASE_PATH}
+                              />
+                          </div>
+
+                          {/* Botones de Acción */}
+                          <div className="mt-auto pt-1 pb-1">
+                              <ActionButtons
+                                  acciones={gameState.accionesPosibles}
+                                  onCanto={handleCanto}
+                                  partidaTerminada={gameState.partidaTerminada}
+                                  className="w-full"
+                              />
+                          </div>
+                     </div>
+                );
+            case 'terminado':
+                return (
+                    <EndGameScreen
+                        humanPlayerWon={gameState.ganadorPartida?.jugador?.esHumano === true}
+                        onRematch={handleStartGame} // La revancha inicia una nueva partida
+                        onExit={handleExitGame} // El salir vuelve a la pantalla de inicio/selección
+                    />
+                );
+            default:
+                // Podrías tener un estado de carga o un error
+                return <div>Cargando...</div>;
+        }
+    };
+
+
     return (
         <div className="flex h-screen w-screen text-white p-2 overflow-hidden relative font-sans bg-marron-oscuro">
-            {/* Columna Izquierda: Log y Marcador */}
-            <div className="w-1/4 xl:w-1/3 pr-2 flex flex-col h-full bg-stone-900 bg-opacity-80 rounded-lg p-4">
+            <div className="w-1/4 xl:w-1/3 pr-2 flex flex-col h-full bg-stone-900 bg-opacity-80 rounded-lg p-4 relative pt-60">
+
+            <button
+                onClick={handleRequestExit}
+                className="absolute top-2 left-2 px-4 py-3 text-yellow-300 hover:text-yellow-500 transition-colors z-10 text-base rounded flex items-center gap-2 bg-mesa-oscura hover:bg-marron-oscuro/80 border-2 border-yellow-500 shadow-md transform hover:scale-105"
+                aria-label="Abandonar Partida"
+                title="Abandonar Partida"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Abandonar Partida
+            </button>
+
+            <div className="flex flex-col flex-grow justify-content justify-normal items-center">
                 <Scoreboard
                     equipoPrimero={gameState.equipoPrimero}
                     equipoSegundo={gameState.equipoSegundo}
                     limitePuntaje={partida.limitePuntaje}
                     className="mb-2 text-white"
                 />
-                {/* Título del Log - Mantener amarillo/dorado */}
+                    <div className="flex items-center my-4 w-2/3 mx-auto">
+                    <div className="flex-grow h-px bg-gradient-to-r from-transparent via-yellow-500 to-yellow-500"></div>
+                    <div className="text-3xl text-yellow-500 mx-2">⚜️</div>
+                    <div className="flex-grow h-px bg-gradient-to-l from-transparent via-yellow-500 to-yellow-500"></div>
+                    </div>
                 <div className="text-lg font-semibold mb-1 text-yellow-300 tracking-wide">Historial de partida</div>
-                {/* Log de Partida - Mantener fondo oscuro semi-transparente y texto blanco/claro */}
                 <GameLog
                     mensajes={gameState.mensajeLog}
-                    className="bg-black bg-opacity-50 rounded-lg shadow-lg overflow-y-auto text-sm h-1/2 md:h-40rem] text-gray-200" // Asegura texto claro
                 />
             </div>
-
-            {/* Columna Derecha: Juego Principal */}
+            </div>
+            {/* Columna Derecha: Contenido de la Pantalla Actual (Inicio, Jugando, Terminado) */}
             <div
                 className="w-3/4 xl:w-4/5 flex flex-col h-full pl-1 bg-cover bg-center bg-no-repeat"
                 style={{ backgroundImage: `url('${GAME_BACKGROUND_IMAGE}')` }}
             >
-                {/* Área Principal: Botón Iniciar o Tablero de Juego */}
-                {!gameState.partidaIniciada ? (
-                    // --- Pantalla de Inicio ---
-                    <div className="flex-1 flex items-center justify-center">
-                        <button
-                            onClick={iniciarPartida}
-                            // Mantener fondo amarillo/dorado, cambiar texto a un color oscuro que combine
-                            className="bg-yellow-500 hover:bg-yellow-600 text-stone-900 font-bold py-4 px-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 shadow-xl transform transition hover:scale-105 text-xl"
-                        >
-                            Iniciar Partida
-                        </button>
-                    </div>
-                ) : (
-                    // --- Tablero de Juego Activo ---
-                    <div className="flex flex-col flex-1 max-h-full relative">
-                        {/* Cartel "Repartiendo..." - Mantener colores existentes (amarillo/dorado, fondo oscuro) */}
-                        {gameState.mostrandoCartelReparto && (
-                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm rounded-lg">
-                                <div className="text-4xl font-bold text-yellow-300 animate-pulse p-6 rounded-lg shadow-xl border-2 border-yellow-500 bg-black bg-opacity-80">
-                                    Repartiendo Cartas...
-                                </div>
+                {/* Renderiza la pantalla actual según el estado */}
+                {renderScreen()}
+
+                 {/* Modal de Confirmación de Salida (Condicional) */}
+                 {gameState.mostrandoConfirmacionSalir && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
+                        <div className="bg-stone-800 bg-opacity-95 p-8 rounded-lg shadow-xl border-2 border-yellow-600 w-full max-w-sm mx-auto text-center">
+
+                            {/* Título del Modal */}
+                             <h3 className="text-xl font-semibold text-yellow-300 mb-4">
+                                 Abandonar Partida
+                             </h3>
+
+                            {/* Mensaje del Modal */}
+                            <p className="text-gray-200 mb-6">
+                                ¿Estás seguro que quieres abandonar la partida?
+                            </p>
+
+                            {/* Botones del Modal */}
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={handleConfirmExit} // Llama a la función para salir
+                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 shadow-md transform transition hover:scale-105"
+                                >
+                                    Sí, Salir
+                                </button>
+                                <button
+                                    onClick={handleCancelExit} // Llama a la función para cancelar
+                                    className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 shadow-md transform transition hover:scale-105"
+                                >
+                                    No
+                                </button>
                             </div>
-                        )}
-
-                        {/* CallDisplay - Asegurar que el texto se vea sobre el fondo de madera */}
-                        <CallDisplay call={gameState.ultimoCanto} />
-
-                        {/* Área del Oponente (IA) */}
-                        <div className="mb-2">
-                            <PlayerArea
-                                jugador={gameState.equipoSegundo?.jugador ?? null}
-                                cartas={Array(gameState.equipoSegundo?.jugador?.cartasEnMano?.length ?? gameState.cartasManoJugador.length ?? 3).fill(null)}
-                                esTurno={gameState.turnoActual === gameState.equipoSegundo}
-                                onCardClick={() => {}}
-                                puedeJugarCarta={false}
-                                imageBasePath={IMAGE_BASE_PATH}
-                                // Ya no tiene fondo propio, hereda el de la mesa
-                            />
-                        </div>
-
-                        {/* Mesa de Juego */}
-                        <div className="flex-1 mb-2 min-h-[20vh] md:min-h-[25vh]">
-                            <GameBoard
-                                cartasMesa={gameState.cartasMesa}
-                                numeroManoActual={gameState.numeroManoActual}
-                                imageBasePath={IMAGE_BASE_PATH}
-                                // Ya no tiene fondo propio, hereda el de la mesa
-                            />
-                        </div>
-
-                        {/* Área del Jugador Humano */}
-                        <div className="mb-1">
-                            <PlayerArea
-                                jugador={gameState.equipoPrimero?.jugador ?? null}
-                                cartas={gameState.cartasManoJugador}
-                                esTurno={gameState.turnoActual?.jugador?.esHumano === true}
-                                onCardClick={handlePlayCard}
-                                puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
-                                imageBasePath={IMAGE_BASE_PATH}
-                                // Ya no tiene fondo propio, hereda el de la mesa
-                            />
-                        </div>
-
-                        {/* Botones de Acción - Asumimos que los botones internos usarán colores que combinen */}
-                        <div className="mt-auto pt-1 pb-1">
-                            <ActionButtons
-                                acciones={gameState.accionesPosibles}
-                                onCanto={handleCanto}
-                                partidaTerminada={gameState.partidaTerminada}
-                                className="w-full"
-                            />
                         </div>
                     </div>
                 )}
