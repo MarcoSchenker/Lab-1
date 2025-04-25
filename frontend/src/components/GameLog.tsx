@@ -17,9 +17,9 @@ const GameLog: React.FC<GameLogProps> = ({ mensajes, className = '' }) => {
     return (
         <details className={`w-full text-xs ${className}`}>
             <summary className="cursor-pointer text-center text-gray-400 hover:text-white py-1">
-                Mostrar/Ocultar Log del Juego
+                Mostrar/Ocultar Historial del Juego
             </summary>
-            <div className="h-full overflow-y-auto bg-gray-800 bg-opacity-70 p-2 rounded mt-1 border border-gray-600 scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-700">
+            <div className="h-96 overflow-y-auto bg-gray-800 bg-opacity-70 p-2 rounded mt-1 border border-gray-600 scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-700">
                 {mensajes.length === 0 && <p className="text-gray-500 italic">El log está vacío.</p>}
                 {mensajes.map((msg, index) => {
                     // Añadir algo de formato o iconos basados en el mensaje (opcional)

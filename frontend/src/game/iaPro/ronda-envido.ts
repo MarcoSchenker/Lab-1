@@ -14,6 +14,7 @@ import { Naipe } from './naipe';
      public equipoDebeResponderEnvido: Equipo | null = null;
      public envidoResuelto: boolean = false;
      public puedeEnvido: boolean = true;
+     private equipoInterrumpidoEnvido: Equipo | null = null;
 
      constructor(ronda: Ronda) {
          this.ronda = ronda;
@@ -24,6 +25,7 @@ import { Naipe } from './naipe';
          this.equipoDebeResponderEnvido = null;
          this.envidoResuelto = false;
          this.puedeEnvido = true;
+         this.equipoInterrumpidoEnvido = null;
          this.ronda.equipoPrimero.jugador.puntosGanadosEnvidoRonda = 0;
          this.ronda.equipoSegundo.jugador.puntosGanadosEnvidoRonda = 0;
      }
@@ -57,26 +59,33 @@ import { Naipe } from './naipe';
      }
 
      public registrarCanto(canto: Canto, equipoQueCanta: Equipo): boolean {
-         if (!this.getPosiblesCantos().includes(canto)) {
+        if (!this.getPosiblesCantos().includes(canto)) {
              this.logDebug(`Canto Envido inválido ${canto} intentado por ${equipoQueCanta.jugador.nombre}`);
              return false;
-         }
+        }
+        const estabaEsperandoJugada = this.ronda.estadoRonda === EstadoRonda.EsperandoJugadaNormal || this.ronda.estadoRonda === EstadoRonda.InicioMano;
+        const esTurnoDelCantador = equipoQueCanta === this.ronda.equipoEnTurno;
 
-         this.ronda.callbacks.showPlayerCall(equipoQueCanta.jugador, this.ronda.cantoToString(canto));
-         this.cantosEnvido.push({ canto, equipo: equipoQueCanta });
+        this.ronda.callbacks.showPlayerCall(equipoQueCanta.jugador, this.ronda.cantoToString(canto));
+        this.cantosEnvido.push({ canto, equipo: equipoQueCanta });
 
-         this.equipoDebeResponderEnvido = this.ronda.getOponente(equipoQueCanta);
-         this.ronda.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido;
-         this.ronda.equipoEnTurno = this.equipoDebeResponderEnvido;
-         console.log("[registrarCanto] equipoDebeResponderEnvido:", this.equipoDebeResponderEnvido?.jugador.nombre);
-         console.log("[registrarCanto] estadoRonda:", this.ronda.estadoRonda);
-         console.log("[registrarCanto] equipoEnTurno:", this.ronda.equipoEnTurno?.jugador.nombre);
+        if (estabaEsperandoJugada && esTurnoDelCantador) {
+            this.equipoInterrumpidoEnvido = equipoQueCanta; // Recordar quién debe jugar después
+        } else {
+            this.equipoInterrumpidoEnvido = null;
+        }
 
-         return true;
+        this.equipoDebeResponderEnvido = this.ronda.getOponente(equipoQueCanta);
+        this.ronda.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido;
+        this.ronda.equipoEnTurno = this.equipoDebeResponderEnvido;
+        console.log("[registrarCanto] equipoDebeResponderEnvido:", this.equipoDebeResponderEnvido?.jugador.nombre);
+        console.log("[registrarCanto] estadoRonda:", this.ronda.estadoRonda);
+        console.log("[registrarCanto] equipoEnTurno:", this.ronda.equipoEnTurno?.jugador.nombre);
+
+        return true;
      }
 
      public registrarRespuesta(respuesta: Canto, equipoQueResponde: Equipo): boolean {
-         // LOG para depuración
          console.log("[registrarRespuesta] equipoDebeResponderEnvido:", this.equipoDebeResponderEnvido?.jugador.nombre);
          console.log("[registrarRespuesta] equipoQueResponde:", equipoQueResponde.jugador.nombre);
          console.log("[registrarRespuesta] respuesta:", respuesta);
@@ -98,21 +107,19 @@ import { Naipe } from './naipe';
          const esRespuestaFinal = respuesta === Canto.Quiero || respuesta === Canto.NoQuiero;
 
          if (esRespuestaFinal) {
-             this.resolverEnvido(respuesta === Canto.Quiero, equipoQueResponde);
-             this.ronda.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
-             this.setTurnoPostEnvido(respuesta); // Usar método refactorizado
-         } else {
-             // CORRECCIÓN: Setear correctamente el equipo que debe responder y loguear
-             this.equipoDebeResponderEnvido = this.ronda.getOponente(equipoQueResponde);
-             this.ronda.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido;
-             this.ronda.equipoEnTurno = this.equipoDebeResponderEnvido;
-
-             // LOG para depuración
-             console.log("[registrarRespuesta] Nuevo equipoDebeResponderEnvido:", this.equipoDebeResponderEnvido?.jugador.nombre);
-             console.log("[registrarRespuesta] estadoRonda:", this.ronda.estadoRonda);
-             console.log("[registrarRespuesta] equipoEnTurno:", this.ronda.equipoEnTurno?.jugador.nombre);
-         }
-         return true;
+            this.resolverEnvido(respuesta === Canto.Quiero, equipoQueResponde); // Calcula puntos, etc.
+            this.ronda.estadoRonda = EstadoRonda.EsperandoJugadaNormal;           // Cambia estado para jugar carta
+            this.setTurnoPostEnvido(respuesta);
+             this.equipoInterrumpidoEnvido = null;
+        } else {
+            this.equipoDebeResponderEnvido = this.ronda.getOponente(equipoQueResponde); // El otro debe responder
+            this.ronda.estadoRonda = EstadoRonda.EsperandoRespuestaEnvido;             // Se sigue esperando respuesta
+            this.ronda.equipoEnTurno = this.equipoDebeResponderEnvido;                 // Cambiar turno de respuesta
+            console.log("[registrarRespuesta] Nuevo equipoDebeResponderEnvido:", this.equipoDebeResponderEnvido?.jugador.nombre);
+            console.log("[registrarRespuesta] estadoRonda:", this.ronda.estadoRonda);
+            console.log("[registrarRespuesta] equipoEnTurno:", this.ronda.equipoEnTurno?.jugador.nombre);
+        }
+        return true;
      }
 
      private resolverEnvido(querido: boolean, equipoQueRespondio: Equipo): void {
@@ -244,17 +251,29 @@ import { Naipe } from './naipe';
          this.ronda.callbacks.displayLog(mensaje, 'public');
      }
 
-     // --- Métodos Refactorizados ---
-
-     /** Determina el turno después de resolver el envido */
-     private setTurnoPostEnvido(respuesta: Canto): void {
-         const ultimoCantadorNoRespuesta = getLast(
-             this.cantosEnvido.filter(c => !this.ronda.esRespuesta(c.canto))
-         )?.equipo;
-         if (ultimoCantadorNoRespuesta) {
-             this.ronda.equipoEnTurno = ultimoCantadorNoRespuesta;
-         } else {
-             this.ronda.equipoEnTurno = this.ronda.equipoMano; // Fallback
+     /** Determina el turno DESPUÉS de resolver el envido (con Quiero o NoQuiero) */
+    private setTurnoPostEnvido(respuestaFinal: Canto): void {
+        if (this.equipoInterrumpidoEnvido) {
+            this.ronda.equipoEnTurno = this.equipoInterrumpidoEnvido;
+            //this.logDebug(`Envido resuelto (${respuestaFinal}). Turno de juego vuelve a ${this.equipoInterrumpidoEnvido.jugador.nombre} (interrumpido).`);
+        } else {
+            // Si NADIE fue interrumpido (ej: Envido se cantó justo después de una jugada,
+            // como el Pie cantando Envido después de que el Mano jugó), entonces
+            // el turno para la siguiente jugada pasa al último que cantó (antes del Quiero/NoQuiero).
+            // Esto es porque ese jugador ahora tiene "la palabra" para jugar su carta.
+            const ultimoCantadorNoRespuesta = getLast(
+                this.cantosEnvido.filter(c => !this.ronda.esRespuesta(c.canto))
+            )?.equipo;
+            if (ultimoCantadorNoRespuesta) {
+                this.ronda.equipoEnTurno = ultimoCantadorNoRespuesta;
+                 //this.logDebug(`Envido resuelto (${respuestaFinal}). Turno de juego para ${ultimoCantadorNoRespuesta.jugador.nombre} (último cantante).`);
+            } else {
+                //this.logDebug(`Envido resuelto (${respuestaFinal}). No se encontró último cantante. Fallback a mano.`);
+                this.ronda.equipoEnTurno = this.ronda.equipoMano;
+            }
+        }
+         if(this.ronda.estadoRonda !== EstadoRonda.RondaTerminada) {
+            this.ronda.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
          }
-     }
- }
+    }
+}

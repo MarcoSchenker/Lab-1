@@ -115,7 +115,6 @@ export class RondaTrucoHandler {
         // --- Guardar jugador interrumpido SI CORRESPONDE ---
         if (estabaEsperandoJugada && esTurnoDelCantador) {
             this.equipoInterrumpido = equipoQueCanta; // Recordar quién debe jugar después
-            this.logDebug(`${equipoQueCanta.jugador.nombre} interrumpió su turno de juego para cantar ${this.ronda.cantoToString(canto)}.`);
         } else {
             // Si el canto NO interrumpió (ej: se cantó justo después de que el otro jugó), no hay interrumpido.
             this.equipoInterrumpido = null;
@@ -150,7 +149,6 @@ export class RondaTrucoHandler {
             // --- Limpiar el estado de interrupción DESPUÉS de usarlo ---
                 if (respuesta === Canto.Quiero) {
                     this.equipoInterrumpido = null;
-                    this.logDebug("Equipo interrumpido limpiado.");
                 }
             }
         } else {
@@ -183,6 +181,9 @@ export class RondaTrucoHandler {
         if (this.ronda.estadoRonda === EstadoRonda.RondaTerminada) {
         this.logDebug(`${equipoQueSeVa.jugador.nombre} intentó irse al mazo pero la ronda ya terminó.`);
         return false;
+        }
+        if (this.trucoQuerido){
+            return false;
         }
         this.ronda.callbacks.showPlayerCall(equipoQueSeVa.jugador, this.ronda.cantoToString(Canto.IrAlMazo));
         this.cantosTruco.push({ canto: Canto.IrAlMazo, equipo: equipoQueSeVa });
@@ -275,8 +276,6 @@ export class RondaTrucoHandler {
             this.ronda.envidoHandler.envidoResuelto &&
             getLast(this.ronda.envidoHandler.cantosEnvido)?.canto === Canto.Quiero // Verificar si el último canto fue Quiero
         ) {
-            // Determinar quién ganó el envido basándose en los puntos registrados en los jugadores
-            // (Esta lógica asume que guardas los puntos ganados en el jugador/equipo)
             const equipoGanadorEnvido =
                 this.ronda.equipoPrimero.jugador.puntosGanadosEnvidoRonda > 0
                     ? this.ronda.equipoPrimero
@@ -356,14 +355,12 @@ export class RondaTrucoHandler {
         if (this.equipoInterrumpido) {
             // Si un turno de juego fue interrumpido, el turno VUELVE a ese jugador.
             this.ronda.equipoEnTurno = this.equipoInterrumpido;
-            this.logDebug(`Truco resuelto con Quiero. Turno vuelve a ${this.equipoInterrumpido.jugador.nombre} (interrumpido).`);
             // Nota: this.equipoInterrumpido se limpiará después en registrarRespuesta
         } else {
             // Si NADIE fue interrumpido (ej: Truco se cantó justo después de una jugada),
             // el turno para la siguiente jugada pasa al oponente de quien dijo "Quiero".
             // (Porque quien dijo "Quiero" acaba de responder, no de jugar carta).
             this.ronda.equipoEnTurno = this.ronda.getOponente(equipoQueRespondioQuiero);
-            this.logDebug(`Truco resuelto con Quiero. Turno pasa a ${this.ronda.equipoEnTurno.jugador.nombre} (oponente de quien quiso).`);
         }
          if(this.ronda.estadoRonda !== EstadoRonda.RondaTerminada) {
              this.ronda.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
