@@ -43,10 +43,10 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
     // Estilos base para los botones
     const buttonBaseStyle = "text-white font-bold py-2 px-4 rounded shadow hover:shadow-lg transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black";
-    const envidoStyle = "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500";
-    const trucoStyle = "bg-red-600 hover:bg-red-700 focus:ring-red-500";
-    const respuestaStyle = "bg-yellow-500 hover:bg-yellow-600 text-black focus:ring-yellow-400"; // Texto negro para mejor contraste
-    const mazoStyle = "bg-gray-600 hover:bg-gray-700 focus:ring-gray-500";
+    const envidoStyle = "bg-blue-900 hover:bg-blue-950 focus:ring-blue-500";
+    const trucoStyle = "bg-red-700 hover:bg-red-600 focus:ring-red-500";
+    const respuestaStyle = "bg-yellow-700 hover:bg-yellow-600 text-black focus:ring-yellow-400";
+    const mazoStyle = "bg-gray-500 hover:bg-gray-600 focus:ring-gray-500";
 
     const renderButton = (canto: Canto, style: string) => (
         <button
@@ -59,8 +59,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     );
 
     return (
-        <div className={`w-full p-3 bg-black bg-opacity-40 rounded-lg shadow-md ${className}`}>
-            <h3 className="text-center font-semibold mb-3 text-lg text-gray-300">Acciones</h3>
+        <div className={`max-w-5xl p-3 bg-stone-950 bg-opacity-0 rounded-lg shadow-md mx-auto ${className}`}>
             <div className="flex flex-wrap gap-3 justify-center items-center min-h-[3rem]">
                 {/* Botones de Canto Envido */}
                 {acciones.puedeCantarEnvido.map(canto => renderButton(canto, envidoStyle))}

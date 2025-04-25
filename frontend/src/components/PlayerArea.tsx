@@ -11,6 +11,7 @@ interface PlayerAreaProps {
     onCardClick: (naipe: Naipe) => void;
     puedeJugarCarta: boolean;
     imageBasePath?: string;
+    className?: string; // Agregado para poder pasar clases adicionales (como bg-transparent)
 }
 
 const PlayerArea: React.FC<PlayerAreaProps> = ({
@@ -20,10 +21,11 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
     onCardClick,
     puedeJugarCarta,
     imageBasePath = './cartas/mazoOriginal',
+    className = "", // Valor por defecto
 }) => {
     if (!jugador) {
         return (
-            <div className="h-48 border border-dashed border-gray-500 rounded flex items-center justify-center text-gray-400">
+            <div className={`h-48 border border-dashed rounded flex items-center justify-center text-gray-400 ${className}`}>
                 Esperando jugador...
             </div>
         );
@@ -31,13 +33,7 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
 
     const esHumano = jugador.esHumano;
     const animationClass = esHumano ? 'animate-carta-desliza-abajo' : 'animate-carta-desliza-arriba';
-
-    const turnoIndicatorClasses = esTurno
-        ? 'ring-2 ring-offset-2 ring-offset-green-800 ring-yellow-400'
-        : '';
-    const areaClasses = `relative p-4 rounded-lg shadow-xl min-h-[12rem] md:min-h-[14rem] flex flex-col items-center ${turnoIndicatorClasses} ${
-        esHumano ? 'bg-blue-900' : 'bg-red-900'
-    }`;
+    const areaClasses = `relative p-4 rounded-lg min-h-[8rem] md:min-h-[10rem] flex flex-col items-center ${className}`;
 
     return (
         <div className={areaClasses}>
@@ -45,7 +41,8 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
                 {jugador.nombre} {esTurno ? '(Tu Turno)' : ''}
             </h2>
 
-            <div className="flex justify-center items-end space-x-[-20px] sm:space-x-[-25px] md:space-x-[-30px] h-32">
+            <div className="flex justify-center items-end space-x-[-16px] sm:space-x-[-20px] md:space-x-[-30px] h-48 w-3/4">
+                {/* Renderizar cartas reales */}
                 {cartas.map((carta, index) => (
                     <Card
                         key={carta ? `${carta.palo}-${carta.numero}` : `dorso-${index}`}
@@ -58,14 +55,16 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
                         className={`z-${index * 10} ${animationClass}`}
                     />
                 ))}
+                {/* Renderizar placeholders si no hay cartas */}
                 {cartas.length === 0 &&
                     Array.from({ length: 3 }).map((_, index) => (
                         <Card
                             key={`placeholder-${index}`}
-                            carta={null}
-                            bocaAbajo={!esHumano}
+                            carta={null} // Naipe es null para placeholder
+                            bocaAbajo={!esHumano} // Mostrar dorso si no es humano
                             className={`z-${index * 10} opacity-30`}
-                            disabled={true}
+                            disabled={true} // No interactivo
+                            // No necesita imageBasePath si carta es null y bocaAbajo true (Card debería manejar esto)
                         />
                     ))}
             </div>
