@@ -89,42 +89,69 @@ export function getPosiblesRespuestasEnvido(ronda: Ronda): Canto[] {
 }
 
 export function puedeCantarTruco(ronda: Ronda, equipo: Equipo): boolean {
-    if (ronda.envidoHandler.equipoDebeResponderEnvido || ronda.trucoHandler.trucoResuelto) return false;
-    if (ronda.trucoHandler.equipoDebeResponderTruco === equipo) return false; // No puede cantar si debe responder
+    const handler = ronda.trucoHandler;
 
-    const ultimoCantoObj = getLast(ronda.trucoHandler.cantosTruco);
-    if (!ultimoCantoObj) return true; // Nadie cantó, puede Truco
+    if (ronda.envidoHandler.equipoDebeResponderEnvido) return false; // Envido pendiente
+    if (handler.trucoNoQueridoPor || handler.equipoSeFueAlMazo) return false; // Truco resuelto negativo
+    if (handler.equipoDebeResponderTruco === equipo) return false; // Debe responder, no cantar
 
-    if (esRespuesta(ultimoCantoObj.canto)) {
-        if (ultimoCantoObj.canto === Canto.NoQuiero) return false; // Nadie más canta
-        // Si fue Quiero, puede escalar el que respondió Quiero (si es el equipo actual)
-        return ultimoCantoObj.equipo === equipo;
-    } else {
-        // Si el último fue un canto (T, RT, V4), no puede cantar el mismo equipo
-        return ultimoCantoObj.equipo !== equipo;
+    // ¿Se llegó a ValeCuatro y se aceptó?
+    const ultimoNivelObj = getLast(handler.cantosTruco.filter(c => !esRespuesta(c.canto)));
+    const ultimoNivel = ultimoNivelObj?.canto;
+    if (ultimoNivel === Canto.ValeCuatro && handler.trucoQuerido) return false;
+
+    // ¿Fue mi propio canto el último y estoy esperando respuesta?
+    const ultimoCantoGeneralObj = getLast(handler.cantosTruco);
+    if (ultimoCantoGeneralObj && !esRespuesta(ultimoCantoGeneralObj.canto) && ultimoCantoGeneralObj.equipo === equipo) {
+        return false; // No puedo cantar si espero respuesta a mi canto
     }
+    return true;
 }
 
+/**
+ * Determina QUÉ cantos de Truco específicos (Truco, ReTruco, ValeCuatro)
+ * puede hacer el jugador en turno, aplicando la regla de escalada.
+ */
 export function getPosiblesCantosTruco(ronda: Ronda): Canto[] {
-    if (!puedeCantarTruco(ronda, ronda.equipoEnTurno)) return [];
-    const ultimoCantoNoRespondido = getLast(ronda.trucoHandler.cantosTruco.filter(c => !esRespuesta(c.canto)))?.canto;
+    const handler = ronda.trucoHandler;
+    const equipoActual = ronda.equipoEnTurno;
+    const cantos = handler.cantosTruco;
 
-    // Si no hay cantos previos O el último fue respondido con Quiero por el equipo en turno
-    const ultimoReal = getLast(ronda.trucoHandler.cantosTruco);
-    const puedeEscalar = !ultimoReal || (ultimoReal.canto === Canto.Quiero && ultimoReal.equipo === ronda.equipoEnTurno);
-
-    if (puedeEscalar) {
-        switch (ultimoCantoNoRespondido) {
-            case undefined: return [Canto.Truco];         // No se cantó nada
-            case Canto.Truco: return [Canto.ReTruco];    // Se cantó Truco y me respondieron Quiero
-            case Canto.ReTruco: return [Canto.ValeCuatro]; // Se cantó ReTruco y me respondieron Quiero
-            default: return [];                          // No se puede escalar ValeCuatro
-        }
+    // Primero, usar la función general para ver si se puede cantar ALGO
+    if (!puedeCantarTruco(ronda, equipoActual)) {
+        return [];
     }
 
-    return []; // No puede cantar en otras situaciones (ej: le cantaron y aún no respondió)
-}
+    // Determinar qué canto específico es posible
+    const ultimoCantoGeneral = getLast(cantos);
+    const ultimoCantoRealObj = getLast(cantos.filter(c => !esRespuesta(c.canto)));
+    const ultimoNivelCantado = ultimoCantoRealObj?.canto;
 
+    // Caso 1: No se ha cantado nada aún.
+    if (!ultimoCantoGeneral) {
+        return [Canto.Truco];
+    }
+
+    // Caso 2: El Truco ya fue aceptado (querido).
+    if (handler.trucoQuerido) {
+        // ¿Puede escalar el jugador actual? SÓLO si él dijo el último "Quiero".
+        if (ultimoCantoGeneral?.canto === Canto.Quiero && ultimoCantoGeneral.equipo === equipoActual) {
+            // Sí, puede escalar. ¿A qué nivel?
+            switch (ultimoNivelCantado) { // Nivel que se aceptó
+                case Canto.Truco:
+                    return [Canto.ReTruco];    // Aceptó Truco -> Puede cantar ReTruco
+                case Canto.ReTruco:
+                    return [Canto.ValeCuatro]; // Aceptó ReTruco -> Puede cantar ValeCuatro
+                default:
+                    return []; // No se puede escalar V4 o estado raro
+            }
+        } else {
+            return [];
+        }
+    } else {
+        return [];
+    }
+}
 export function getPosiblesRespuestasTruco(ronda: Ronda): Canto[] {
     if (!ronda.trucoHandler.equipoDebeResponderTruco || ronda.equipoEnTurno !== ronda.trucoHandler.equipoDebeResponderTruco) return [];
 

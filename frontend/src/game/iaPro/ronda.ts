@@ -137,7 +137,7 @@ export class Ronda {
 
             if (this.debugMode) {
                 this.callbacks.displayLog(
-                    `🌀 Estado=${EstadoRonda[this.estadoRonda]}, Turno=${this.equipoEnTurno.jugador.nombre}, Mano=${this.numeroDeMano}, Jugadas en Mano=${this.turnoHandler.jugadasEnManoActual}`,
+                    `Estado=${EstadoRonda[this.estadoRonda]}, Turno=${this.equipoEnTurno.jugador.nombre}, Mano=${this.numeroDeMano}, Jugadas en Mano=${this.turnoHandler.jugadasEnManoActual}`,
                     'debug'
                 );
             }
@@ -185,7 +185,8 @@ export class Ronda {
 
                 case EstadoRonda.ManoTerminada:
                     this.turnoHandler.procesarFinDeMano();
-                    continue; // Revalúa el nuevo estado
+                    //this.callbacks.displayLog(`Fin de la mano: Mano=${this.numeroDeMano}`, `public`);
+                    continue;
 
                 default:
                     console.error("Estado de ronda desconocido:", this.estadoRonda);
@@ -280,8 +281,6 @@ export class Ronda {
                     acciones.puedeMazo = false; // No ir al mazo si la mano/ronda terminó
             }
         }
-        // Si no es humano, las acciones permanecen vacías/false como se inicializaron
-
         this.callbacks.actualizarAccionesPosibles(acciones);
     }
 

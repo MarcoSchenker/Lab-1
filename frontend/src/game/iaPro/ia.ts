@@ -316,7 +316,7 @@ private esRespuesta(canto: Canto): boolean {
     
         // 1. ¿Aceptar me hace perder el partido si el oponente gana el envido? Si es así, y tengo puntos MUY malos, quizás rechazar sea mejor que aceptar sí o sí.
         if (p2 + puntosSiNoQuiero < limitePuntaje && p1 + puntosEnvidoAcumulados >= limitePuntaje) {
-             if (misPuntosEnvido < 24 && valorConfianza < 0.2) { // Solo si mis puntos son realmente bajos
+             if (misPuntosEnvido < 25 && valorConfianza < 0.2) { // Solo si mis puntos son realmente bajos
                  console.log(`[IA ${this.nombre}] Evitando perder por Envido aunque no querer me complique.`);
                  return Canto.NoQuiero;
              }
@@ -1054,16 +1054,17 @@ private determinarIndiceCarta(
     ultimoCantoTruco: Canto | undefined,
     infoRonda: { manosGanadasPropias: number; manosGanadasOponente: number; manosRestantes: number }
 ): number {
+    if (ronda.numeroDeMano === 1 && ronda.turnoHandler.getGanadorUltimaMano() === null) {
+        return this.elegir(1);
+    }
+
     let indice = -1;
 
     if (mano) {
-        // Estrategia para cuando somos Mano
         indice = this.estrategiaMano(clasificacion, infoRonda);
     } else {
-        // Estrategia para cuando somos Pie
         indice = this.estrategiaPie(cartaOpuesta, clasificacion, infoRonda);
 
-        // Considerar estrategia de Truco (puede sobreescribir la elección anterior)
         const indiceTruco = this.estrategiaTruco(ronda, ultimoCantoTruco, clasificacion);
         if (indiceTruco !== undefined) {
             indice = indiceTruco;
