@@ -35,22 +35,27 @@ export class RondaTrucoHandler {
     
 
     private puedeCantar(equipo: Equipo): boolean {
-        if (this.ronda.envidoHandler.equipoDebeResponderEnvido) return false;
-        if (this.trucoResuelto) return false;
-        if (this.equipoDebeResponderTruco === equipo) return false;
-        
-        const ultimoCantoObj = getLast(this.cantosTruco);
-            if (!ultimoCantoObj) return true;
-        
-
-        if (this.ronda.esRespuesta(ultimoCantoObj.canto)) {
-            if ( ultimoCantoObj.canto === Canto.NoQuiero || ultimoCantoObj.canto === Canto.IrAlMazo) {
-        return false;
+        // Check 1: Basic game states preventing any Truco interaction
+        if (this.ronda.envidoHandler.equipoDebeResponderEnvido) {
+            return false; // Envido has priority
         }
-        return ultimoCantoObj.equipo === equipo;
-        } else {
-        return ultimoCantoObj.equipo !== equipo;
+        if (this.trucoNoQueridoPor || this.equipoSeFueAlMazo) {
+             return false;
         }
+    
+        if (this.equipoDebeResponderTruco === equipo) {
+             return false;
+        }
+        const ultimoNivelObj = getLast(this.cantosTruco.filter(c => !this.ronda.esRespuesta(c.canto)));
+        const ultimoNivel = ultimoNivelObj?.canto;
+        if (ultimoNivel === Canto.ValeCuatro && this.trucoQuerido) {
+             return false; // Cannot escalate V4 if accepted
+        }
+        const ultimoCantoGeneralObj = getLast(this.cantosTruco);
+        if (ultimoCantoGeneralObj && !this.ronda.esRespuesta(ultimoCantoGeneralObj.canto) && ultimoCantoGeneralObj.equipo === equipo) {
+             return false; // Cannot sing again if waiting for opponent's response to my call
+        }
+        return true;
     }
     
 

@@ -138,7 +138,6 @@ export class RondaTurnoHandler {
             this.ronda.numeroDeMano, // Mano actual (0, 1, o 2)
             this.jugadasEnManoActual // Número de jugada DENTRO de la mano (0 o 1)
         );
-        // ----------------------------------------------------
 
         // Actualizar la mano visual del jugador (humano) para que desaparezca la carta jugada
         if (jugador.esHumano) {
@@ -279,9 +278,6 @@ export class RondaTurnoHandler {
         const e2 = this.ronda.equipoSegundo;
         // La mano que ACABA de terminar (0, 1, o 2)
         const manoQueTermino = this.ronda.numeroDeMano;
-
-        // --- REGLA BÁSICA: Alguien ganó 2 manos ---
-        // Se chequea después de mano 2 (manoQueTermino = 1) o mano 3 (manoQueTermino = 2)
         if (e1.manosGanadasRonda >= 2) return e1;
         if (e2.manosGanadasRonda >= 2) return e2;
 
@@ -298,6 +294,9 @@ export class RondaTurnoHandler {
 
             // Regla: Gana Primera, Parda Segunda -> Gana el de la Primera
             if (ganadorM0 && ganadorM1 === null) return ganadorM0;
+
+            // Regla: Gana Primera, Parda Segunda -> Gana el de la Primera
+            if (ganadorM1 && ganadorM0 === null) return ganadorM1;
 
             // Otros casos (1-1, Parda-Parda) -> La ronda continúa a mano 3
             return null;
