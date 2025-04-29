@@ -168,3 +168,20 @@
 .modify-profile-button:hover {
   background-color: #2980b9;
 }
+
+.delete-profile-button {
+  background-color: #e74c3c; /* Rojo */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 16px;
+  transition: background-color 0.3s ease;
+  position:fixed;
+  left: 165px; /* Fijo a la izquierda */
+}
+
+.delete-profile-button:hover {
+  background-color: #c0392b; /* Rojo más oscuro al pasar el mouse */
+}

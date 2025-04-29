@@ -851,6 +851,26 @@ app.put('/usuarios/:username/contraseña', async (req, res) => {
   }
 });
 
+// Endpoint para eliminar el perfil de un usuario
+app.delete('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Verificar si el usuario existe
+    const [rows] = await pool.query('SELECT * FROM usuarios WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Eliminar el usuario (las relaciones se eliminan automáticamente por ON DELETE CASCADE)
+    await pool.query('DELETE FROM usuarios WHERE id = ?', [id]);
+
+    res.json({ message: 'Perfil eliminado exitosamente' });
+  } catch (err) {
+    console.error('Error al eliminar el perfil:', err.message);
+    res.status(500).json({ error: 'Error al eliminar el perfil' });
+  }
+});
 
 // WebSocket básico
 io.on('connection', (socket) => {

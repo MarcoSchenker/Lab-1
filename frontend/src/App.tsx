@@ -10,6 +10,7 @@ import FriendRequestPage from './pages/FriendRequestPage';
 import AuthRedirect from './components/AuthRedirect';
 import FriendsPage from './pages/FriendsPage';
 import EditProfile from './pages/EditProfile';
+import DeleteProfile from './components/DeleteProfile';
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
         <Route path="/friends" element={<AuthRoute> <FriendsPage /></AuthRoute>}/>
         <Route path="/user/:usuario_id" element={<AuthRoute><StatsPage /> </AuthRoute>} />
         <Route path="/modificar-perfil" element={<AuthRoute><EditProfile /> </AuthRoute>} />
+        <Route path="/eliminar-perfil" element={<AuthRoute><DeleteProfile /> </AuthRoute>} />
       </Routes>
     </Router>
   );

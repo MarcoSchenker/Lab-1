@@ -268,6 +268,38 @@ async function initializeDatabase() {
     
     console.log('Trigger after_usuario_insert creado o actualizado');
 
+// Función para eliminar una clave foránea si existe
+async function dropForeignKeyIfExists(connection, tableName, foreignKeyName) {
+  const [rows] = await connection.query(`
+    SELECT CONSTRAINT_NAME 
+    FROM information_schema.KEY_COLUMN_USAGE 
+    WHERE TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND TABLE_SCHEMA = DATABASE()
+  `, [tableName, foreignKeyName]);
+
+  if (rows.length > 0) {
+    await connection.query(`ALTER TABLE ?? DROP FOREIGN KEY ??`, [tableName, foreignKeyName]);
+    console.log(`Clave foránea ${foreignKeyName} eliminada de la tabla ${tableName}`);
+  } else {
+    console.log(`Clave foránea ${foreignKeyName} no existe en la tabla ${tableName}`);
+  }
+}
+
+// Llamadas para eliminar claves foráneas
+await dropForeignKeyIfExists(connection, 'imagenes_perfil', 'imagenes_perfil_ibfk_1');
+await dropForeignKeyIfExists(connection, 'estadisticas', 'estadisticas_ibfk_1');
+await dropForeignKeyIfExists(connection, 'perfiles', 'perfiles_ibfk_1');
+await dropForeignKeyIfExists(connection, 'skins_desbloqueadas', 'skins_desbloqueadas_ibfk_1');
+await dropForeignKeyIfExists(connection, 'amigos', 'amigos_ibfk_1');
+await dropForeignKeyIfExists(connection, 'amigos', 'amigos_ibfk_2');
+
+// Agregar las restricciones con ON DELETE CASCADE
+await connection.query('ALTER TABLE imagenes_perfil ADD CONSTRAINT imagenes_perfil_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+await connection.query('ALTER TABLE estadisticas ADD CONSTRAINT estadisticas_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+await connection.query('ALTER TABLE perfiles ADD CONSTRAINT perfiles_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+await connection.query('ALTER TABLE skins_desbloqueadas ADD CONSTRAINT skins_desbloqueadas_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+await connection.query('ALTER TABLE amigos ADD CONSTRAINT amigos_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+await connection.query('ALTER TABLE amigos ADD CONSTRAINT amigos_ibfk_2 FOREIGN KEY (amigo_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+
     console.log('Inicialización de la base de datos completada exitosamente');
   } catch (error) {
     console.error('Error al inicializar la base de datos:', error);

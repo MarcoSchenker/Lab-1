@@ -197,6 +197,15 @@ const Header: React.FC = () => {
             </br>
               <button onClick={handleUpload}>Subir Foto</button>
             </div>
+            <br></br>
+            <div className="errase-button">
+              <button
+                onClick={() => navigate('/eliminar-perfil')}
+                className="delete-profile-button"
+              >
+                Borrar Perfil
+              </button>
+            </div>
           </div>
         )}
       </div>
