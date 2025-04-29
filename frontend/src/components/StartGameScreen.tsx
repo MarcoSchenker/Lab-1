@@ -61,7 +61,7 @@ const StartGameScreen: React.FC<StartGameScreenProps> = ({ onStartGame, onExit})
         {onExit && ( // Muestra el link solo si se proporciona la función onExit
           <button
             onClick={onExit}
-            className={`block mx-auto text-gray-700 hover:text-gray-500 cursor-pointer text-lg mt-4 leading-none focus:outline-none focus:underline`}
+            className={`bg-white block mx-auto text-gray-700 hover:text-gray-500 cursor-pointer text-lg mt-4 leading-none focus:outline-none focus:underline`}
           >
             Salir
           </button>
