@@ -36,11 +36,15 @@ const EditProfile: React.FC = () => {
 
     try {
       setLoading(true);
-      await api.put(`/usuarios/${loggedInUser}/username`, { nombre_usuario });
+      await api.put(`/usuarios/${loggedInUser}/username`, { nuevo_nombre_usuario: nombre_usuario });
+
+      // Actualizar el nombre de usuario en el localStorage
+      localStorage.setItem('username', nombre_usuario);
+
       setSuccessMessage('Nombre de usuario actualizado exitosamente.');
       setTimeout(() => {
-        navigate('/dashboard'); // Redirigir al dashboard después de 3 segundos
-      }, 3000);
+        navigate('/dashboard'); 
+      }, 1000);
     } catch (error) {
       console.error('Error al actualizar nombre de usuario:', error);
       alert('Error al actualizar el nombre de usuario. Intenta nuevamente.');
@@ -59,11 +63,12 @@ const EditProfile: React.FC = () => {
 
     try {
       setLoading(true);
-      await api.put(`/usuarios/${loggedInUser}/contraseña`, { contraseñaActual, nuevaContraseña });
+      await api.put(`/usuarios/${loggedInUser}/password`, { contraseñaActual, nuevaContraseña });
+
       setSuccessMessage('Contraseña actualizada exitosamente.');
       setTimeout(() => {
         navigate('/dashboard'); // Redirigir al dashboard después de 3 segundos
-      }, 3000);
+      }, 1000);
     } catch (error) {
       console.error('Error al actualizar contraseña:', error);
       alert('Error al actualizar la contraseña. Intenta nuevamente.');
