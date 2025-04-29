@@ -12,7 +12,7 @@ const AuthRoute: React.FC<IAuthRouteProps> = ({ children }) => {
     const location = useLocation(); // Para guardar la ubicación y redirigir después del login
 
     if (!token) {
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        return <Navigate to="/" state={{ from: location }} replace />;
     }
 
     return (
