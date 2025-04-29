@@ -785,9 +785,9 @@ app.get('/estadisticas/:username', async (req, res) => {
 });
 
 // Endpoint para actualizar el nombre de usuario
-app.put('/usuarios/:id', async (req, res) => {
-  const { id } = req.params;
-  const { nombre_usuario } = req.body;
+app.put('/usuarios/:username/username', async (req, res) => {
+  const { nombre_usuario } = req.params;
+  const { nuevo_nombre_usuario } = req.body;
 
   if (!nombre_usuario) {
     return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
@@ -795,13 +795,13 @@ app.put('/usuarios/:id', async (req, res) => {
 
   try {
     // Verificar si el usuario existe
-    const [rows] = await pool.query('SELECT * FROM usuarios WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT * FROM usuarios WHERE nombre_usuario = ?', [nombre_usuario]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
     // Actualizar el nombre de usuario
-    await pool.query('UPDATE usuarios SET nombre_usuario = ? WHERE id = ?', [nombre_usuario, id]);
+    await pool.query('UPDATE usuarios SET nombre_usuario = ? WHERE id = ?', [nuevo_nombre_usuario, nombre_usuario]);
 
     res.json({ message: 'Nombre de usuario actualizado exitosamente' });
   } catch (err) {
@@ -814,7 +814,7 @@ app.put('/usuarios/:id', async (req, res) => {
 });
 
 // Endpoint para actualizar la contraseña del usuario
-app.put('/usuarios/:id/contraseña', async (req, res) => {
+app.put('/usuarios/:username/contraseña', async (req, res) => {
   const { id } = req.params;
   const { contraseñaActual, nuevaContraseña } = req.body;
 

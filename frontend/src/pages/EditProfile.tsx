@@ -11,14 +11,12 @@ const EditProfile: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
-  const userId = localStorage.getItem('userId'); // Obtener el ID del usuario desde localStorage
+  const loggedInUser = localStorage.getItem('username'); // Obtener el ID del usuario desde localStorage
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await api.get(`/usuarios/id`, { params: { username: localStorage.getItem('username') } });
-        const userData = response.data;
-        setNombreUsuario(userData.nombre_usuario);
+
       } catch (error) {
         console.error('Error al obtener datos del usuario:', error);
         alert('Error al cargar los datos del usuario.');
@@ -38,7 +36,7 @@ const EditProfile: React.FC = () => {
 
     try {
       setLoading(true);
-      await api.put(`/usuarios/${userId}`, { nombre_usuario });
+      await api.put(`/usuarios/${loggedInUser}/username`, { nombre_usuario });
       setSuccessMessage('Nombre de usuario actualizado exitosamente.');
       setTimeout(() => {
         navigate('/dashboard'); // Redirigir al dashboard después de 3 segundos
@@ -61,7 +59,7 @@ const EditProfile: React.FC = () => {
 
     try {
       setLoading(true);
-      await api.put(`/usuarios/${userId}/contraseña`, { contraseñaActual, nuevaContraseña });
+      await api.put(`/usuarios/${loggedInUser}/contraseña`, { contraseñaActual, nuevaContraseña });
       setSuccessMessage('Contraseña actualizada exitosamente.');
       setTimeout(() => {
         navigate('/dashboard'); // Redirigir al dashboard después de 3 segundos
