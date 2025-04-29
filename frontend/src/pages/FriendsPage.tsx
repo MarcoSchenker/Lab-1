@@ -86,7 +86,9 @@ const FriendsPage: React.FC = () => {
               ))}
             </ul>
           ) : (
+            <div className="friendsText">
             <p>No tienes amigos agregados.</p>
+            </div>
           )}
         </div>
       </div>

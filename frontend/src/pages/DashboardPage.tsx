@@ -23,7 +23,7 @@ const DashboardPage: React.FC = () => {
           <div>Torneo</div>
         </Link>
         <Link to="/salas" className="game-mode">
-          <div>Salas (2, 4, 6 Jugadores)</div>
+          <div>Salas</div>
         </Link>
         <Link to="/store" className="game-mode tienda">
           <div>Tienda</div>

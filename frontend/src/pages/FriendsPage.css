@@ -153,3 +153,8 @@
 .flechita:hover {
   transform: scale(1.2);
 }
+
+.friendsText{
+  color: black;
+  background-color: black;
+}

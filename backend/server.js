@@ -784,43 +784,32 @@ app.get('/estadisticas/:username', async (req, res) => {
   }
 });
 
-// Endpoint para actualizar los datos del usuario
+// Endpoint para actualizar el nombre de usuario
 app.put('/usuarios/:id', async (req, res) => {
   const { id } = req.params;
-  const { nombre_usuario, email, contraseña } = req.body;
+  const { nombre_usuario } = req.body;
 
-  if (!nombre_usuario || !email) {
-    return res.status(400).json({ error: 'El nombre de usuario y el email son obligatorios' });
+  if (!nombre_usuario) {
+    return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
   }
 
   try {
-    const bcrypt = require('bcrypt');
-    let hashedPassword = null;
-
-    // Si se proporciona una nueva contraseña, encriptarla
-    if (contraseña) {
-      hashedPassword = await bcrypt.hash(contraseña, 10);
+    // Verificar si el usuario existe
+    const [rows] = await pool.query('SELECT * FROM usuarios WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // Actualizar los datos del usuario
-    const query = `
-      UPDATE usuarios 
-      SET nombre_usuario = ?, email = ?, ${contraseña ? 'contraseña = ?' : ''}
-      WHERE id = ?
-    `;
-    const params = contraseña
-      ? [nombre_usuario, email, hashedPassword, id]
-      : [nombre_usuario, email, id];
+    // Actualizar el nombre de usuario
+    await pool.query('UPDATE usuarios SET nombre_usuario = ? WHERE id = ?', [nombre_usuario, id]);
 
-    await pool.query(query, params);
-
-    res.json({ message: 'Usuario actualizado exitosamente' });
+    res.json({ message: 'Nombre de usuario actualizado exitosamente' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ error: 'El nombre de usuario o email ya está en uso' });
+      return res.status(400).json({ error: 'El nombre de usuario ya está en uso' });
     }
-    console.error('Error al actualizar usuario:', err.message);
-    res.status(500).json({ error: 'Error al actualizar usuario' });
+    console.error('Error al actualizar el nombre de usuario:', err.message);
+    res.status(500).json({ error: 'Error al actualizar el nombre de usuario' });
   }
 });
 

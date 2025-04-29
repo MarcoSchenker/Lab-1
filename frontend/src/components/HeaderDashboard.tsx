@@ -106,7 +106,7 @@ const Header: React.FC = () => {
     formData.append('foto', file);
 
     try {
-      await api.post(`/usuarios/${userId}/foto-perfil`, formData);
+      await api.post(`/usuarios/${loggedInUser}/foto-perfil`, formData);
       alert('Foto de perfil subida exitosamente');
 
       // Actualizar la foto de perfil después de subirla
