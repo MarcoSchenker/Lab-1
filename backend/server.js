@@ -643,12 +643,12 @@ app.post('/friend-requests/:id/accept', async (req, res) => {
   }
 });
 
-app.post('/friend-requests/:id/reject', async (req, res) => {
+app.delete('/friend-requests/:id/reject', async (req, res) => {
   const { id } = req.params;
 
   try {
     // Cambiar el estado de la solicitud a "rechazado"
-    await pool.query('UPDATE amigos SET estado = ? WHERE id = ?', ['rechazado', id]);
+    await pool.query('DELETE FROM amigos WHERE id = ?', [id]);
     res.json({ message: 'Solicitud de amistad rechazada' });
   } catch (err) {
     console.error('Error al rechazar solicitud de amistad:', err.message);

@@ -33,7 +33,7 @@ const FriendRequestPage: React.FC = () => {
 
   const handleRejectRequest = async (requestId: number) => {
     try {
-      await api.post(`/friend-requests/${requestId}/reject`);
+      await api.delete(`/friend-requests/${requestId}/reject`);
       setFriendRequests(friendRequests.filter((req) => req.id !== requestId));
     } catch (err) {
       console.error("Error al rechazar solicitud de amistad:", err);
