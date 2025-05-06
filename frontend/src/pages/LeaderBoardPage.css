@@ -5,7 +5,7 @@
     justify-content: center;
     min-height: 100vh;
     width: 100vw;
-    background: url('/FondoAmigos.jpg') no-repeat center center fixed;
+    background: url('/trofeos.png') no-repeat center center fixed;
     background-size: cover;
     background-attachment: fixed;
     position: relative;
@@ -18,7 +18,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6); /* Overlay más oscuro para mejorar contraste */
     z-index: 0;
   }
   
@@ -28,11 +28,12 @@
     max-width: 900px;
     width: 90%;
     margin: 0 auto;
-    background-color: rgba(160, 92, 14, 0.789);
+    background-color: rgba(59, 29, 7, 0.85); /* Fondo más oscuro para mejorar contraste */
     border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
     position: relative;
     z-index: 1;
+    border: 2px solid rgba(255, 215, 0, 0.5); /* Borde dorado sutil */
   }
   
   /* Ícono de casita para volver al dashboard */
@@ -41,7 +42,7 @@
     top: 20px;
     left: 20px;
     font-size: 2rem;
-    color: rgb(207, 130, 28);
+    color: rgb(255, 215, 0); /* Color dorado para el ícono de inicio */
     cursor: pointer;
     z-index: 2;
     transition: transform 0.2s ease;
@@ -53,11 +54,12 @@
   
   /* Título del ranking */
   .rankingTitle {
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: bold;
     text-align: center;
-    margin-bottom: 20px;
-    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 25px;
+    color: rgba(255, 215, 0, 0.9); /* Color dorado para título */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
   }
   
   /* Contenedor de la barra de búsqueda con el ícono */
@@ -66,18 +68,19 @@
     align-items: center;
     width: 80%;
     max-width: 800px;
-    border-bottom: 4px solid #000000;
+    border: none;
     margin: 0 auto 20px;
-    padding: 5px 10px;
-    background-color: #fff;
-    border-radius: 16px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 10px 15px;
+    background-color: rgba(30, 15, 5, 0.8);
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.3);
   }
   
   /* Ícono de la lupa */
   .searchIcon {
     font-size: 1.5rem;
-    color: #000;
+    color: rgba(255, 215, 0, 0.8);
     margin-right: 10px;
   }
   
@@ -87,8 +90,13 @@
     border: none;
     font-size: 1.2rem;
     outline: none;
-    color: #000;
-    background-color: white;
+    color: #fff;
+    background-color: transparent;
+    padding: 5px 0;
+  }
+  
+  .searchBar::placeholder {
+    color: rgba(255, 255, 255, 0.6);
   }
   
   /* Contenedor del ranking */
@@ -99,43 +107,115 @@
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
-    background-image: url('/mad.jpg');
+    background-image: url('/madera-oscura.jpg'); /* Fondo de madera oscura como en la imagen */
+    background-color: #261207; /* Color de respaldo */
     border-radius: 14px;
     padding: 20px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    overflow-x: auto;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+  }
+  
+  /* Contenedor de la tabla con scroll */
+  .tableContainer {
+    width: 100%;
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: 8px;
+    background-color: rgba(20, 10, 5, 0.7);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Scrollbar personalizado */
+  .tableContainer::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .tableContainer::-webkit-scrollbar-track {
+    background: rgba(30, 15, 5, 0.8);
+    border-radius: 10px;
+  }
+  
+  .tableContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.6);
+    border-radius: 10px;
+  }
+  
+  .tableContainer::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 215, 0, 0.8);
   }
   
   /* Tabla de ranking */
   .rankingData {
     width: 100%;
     margin-top: 20px;
-    overflow-x: auto;
+    margin-bottom: 15px;
+    color: #fff !important;
   }
   
   .rankingTable {
     width: 100%;
     border-collapse: collapse;
-    background-color: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    overflow: hidden;
+    background-color: transparent;
   }
   
   .rankingTable th,
   .rankingTable td {
     padding: 12px 15px;
     text-align: center;
-    border-bottom: 1px solid #dddddd;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    color: #fff !important;
   }
   
   .rankingTable th {
-    background-color: #bd670c;
-    color: white;
+    background-color: rgba(30, 15, 5, 0.9);
+    color: rgba(255, 215, 0, 0.9) !important;
     font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-bottom: 2px solid rgba(255, 215, 0, 0.5);
   }
   
-  .rankingTable tr:hover {
-    background-color: rgba(206, 206, 206, 0.692);
+  /* Estilos para filas según posición */
+  .rankingItem {
+    transition: background-color 0.2s ease;
+    border-radius: 6px;
+    margin: 2px 0;
+  }
+  
+  .rankingItem.firstPlace {
+    background-color: rgba(255, 215, 0, 0.25);
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 215, 0, 0.5);
+  }
+  
+  .rankingItem.secondPlace {
+    background-color: rgba(192, 192, 192, 0.25);
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(192, 192, 192, 0.5);
+  }
+  
+  .rankingItem.thirdPlace {
+    background-color: rgba(205, 127, 50, 0.25);
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(205, 127, 50, 0.5);
+  }
+  
+  .rankingItem.evenRow {
+    background-color: rgba(30, 15, 5, 0.7);
+  }
+  
+  .rankingItem.oddRow {
+    background-color: rgba(50, 25, 10, 0.7);
+  }
+  
+  .rankingItem:hover {
+    background-color: rgba(255, 215, 0, 0.2);
+    transition: background-color 0.2s ease;
   }
   
   /* Posición en el ranking */
@@ -149,36 +229,67 @@
     margin: 0 auto;
     font-weight: bold;
     position: relative;
+    color: #000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
   
-  /* Icono de trofeo para los tres primeros lugares */
+  /* Icono de trofeo o medalla */
   .trophyIcon {
     position: absolute;
     top: -12px;
     right: -12px;
+    font-size: 1.2rem;
+    color: rgba(255, 215, 0, 0.9);
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.5));
+  }
+  
+  .medalIcon {
+    position: absolute;
+    top: -8px;
+    right: -8px;
     font-size: 1rem;
-    color: #000;
+    color: rgba(192, 192, 192, 0.9);
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.5));
   }
   
-  /* Estilos para cada fila según la posición */
-  .rankingItem:nth-child(1) td {
-    font-weight: bold;
-    color: #333;
+  /* Estilos específicos para columnas */
+  .playerName {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95) !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   }
   
-  .rankingItem:nth-child(2) td {
+  .eloValue {
     font-weight: bold;
-    color: #444;
+    color: rgba(255, 215, 0, 0.9) !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   }
   
-  .rankingItem:nth-child(3) td {
+  /* Mensaje de carga */
+  .loadingMessage {
+    padding: 20px;
     font-weight: bold;
-    color: #555;
+    color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(30, 15, 5, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
   }
   
   /* Mensaje de error */
   .error {
-    color: #ff0000;
+    color: #ff6b6b;
     font-weight: bold;
     margin: 20px 0;
+    padding: 10px;
+    background-color: rgba(30, 15, 5, 0.8);
+    border-radius: 8px;
+    border-left: 4px solid #ff0000;
+  }
+  
+  /* Pie de página del ranking */
+  .rankingFooter {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: rgba(255, 215, 0, 0.7);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   }
