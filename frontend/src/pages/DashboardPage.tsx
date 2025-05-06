@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 import { IoPersonAddSharp } from "react-icons/io5";
+import { HiMiniTrophy } from "react-icons/hi2";
 import Header from '../components/HeaderDashboard';
 import './DashboardPage.css';
 
@@ -10,9 +11,12 @@ const DashboardPage: React.FC = () => {
     <div className="dashboard-container">
       <Header />
 
-      <div className="right-add-friend">
+      <div className="right-icons">
         <Link to="/friends" title="Amigos">
           <IoPersonAddSharp className="icon" />
+        </Link>
+        <Link to="/ranking" title="Ranking">
+          <HiMiniTrophy className="icon" />
         </Link>
       </div>
       <div className="game-modes">

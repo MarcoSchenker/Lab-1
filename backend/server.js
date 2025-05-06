@@ -875,6 +875,28 @@ app.delete('/usuarios/:id', async (req, res) => {
   }
 });
 
+// Endpoint para obtener el ranking de jugadores ordenado por ELO
+app.get('/ranking', async (req, res) => {
+  try {
+    // Obtener todos los usuarios con sus estadísticas, ordenados por ELO descendente
+    const [rows] = await pool.query(`
+      SELECT u.nombre_usuario, 
+             IFNULL(e.victorias, 0) as victorias, 
+             IFNULL(e.derrotas, 0) as derrotas, 
+             IFNULL(e.partidas_jugadas, 0) as partidas_jugadas, 
+             IFNULL(e.elo, 0) as elo
+      FROM usuarios u
+      LEFT JOIN estadisticas e ON u.id = e.usuario_id
+      ORDER BY e.elo DESC, e.victorias DESC
+    `);
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener el ranking:', err.message);
+    res.status(500).json({ error: 'Error al obtener el ranking' });
+  }
+});
+
 // WebSocket básico
 io.on('connection', (socket) => {
   console.log('Nuevo jugador conectado');

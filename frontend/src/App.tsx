@@ -11,6 +11,7 @@ import AuthRedirect from './components/AuthRedirect';
 import FriendsPage from './pages/FriendsPage';
 import EditProfile from './pages/EditProfile';
 import DeleteProfile from './components/DeleteProfile';
+import LeaderBoardPage from './pages/LeaderBoardPage';
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
             </AuthRoute>
           }
         />
+        <Route path="/ranking" element={<AuthRoute><LeaderBoardPage /></AuthRoute>}/>
         <Route
           path="/friends-request"
           element={
