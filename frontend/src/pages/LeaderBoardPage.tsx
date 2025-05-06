@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./LeaderBoardPage.css";
 import api from "../services/api";
-import { FaMagnifyingGlass, FaTrophy } from "react-icons/fa6";
+import { FaMagnifyingGlass, FaTrophy, FaMedal } from "react-icons/fa6";
 import { FaHome } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -52,10 +52,14 @@ const LeaderBoardPage: React.FC = () => {
         const response = await api.get('/ranking');
         
         // Añadir la posición en el ranking a cada jugador
-        const rankedPlayers = response.data.map((player: Player, index: number) => ({
-          ...player,
-          rank: index + 1
-        }));
+        // Filtrar jugadores con ELO > 0 y tomar solo los top 25
+        const rankedPlayers = response.data
+          .filter((player: Player) => player.elo > 0)
+          .map((player: Player, index: number) => ({
+            ...player,
+            rank: index + 1
+          }))
+          .slice(0, 25); // Solo los 25 mejores
         
         setPlayers(rankedPlayers);
       } catch (err: any) {
@@ -75,6 +79,21 @@ const LeaderBoardPage: React.FC = () => {
     if (rank === 3) return "#cd7f32"; // Bronce
     return "transparent";
   };
+  
+  // Función para determinar el icono según la posición
+  const getRankIcon = (rank: number) => {
+    if (rank <= 3) return <FaTrophy className="trophyIcon" />;
+    if (rank <= 10) return <FaMedal className="medalIcon" />;
+    return null;
+  };
+  
+  // Función para determinar el color de fondo de la fila
+  const getRowClass = (rank: number) => {
+    if (rank === 1) return "firstPlace";
+    if (rank === 2) return "secondPlace";
+    if (rank === 3) return "thirdPlace";
+    return rank % 2 === 0 ? "evenRow" : "oddRow";
+  };
 
   return (
     <div className="LeaderBoardPage">
@@ -92,46 +111,49 @@ const LeaderBoardPage: React.FC = () => {
           />
           <div className="rankingData">
             {loading ? (
-              <p>Cargando ranking...</p>
+              <p className="loadingMessage">Cargando ranking...</p>
             ) : error ? (
               <p className="error">{error}</p>
             ) : (
-              <table className="rankingTable">
-                <thead>
-                  <tr>
-                    <th>Posición</th>
-                    <th>Jugador</th>
-                    <th>ELO</th>
-                    <th>Victorias</th>
-                    <th>Derrotas</th>
-                    <th>Partidas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {players
-                    .filter((player) => 
-                      player.nombre_usuario.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .map((player) => (
-                      <tr key={player.nombre_usuario} className="rankingItem">
-                        <td>
-                          <div className="rankPosition" style={{ backgroundColor: getMedalColor(player.rank || 0) }}>
-                            {player.rank}
-                            {player.rank && player.rank <= 3 && (
-                              <FaTrophy className="trophyIcon" />
-                            )}
-                          </div>
-                        </td>
-                        <td>{player.nombre_usuario}</td>
-                        <td>{player.elo}</td>
-                        <td>{player.victorias}</td>
-                        <td>{player.derrotas}</td>
-                        <td>{player.partidas_jugadas}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <div className="tableContainer">
+                <table className="rankingTable">
+                  <thead>
+                    <tr>
+                      <th>Posición</th>
+                      <th>Jugador</th>
+                      <th>ELO</th>
+                      <th>Victorias</th>
+                      <th>Derrotas</th>
+                      <th>Partidas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players
+                      .filter((player) => 
+                        player.nombre_usuario.toLowerCase().includes(searchTerm.toLowerCase())
+                      )
+                      .map((player) => (
+                        <tr key={player.nombre_usuario} className={`rankingItem ${getRowClass(player.rank || 0)}`}>
+                          <td>
+                            <div className="rankPosition" style={{ backgroundColor: getMedalColor(player.rank || 0) }}>
+                              {player.rank}
+                              {getRankIcon(player.rank || 0)}
+                            </div>
+                          </td>
+                          <td className="playerName">{player.nombre_usuario}</td>
+                          <td className="eloValue">{player.elo}</td>
+                          <td>{player.victorias}</td>
+                          <td>{player.derrotas}</td>
+                          <td>{player.partidas_jugadas}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             )}
+          </div>
+          <div className="rankingFooter">
+            Mostrando los 25 mejores jugadores
           </div>
         </div>
       </div>
