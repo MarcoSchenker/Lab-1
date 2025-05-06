@@ -300,6 +300,56 @@ await connection.query('ALTER TABLE skins_desbloqueadas ADD CONSTRAINT skins_des
 await connection.query('ALTER TABLE amigos ADD CONSTRAINT amigos_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
 await connection.query('ALTER TABLE amigos ADD CONSTRAINT amigos_ibfk_2 FOREIGN KEY (amigo_id) REFERENCES usuarios(id) ON DELETE CASCADE');
 
+// Función para agregar una columna si no existe
+async function addColumnIfNotExists(connection, tableName, columnName, columnDefinition) {
+  const [rows] = await connection.query(`
+    SELECT COLUMN_NAME 
+    FROM information_schema.COLUMNS 
+    WHERE TABLE_NAME = ? AND COLUMN_NAME = ? AND TABLE_SCHEMA = DATABASE()
+  `, [tableName, columnName]);
+
+  if (rows.length === 0) {
+    await connection.query(`ALTER TABLE ?? ADD COLUMN ?? ${columnDefinition}`, [tableName, columnName]);
+    console.log(`Columna ${columnName} añadida a la tabla ${tableName}`);
+  } else {
+    console.log(`Columna ${columnName} ya existe en la tabla ${tableName}`);
+  }
+}
+
+// Modificar la tabla partidas para incluir los nuevos campos necesarios
+// Verificar y agregar columnas en la tabla `partidas`
+await addColumnIfNotExists(connection, 'partidas', 'tipo', "ENUM('publica', 'privada') DEFAULT 'publica'");
+await addColumnIfNotExists(connection, 'partidas', 'codigo_acceso', 'VARCHAR(10) NULL');
+await addColumnIfNotExists(connection, 'partidas', 'puntos_victoria', 'INT DEFAULT 15');
+await addColumnIfNotExists(connection, 'partidas', 'max_jugadores', 'INT DEFAULT 4');
+await addColumnIfNotExists(connection, 'partidas', 'tiempo_expiracion', 'TIMESTAMP NULL');
+console.log('Tabla partidas actualizada con nuevos campos');
+
+// Actualizar la tabla jugadores_partidas para incluir si el jugador es anfitrión
+await addColumnIfNotExists(connection, 'jugadores_partidas', 'es_anfitrion', 'BOOLEAN DEFAULT FALSE');
+console.log('Tabla jugadores_partidas actualizada con campo es_anfitrion');
+
+// Función para crear un índice si no existe
+async function createIndexIfNotExists(connection, tableName, indexName, indexDefinition) {
+  const [rows] = await connection.query(`
+    SELECT INDEX_NAME 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_NAME = ? AND INDEX_NAME = ? AND TABLE_SCHEMA = DATABASE()
+  `, [tableName, indexName]);
+
+  if (rows.length === 0) {
+    await connection.query(`CREATE INDEX ?? ON ?? (${indexDefinition})`, [indexName, tableName]);
+    console.log(`Índice ${indexName} creado en la tabla ${tableName}`);
+  } else {
+    console.log(`Índice ${indexName} ya existe en la tabla ${tableName}`);
+  }
+}
+
+// Crear índices en la tabla `partidas`
+await createIndexIfNotExists(connection, 'partidas', 'idx_partidas_estado', 'estado');
+await createIndexIfNotExists(connection, 'partidas', 'idx_partidas_tipo', 'tipo');
+console.log('Índice creado para búsqueda rápida por tipo de partida');
+
     console.log('Inicialización de la base de datos completada exitosamente');
   } catch (error) {
     console.error('Error al inicializar la base de datos:', error);

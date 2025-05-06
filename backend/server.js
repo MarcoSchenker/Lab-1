@@ -7,7 +7,7 @@ const multer = require('multer');
 require('dotenv').config();
 const pool = require('./config/db');
 const { initializeDatabase } = require('./config/dbInit');
-
+const salasRoutes = require('./salasRoute');
 
 // Inicializar Express
 const app = express();
@@ -18,6 +18,8 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/api/salas', salasRoutes);
+
 
 // Inicializar la base de datos antes de arrancar el servidor
 (async () => {
