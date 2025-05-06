@@ -1,0 +1,184 @@
+.LeaderBoardPage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100vw;
+    background: url('/FondoAmigos.jpg') no-repeat center center fixed;
+    background-size: cover;
+    background-attachment: fixed;
+    position: relative;
+  }
+  
+  .LeaderBoardPage::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 0;
+  }
+  
+  .LeaderBoardContainer {
+    padding: 20px;
+    text-align: center;
+    max-width: 900px;
+    width: 90%;
+    margin: 0 auto;
+    background-color: rgba(160, 92, 14, 0.789);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Ícono de casita para volver al dashboard */
+  .homeIcon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 2rem;
+    color: rgb(207, 130, 28);
+    cursor: pointer;
+    z-index: 2;
+    transition: transform 0.2s ease;
+  }
+  
+  .homeIcon:hover {
+    transform: scale(1.2);
+  }
+  
+  /* Título del ranking */
+  .rankingTitle {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  /* Contenedor de la barra de búsqueda con el ícono */
+  .searchBarContainer {
+    display: flex;
+    align-items: center;
+    width: 80%;
+    max-width: 800px;
+    border-bottom: 4px solid #000000;
+    margin: 0 auto 20px;
+    padding: 5px 10px;
+    background-color: #fff;
+    border-radius: 16px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ícono de la lupa */
+  .searchIcon {
+    font-size: 1.5rem;
+    color: #000;
+    margin-right: 10px;
+  }
+  
+  /* Estilos del input */
+  .searchBar {
+    flex: 1;
+    border: none;
+    font-size: 1.2rem;
+    outline: none;
+    color: #000;
+    background-color: white;
+  }
+  
+  /* Contenedor del ranking */
+  .rankingHolder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    background-image: url('/mad.jpg');
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+  }
+  
+  /* Tabla de ranking */
+  .rankingData {
+    width: 100%;
+    margin-top: 20px;
+    overflow-x: auto;
+  }
+  
+  .rankingTable {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .rankingTable th,
+  .rankingTable td {
+    padding: 12px 15px;
+    text-align: center;
+    border-bottom: 1px solid #dddddd;
+  }
+  
+  .rankingTable th {
+    background-color: #bd670c;
+    color: white;
+    font-weight: bold;
+  }
+  
+  .rankingTable tr:hover {
+    background-color: rgba(206, 206, 206, 0.692);
+  }
+  
+  /* Posición en el ranking */
+  .rankPosition {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin: 0 auto;
+    font-weight: bold;
+    position: relative;
+  }
+  
+  /* Icono de trofeo para los tres primeros lugares */
+  .trophyIcon {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    font-size: 1rem;
+    color: #000;
+  }
+  
+  /* Estilos para cada fila según la posición */
+  .rankingItem:nth-child(1) td {
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .rankingItem:nth-child(2) td {
+    font-weight: bold;
+    color: #444;
+  }
+  
+  .rankingItem:nth-child(3) td {
+    font-weight: bold;
+    color: #555;
+  }
+  
+  /* Mensaje de error */
+  .error {
+    color: #ff0000;
+    font-weight: bold;
+    margin: 20px 0;
+  }

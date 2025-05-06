@@ -36,6 +36,10 @@ body {
   position: relative;
   z-index: 1; /* Asegura que el contenido esté por encima de la capa de opacidad */
 }
+.right-trophy {
+  position: relative;
+  z-index: 1; /* Asegura que el contenido esté por encima de la capa de opacidad */
+}
 
 /* Animación para mover el fondo hacia arriba */
 @keyframes scroll-up {
@@ -68,6 +72,26 @@ body {
 
 .right-add-friend .icon:hover {
   transform: scale(1.2); /* Aumenta el tamaño al pasar el mouse */
+  color: blue;
+}
+
+.right-icons {
+  position: absolute;
+  top: 120px;
+  right: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Espacio entre los iconos */
+  z-index: 1;
+}
+.right-icons .icon {
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.right-icons .icon:hover {
+  transform: scale(1.2);
   color: blue;
 }
 
