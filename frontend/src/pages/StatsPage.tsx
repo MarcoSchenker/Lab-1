@@ -43,7 +43,6 @@ const StatsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    document.title = "Cardgame - Estadísticas";
     
     const fetchData = async () => {
       setLoading(true);
