@@ -194,13 +194,15 @@ const StatsPage: React.FC = () => {
 
 // Función auxiliar para determinar el rango según ELO
 function getRankName(elo: number): string {
-  if (elo >= 2000) return "Ancho de Espada";
-  if (elo >= 1800) return "Ancho de Bastos";
-  if (elo >= 1600) return "7 de Espada";
-  if (elo >= 1400) return "7 de Oro";
+  if (elo >= 2400) return "Ancho de Espada";
+  if (elo >= 2000) return "Ancho de Bastos";
+  if (elo >= 1700) return "7 de Espada";
+  if (elo >= 1500) return "7 de Oro";
   if (elo >= 1200) return "3 de Espada";
   if (elo >= 1000) return "2 de Copa";
-  if (elo >= 800) return "Ancho Falso";
+  if (elo >= 700) return "Ancho Falso";
+  if (elo >= 500) return "12 de Oro";
+  if (elo >= 300) return "7 de Bastos";
   return "4 de Copa";
 }
 
