@@ -14,6 +14,8 @@ interface Stats {
   username: string;
 }
 
+
+
 const StatsPage: React.FC = () => {
   const { usuario_id } = useParams<{ usuario_id: string }>();
   const [stats, setStats] = useState<Stats | null>(null);

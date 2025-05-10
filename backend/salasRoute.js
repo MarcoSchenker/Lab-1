@@ -1,9 +1,14 @@
-// routes/salasRoutes.js
 const express = require('express');
 const router = express.Router();
 const pool = require('./config/db');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('./authMiddleware');
+
+// Middleware de diagnóstico para ver todas las solicitudes
+router.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Endpoint de prueba para verificar que las rutas funcionan
 router.get('/salas/test', (req, res) => {
@@ -109,38 +114,63 @@ router.post('/salas/crear', authenticateToken, async (req, res) => {
 
     console.log('Insertando sala con código:', codigoSala);
     
-    // Insertar la nueva sala
-    await connection.query(
-      `INSERT INTO partidas 
-       (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado, fecha_inicio) 
-       VALUES (?, ?, ?, ?, ?, ?, 'en curso', ?)`,
-      [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion, fechaInicio]
-    );
+    try {
+      // Insertar la nueva sala
+      await connection.query(
+        `INSERT INTO partidas 
+         (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado, fecha_inicio) 
+         VALUES (?, ?, ?, ?, ?, ?, 'en curso', ?)`,
+        [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion, fechaInicio]
+      );
+    } catch (dbError) {
+      console.error('Error al insertar partida:', dbError);
+      await connection.rollback();
+      return res.status(500).json({ error: 'Error al insertar partida en la base de datos', detalle: dbError.message });
+    }
 
     console.log('Sala creada, registrando usuario como anfitrión');
     
-    // Registrar al usuario como jugador (anfitrión) de la sala
-    await connection.query(
-      `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, true)`,
-      [codigoSala, usuarioId]
-    );
+    try {
+      // Registrar al usuario como jugador (anfitrión) de la sala
+      await connection.query(
+        `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, true)`,
+        [codigoSala, usuarioId]
+      );
+    } catch (dbError) {
+      console.error('Error al registrar usuario como anfitrión:', dbError);
+      await connection.rollback();
+      return res.status(500).json({ error: 'Error al registrar usuario como anfitrión', detalle: dbError.message });
+    }
 
     await connection.commit();
     console.log('Sala creada exitosamente');
     
-    res.status(201).json({ 
+    // Asegurarnos de enviar una respuesta JSON válida siempre con content-type correcto
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(201).json({ 
       mensaje: 'Sala creada con éxito', 
       codigo_sala: codigoSala 
     });
   } catch (error) {
     console.error('Error detallado al crear sala:', error);
     if (connection) {
-      await connection.rollback();
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Error en rollback:', rollbackError);
+      }
     }
+    
+    // Asegurarnos de enviar una respuesta JSON válida incluso en caso de error
+    res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({ error: 'Error al crear sala', detalle: error.message });
   } finally {
     if (connection) {
-      connection.release();
+      try {
+        connection.release();
+      } catch (releaseError) {
+        console.error('Error al liberar conexión:', releaseError);
+      }
     }
   }
 });

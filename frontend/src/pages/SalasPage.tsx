@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { IoArrowBackOutline, IoAddCircleOutline, IoFilterOutline, IoLockClosed, IoLockOpen, IoRefreshOutline } from "react-icons/io5";
+import { useNavigate } from 'react-router-dom';
+import {IoAddCircleOutline, IoFilterOutline, IoLockClosed, IoLockOpen, IoRefreshOutline } from "react-icons/io5";
 import './SalasPage.css';
 import Header from '../components/HeaderDashboard';
 
@@ -98,27 +98,61 @@ const SalasPage: React.FC = () => {
       setError(null);
       const token = localStorage.getItem('token');
       
+      if (!token) {
+        setError('No hay sesión activa. Por favor inicia sesión de nuevo.');
+        return;
+      }
+      
       // Validar formulario
       if (nuevaSala.tipo === 'privada' && (!nuevaSala.codigo_acceso || nuevaSala.codigo_acceso.length < 4)) {
         setError('El código de acceso debe tener al menos 4 caracteres');
         return;
       }
       
+      console.log('Enviando datos para crear sala:', JSON.stringify(nuevaSala));
+      console.log('URL de la petición:', '/api/salas/crear');
+      console.log('Token usado:', token.substring(0, 15) + '...');
+      
       const response = await fetch('/api/salas/crear', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
         },
         body: JSON.stringify(nuevaSala),
       });
-
+  
+      console.log('Respuesta recibida. Status:', response.status);
+      console.log('Respuesta headers:', response.headers);
+      
+      // Si la respuesta no es 2xx, lanzar error
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear sala');
+        // Intenta extraer el mensaje de error de la respuesta JSON
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+        } catch (jsonError) {
+          // Si no es JSON, obtener el texto
+          const errorText = await response.text();
+          console.error('Respuesta de error no-JSON:', errorText);
+          throw new Error(`Error del servidor: ${response.status} - No es una respuesta JSON válida`);
+        }
       }
-
+      
+      // Solo llegar aquí si la respuesta es exitosa (2xx)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('La respuesta no es JSON:', contentType);
+        throw new Error('La respuesta del servidor no es JSON');
+      }
+      
       const data = await response.json();
+      console.log('Datos de respuesta:', data);
+      
+      if (!data.codigo_sala) {
+        throw new Error('Respuesta incompleta del servidor');
+      }
+  
       setShowModal(false);
       // Redirigir a la sala de juego
       navigate(`/game-page/${data.codigo_sala}`);
