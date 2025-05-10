@@ -5,9 +5,15 @@ const pool = require('./config/db');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('./authMiddleware');
 
+// Endpoint de prueba para verificar que las rutas funcionan
+router.get('/salas/test', (req, res) => {
+  res.json({ mensaje: 'Las rutas de salas están funcionando correctamente' });
+});
+
 // Obtener todas las salas disponibles con filtros
-router.get('/api/salas', authenticateToken, async (req, res) => {
+router.get('/salas', authenticateToken, async (req, res) => {
   try {
+    console.log('Obteniendo salas con filtro:', req.query.filtro);
     const { filtro = 'todas' } = req.query;
     let query = `
       SELECT 
@@ -37,6 +43,7 @@ router.get('/api/salas', authenticateToken, async (req, res) => {
     `;
 
     const [salas] = await pool.query(query);
+    console.log(`Se encontraron ${salas.length} salas`);
 
     // Eliminar salas expiradas
     const ahora = new Date();
@@ -51,14 +58,22 @@ router.get('/api/salas', authenticateToken, async (req, res) => {
     res.json(salasActualizadas);
   } catch (error) {
     console.error('Error al obtener salas:', error);
-    res.status(500).json({ error: 'Error al obtener salas' });
+    res.status(500).json({ error: 'Error al obtener salas', detalle: error.message });
   }
 });
 
 // Crear una nueva sala
-router.post('/api/salas/crear', authenticateToken, async (req, res) => {
+router.post('/salas/crear', authenticateToken, async (req, res) => {
   let connection;
   try {
+    console.log('Creando sala con datos:', req.body);
+    console.log('Usuario autenticado:', req.user);
+    
+    // Verificar que el body no esté vacío
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ error: 'El cuerpo de la solicitud está vacío' });
+    }
+    
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
@@ -89,14 +104,21 @@ router.post('/api/salas/crear', authenticateToken, async (req, res) => {
     const puntosVictoria = parseInt(puntos_victoria) || 15;
     const maxJugadores = parseInt(max_jugadores) || 4;
 
+    // Agregar fecha de inicio actual
+    const fechaInicio = new Date();
+
+    console.log('Insertando sala con código:', codigoSala);
+    
     // Insertar la nueva sala
     await connection.query(
       `INSERT INTO partidas 
-       (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado) 
-       VALUES (?, ?, ?, ?, ?, ?, 'en curso')`,
-      [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion]
+       (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado, fecha_inicio) 
+       VALUES (?, ?, ?, ?, ?, ?, 'en curso', ?)`,
+      [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion, fechaInicio]
     );
 
+    console.log('Sala creada, registrando usuario como anfitrión');
+    
     // Registrar al usuario como jugador (anfitrión) de la sala
     await connection.query(
       `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, true)`,
@@ -104,16 +126,18 @@ router.post('/api/salas/crear', authenticateToken, async (req, res) => {
     );
 
     await connection.commit();
+    console.log('Sala creada exitosamente');
+    
     res.status(201).json({ 
       mensaje: 'Sala creada con éxito', 
       codigo_sala: codigoSala 
     });
   } catch (error) {
-    console.error('Error al crear sala:', error);
+    console.error('Error detallado al crear sala:', error);
     if (connection) {
       await connection.rollback();
     }
-    return res.status(500).json({ error: 'Error al crear sala' });
+    return res.status(500).json({ error: 'Error al crear sala', detalle: error.message });
   } finally {
     if (connection) {
       connection.release();
@@ -121,10 +145,13 @@ router.post('/api/salas/crear', authenticateToken, async (req, res) => {
   }
 });
 
+
 // Unirse a una sala pública
-router.post('/api/salas/unirse', authenticateToken, async (req, res) => {
+router.post('/salas/unirse', authenticateToken, async (req, res) => {
   let connection;
   try {
+    console.log('Intentando unirse a sala con datos:', req.body);
+    
     connection = await pool.getConnection();
     await connection.beginTransaction();
     
@@ -184,7 +211,7 @@ router.post('/api/salas/unirse', authenticateToken, async (req, res) => {
     if (connection) {
       await connection.rollback();
     }
-    return res.status(500).json({ error: 'Error al unirse a la sala' });
+    return res.status(500).json({ error: 'Error al unirse a la sala', detalle: error.message });
   } finally {
     if (connection) {
       connection.release();
@@ -193,7 +220,7 @@ router.post('/api/salas/unirse', authenticateToken, async (req, res) => {
 });
 
 // Unirse a una sala privada mediante código de acceso
-router.post('/api/salas/unirse-privada', authenticateToken, async (req, res) => {
+router.post('/salas/unirse-privada', authenticateToken, async (req, res) => {
   let connection;
   try {
     connection = await pool.getConnection();
@@ -280,7 +307,7 @@ router.post('/api/salas/unirse-privada', authenticateToken, async (req, res) => 
 });
 
 // Abandonar una sala
-router.post('/api/salas/abandonar', authenticateToken, async (req, res) => {
+router.post('/salas/abandonar', authenticateToken, async (req, res) => {
   let connection;
   try {
     connection = await pool.getConnection();

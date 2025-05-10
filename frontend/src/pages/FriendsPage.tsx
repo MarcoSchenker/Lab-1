@@ -14,6 +14,7 @@ const FriendsPage: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<number>(0);
   const navigate = useNavigate();
 
   const loggedInUser = localStorage.getItem("username") || ""; // Usuario logueado
@@ -34,8 +35,18 @@ const FriendsPage: React.FC = () => {
         setLoading(false);
       }
     };
+    
+    const fetchPendingRequests = async () => {
+      try {
+        const response = await api.get(`/friend-requests?to=${loggedInUser}`);
+        setPendingRequests(response.data.length);
+      } catch (err) {
+        console.error("Error al obtener solicitudes de amistad pendientes:", err);
+      }
+    };
   
     fetchFriends();
+    fetchPendingRequests();
   }, [loggedInUser]);
 
   return (
@@ -46,10 +57,13 @@ const FriendsPage: React.FC = () => {
       </div>
       <div className="topRightButton">
         <button
-        className="friendRequestsButton"
-        onClick={() => navigate("/friends-request")}
+          className="friendRequestsButton"
+          onClick={() => navigate("/friends-request")}
         >
           Solicitudes de Amistad
+          {pendingRequests > 0 && (
+            <span className="notification-badge">{pendingRequests}</span>
+          )}
         </button>
       </div>
     <div className="flechita" onClick={() => navigate("/dashboard")}>

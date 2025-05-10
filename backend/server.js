@@ -18,7 +18,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
-app.use('/api/salas', salasRoutes);
+app.use(salasRoutes);   
 
 
 // Inicializar la base de datos antes de arrancar el servidor
@@ -882,7 +882,8 @@ app.get('/ranking', async (req, res) => {
   try {
     // Obtener todos los usuarios con sus estadísticas, ordenados por ELO descendente
     const [rows] = await pool.query(`
-      SELECT u.nombre_usuario, 
+      SELECT u.id,
+             u.nombre_usuario, 
              IFNULL(e.victorias, 0) as victorias, 
              IFNULL(e.derrotas, 0) as derrotas, 
              IFNULL(e.partidas_jugadas, 0) as partidas_jugadas, 

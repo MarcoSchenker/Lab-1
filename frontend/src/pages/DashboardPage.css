@@ -2,7 +2,8 @@
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Montserrat', Arial, sans-serif;
+  background-color: #121212;
 }
 
 .dashboard-container {
@@ -12,8 +13,8 @@ body {
   justify-content: center;
   min-height: 100vh;
   width: 100vw;
-  background: url('fondo.jpg') no-repeat center center fixed; /* Imagen de fondo */
-  background-size: cover; /* Escala la imagen para cubrir el ancho */
+  background: url('fondo.jpg') no-repeat center center fixed;
+  background-size: cover;
   color: #fff;
   position: relative;
   overflow: hidden;
@@ -26,114 +27,125 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Capa oscura con opacidad */
-  z-index: 0; /* Asegura que la capa esté detrás del contenido */
+  background-color: rgba(0, 0, 0, 0.65);
+  z-index: 0;
 }
 
 .game-modes,
-.top-left-help,
-.right-add-friend {
+.right-icons {
   position: relative;
-  z-index: 1; /* Asegura que el contenido esté por encima de la capa de opacidad */
-}
-.right-trophy {
-  position: relative;
-  z-index: 1; /* Asegura que el contenido esté por encima de la capa de opacidad */
+  z-index: 1;
 }
 
-/* Animación para mover el fondo hacia arriba */
-@keyframes scroll-up {
-  0% {
-    background-position: 0 0; /* Posición inicial */
-  }
-  100% {
-    background-position: 0 -100%; /* Mueve el fondo hacia arriba */
-  }
-}
-
-/* Ayuda en la esquina superior izquierda */
-.top-left-help {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-}
-
-.right-add-friend{
-  position: absolute;
-  top: 120px;
-  right: 50px;
-}
-.right-add-friend .icon {
-  font-size: 2rem; /* Tamaño del ícono */
-  color: white; /* Color del ícono */
-  cursor: pointer; /* Cambia el cursor al pasar el mouse */
-  transition: transform 0.2s ease; /* Animación al pasar el mouse */
-}
-
-.right-add-friend .icon:hover {
-  transform: scale(1.2); /* Aumenta el tamaño al pasar el mouse */
-  color: blue;
+/* Efecto de partículas flotantes */
+@keyframes float {
+  0% { transform: translateY(0) translateX(0); opacity: 0.5; }
+  50% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
+  100% { transform: translateY(0) translateX(0); opacity: 0.5; }
 }
 
 .right-icons {
   position: absolute;
   top: 120px;
-  right: 50px;
+  right: 65px;
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Espacio entre los iconos */
+  gap: 24px;
   z-index: 1;
 }
+
 .right-icons .icon {
-  font-size: 2rem;
-  color: white;
+  font-size: 2.2rem;
+  color: #ffffff;
+  background-color: rgba(41, 98, 255, 0.2);
+  border-radius: 50%;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(65, 120, 255, 0.4);
   cursor: pointer;
-  transition: transform 0.2s ease;
-}
-.right-icons .icon:hover {
-  transform: scale(1.2);
-  color: blue;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(5px);
 }
 
-/* Línea blanca */
-.line-white {
-  width: 100%;
-  height: 2px;
-  background-color: white;
-  margin: 20px 0;
+.right-icons .icon:hover {
+  transform: scale(1.15);
+  color: #4a9fff;
+  background-color: rgba(41, 98, 255, 0.4);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(65, 120, 255, 0.6);
 }
 
 /* Modos de juego */
 .game-modes {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
-  max-width: 600px;
+  max-width: 500px;
+  margin-top: 60px;
 }
 
 .game-mode {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background-color: rgba(120, 119, 119, 0.7);
+  justify-content: center;
+  padding: 16px 30px;
+  background: linear-gradient(135deg, rgba(78, 84, 200, 0.8), rgba(37, 41, 88, 0.9));
   color: white;
   text-decoration: none;
-  border-radius: 8px;
-  font-size: 1.2rem;
-  transition: background-color 0.3s;
+  border-radius: 12px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px rgba(78, 84, 200, 0.3);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.game-mode::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.7s;
 }
 
 .game-mode:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4), 0 0 30px rgba(78, 84, 200, 0.5);
+  background: linear-gradient(135deg, rgba(88, 95, 224, 0.9), rgba(37, 41, 88, 0.9));
+}
+
+.game-mode:hover::before {
+  left: 100%;
 }
 
 /* Tienda (con imagen de fondo) */
 .game-mode.tienda {
   position: relative;
-  background-image: url('/CarritoDeCompras.png'); /* Imagen de fondo */
-  background-size: 40px 40px; /* Tamaño de la imagen */
-  background-repeat: no-repeat;
-  background-position: right 20px center; /* Posición de la imagen */
+  background: linear-gradient(135deg, rgba(219, 119, 57, 0.8), rgba(150, 65, 20, 0.9));
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px rgba(219, 119, 57, 0.3);
+}
+
+.game-mode.tienda:hover {
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.9), rgba(150, 65, 20, 0.9));
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4), 0 0 30px rgba(219, 119, 57, 0.5);
+}
+
+.game-mode.tienda::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: url('/CarritoDeCompras.png') no-repeat center center;
+  background-size: contain;
+  opacity: 0.9;
 }

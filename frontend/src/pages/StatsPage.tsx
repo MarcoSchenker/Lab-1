@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../components/HeaderDashboard';
 import api from '../services/api';
+import { FaTrophy, FaGamepad, FaSkull, FaMedal } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import './StatsPage.css';
 
 interface Stats {
   victorias: number;
@@ -13,62 +16,193 @@ interface Stats {
 
 const StatsPage: React.FC = () => {
   const { usuario_id } = useParams<{ usuario_id: string }>();
-  console.log('Usuario ID:', usuario_id);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [userImage, setUserImage] = useState<string | null>(null);
+  const apiUrl = import.meta.env.VITE_API_URL;
+
+  // Variantes para animaciones
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1, 
+      transition: { 
+        staggerChildren: 0.2,
+        delayChildren: 0.3 
+      } 
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5 }
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      console.log(`Intentando obtener estadísticas para usuario_id: ${usuario_id}`);
-      console.log(`URL: /estadisticas/${usuario_id}`);
+    document.title = "Cardgame - Estadísticas";
+    
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await api.get(`/estadisticas/${usuario_id}`);
-        console.log('Respuesta del backend:', response.data); 
-        setStats(response.data);
+        // Obtener estadísticas del usuario
+        const statsResponse = await api.get(`/estadisticas/${usuario_id}`);
+        setStats(statsResponse.data);
+        
+        // Obtener imagen de perfil
+        const imageUrl = `${apiUrl}/usuarios/${usuario_id}/foto?t=${new Date().getTime()}`;
+        setUserImage(imageUrl);
       } catch (error) {
-        console.error('Error al obtener estadísticas:', error);
+        console.error('Error al cargar datos:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStats();
-  }, [usuario_id]);
-  
-  useEffect(() => {
-    console.log('Estado de stats actualizado:', stats);
-  }, [stats]);
+    
+    fetchData();
+  }, [usuario_id, apiUrl]);
 
-  if (!stats) return <div style={{ textAlign: 'center', marginTop: '50px' }}>No hay estadísticas disponibles para este usuario.</div>;
-
-  return (
-    <div>
-      <Header /> 
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        height: '100vh', 
-        textAlign: 'center' 
-      }}>
-        <h2>Estadísticas de {stats.username}</h2>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            padding: '20px',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-            width: '300px',
-          }}
-        >
-          <p>Victorias: <strong>{stats.victorias}</strong></p>
-          <p>Derrotas: <strong>{stats.derrotas}</strong></p>
-          <p>Partidas Jugadas: <strong>{stats.partidas_jugadas}</strong></p>
-          <p>ELO: <strong>{stats.elo}</strong></p>
+  if (loading) {
+    return (
+      <div className="stats-container loading">
+        <Header />
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Cargando estadísticas...</p>
         </div>
       </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="stats-container error">
+        <Header />
+        <div className="error-message">
+          <h2>No hay estadísticas disponibles</h2>
+          <p>No pudimos encontrar información para este usuario.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calcular la tasa de victoria
+  const winRate = stats.partidas_jugadas > 0 
+    ? Math.round((stats.victorias / stats.partidas_jugadas) * 100) 
+    : 0;
+
+  return (
+    <div className="stats-container">
+      <Header />
+      
+      <motion.div 
+        className="stats-content"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div 
+          className="profile-header"
+          variants={itemVariants}
+        >
+          <div className="profile-photo-container">
+            <div 
+              className="profile-photo" 
+              style={{
+                backgroundImage: userImage ? `url(${userImage})` : 'none'
+              }}
+            >
+              {!userImage && <span className="photo-placeholder">{stats.username.charAt(0)}</span>}
+            </div>
+            <div className="glow-effect"></div>
+          </div>
+          
+          <h1 className="player-name">{stats.username}</h1>
+          <div className="player-rank">
+            <FaMedal className="rank-icon" />
+            <span className="rank-text">Rango: {getRankName(stats.elo)}</span>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          className="stats-cards"
+          variants={containerVariants}
+        >
+          <motion.div className="stat-card" variants={itemVariants}>
+            <div className="stat-icon elo">
+              <FaMedal />
+            </div>
+            <div className="stat-info">
+              <h3 className="stat-value">{stats.elo}</h3>
+              <p className="stat-label">ELO</p>
+            </div>
+          </motion.div>
+
+          <motion.div className="stat-card" variants={itemVariants}>
+            <div className="stat-icon victories">
+              <FaTrophy />
+            </div>
+            <div className="stat-info">
+              <h3 className="stat-value">{stats.victorias}</h3>
+              <p className="stat-label">Victorias</p>
+            </div>
+          </motion.div>
+
+          <motion.div className="stat-card" variants={itemVariants}>
+            <div className="stat-icon defeats">
+              <FaSkull />
+            </div>
+            <div className="stat-info">
+              <h3 className="stat-value">{stats.derrotas}</h3>
+              <p className="stat-label">Derrotas</p>
+            </div>
+          </motion.div>
+
+          <motion.div className="stat-card" variants={itemVariants}>
+            <div className="stat-icon games">
+              <FaGamepad />
+            </div>
+            <div className="stat-info">
+              <h3 className="stat-value">{stats.partidas_jugadas}</h3>
+              <p className="stat-label">Partidas Jugadas</p>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        <motion.div 
+          className="advanced-stats"
+          variants={itemVariants}
+        >
+          <div className="win-rate-container">
+            <h3>Tasa de Victoria</h3>
+            <div className="win-rate-bar-container">
+              <div 
+                className="win-rate-bar" 
+                style={{ width: `${winRate}%` }}
+              >
+                <span className="win-rate-text">{winRate}%</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
+
+// Función auxiliar para determinar el rango según ELO
+function getRankName(elo: number): string {
+  if (elo >= 2000) return "Ancho de Espada";
+  if (elo >= 1800) return "Ancho de Bastos";
+  if (elo >= 1600) return "7 de Espada";
+  if (elo >= 1400) return "7 de Oro";
+  if (elo >= 1200) return "3 de Espada";
+  if (elo >= 1000) return "2 de Copa";
+  if (elo >= 800) return "Ancho Falso";
+  return "4 de Copa";
+}
 
 export default StatsPage;

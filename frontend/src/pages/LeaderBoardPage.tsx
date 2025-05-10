@@ -6,6 +6,7 @@ import { FaHome } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 interface Player {
+  id: number;
   nombre_usuario: string;
   elo: number;
   victorias: number;
@@ -133,7 +134,12 @@ const LeaderBoardPage: React.FC = () => {
                         player.nombre_usuario.toLowerCase().includes(searchTerm.toLowerCase())
                       )
                       .map((player) => (
-                        <tr key={player.nombre_usuario} className={`rankingItem ${getRowClass(player.rank || 0)}`}>
+                        <tr 
+                          key={player.nombre_usuario}
+                          className={`rankingItem ${getRowClass(player.rank || 0)}`}
+                          onClick={() => navigate(`/user/${player.id}`)}
+                          style={{ cursor: "pointer" }} 
+                      >
                           <td>
                             <div className="rankPosition" style={{ backgroundColor: getMedalColor(player.rank || 0) }}>
                               {player.rank}

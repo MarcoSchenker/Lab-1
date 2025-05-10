@@ -2,186 +2,537 @@
 .header-component {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Espaciado entre el logo y los íconos */
-  padding: 10px 20px;
-  position: fixed; /* Fija el Header en la parte superior */
+  justify-content: space-between;
+  padding: 15px 30px;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 1000; /* Asegura que el Header esté por encima del contenido */
+  z-index: 1000;
+  transition: all 0.3s ease;
 }
 
 /* Enlace del Header */
 .header-link {
   display: flex;
   align-items: center;
-  text-decoration: none; /* Sin subrayado */
-  color: #fff; /* Texto blanco */
+  text-decoration: none;
+  color: #fff;
+  transition: transform 0.3s ease;
+}
+
+.header-link:hover {
+  transform: scale(1.05);
 }
 
 /* Logo */
 .logo {
-  height: 50px; /* Tamaño del logo */
-  margin-right: 10px; /* Espaciado entre el logo y el texto */
+  height: 50px;
+  margin-right: 15px;
+  filter: drop-shadow(0 0 10px rgba(78, 84, 200, 0.7));
+  transition: all 0.3s ease;
 }
 
-/* Título */
-.title {
-  font-size: 1.8rem; /* Tamaño del texto */
-  font-weight: bold;
-  color: #fff;
+.logo:hover {
+  filter: drop-shadow(0 0 15px rgba(78, 84, 200, 1));
+  transform: scale(1.05);
 }
 
 /* Íconos en la parte derecha */
 .top-right-icons {
-  margin-right: 50px; /* Espaciado a la derecha */
+  margin-right: 10px;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
 /* Información del perfil */
 .profile-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
+  background: linear-gradient(135deg, rgba(41, 98, 255, 0.2), rgba(65, 120, 255, 0.1));
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid rgba(78, 84, 200, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 15px rgba(78, 84, 200, 0.2);
+  transition: all 0.3s ease;
 }
+
+.profile-info:hover {
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3), 0 0 20px rgba(78, 84, 200, 0.4);
+  border: 1px solid rgba(78, 84, 200, 0.5);
+}
+
 .profile-icon {
   width: 50px;
   height: 50px;
-  border-radius: 50%; /* Hace que sea circular */
-  background-size: cover; /* Escala la imagen para cubrir el contenedor */
-  background-position: center; /* Centra la imagen */
-  background-repeat: no-repeat; /* Evita que la imagen se repita */
-  cursor: pointer; /* Cambia el cursor al pasar sobre el ícono */
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  border: 2px solid rgba(78, 84, 200, 0.7);
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(78, 84, 200, 0.5);
+  position: relative;
+}
+
+.profile-icon:hover {
+  transform: scale(1.1);
+  border-color: rgba(78, 84, 200, 1);
+  box-shadow: 0 0 20px rgba(78, 84, 200, 0.8);
+}
+
+.profile-icon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.profile-icon:hover::after {
+  opacity: 1;
 }
 
 /* Menú desplegable */
 .dropdown-menu {
   position: fixed;
   top: 0;
-  right: -70%; /* Inicialmente fuera de la pantalla */
+  right: 0;
   height: 100vh;
-  width: calc(100% - 100px);
-  background-color: rgba(0, 0, 0, 0.9);
+  width: 350px;
+  background: linear-gradient(135deg, rgba(16, 20, 33, 0.97), rgba(24, 29, 49, 0.99));
   color: #fff;
-  padding: 20px;
-  z-index: 1100;
-  transition: transform 0.3s ease;
-  transform: translateX(100%); /* Oculto inicialmente */
+  padding: 30px;
+  z-index: 1200;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateX(100%);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+  overflow-y: auto;
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(78, 84, 200, 0.4);
 }
 
 .dropdown-menu.open {
-  transform: translateX(0); /* Muestra el menú */
+  transform: translateX(0);
 }
 
-.dropdown-menu p {
-  margin: 10px 0; /* Espaciado entre las líneas */
-  font-size: 16px; /* Tamaño de texto más grande */
-  line-height: 1.5;
-  text-align: left;
+.dropdown-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(78, 84, 200, 0.3);
 }
 
-/* Hover en los elementos del menú */
-.dropdown-menu p:hover {
-  color: #ff7b00; /* Cambia el color al pasar el mouse */
+.dropdown-menu-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 20px 0;
+  position: relative;
+}
+
+.dropdown-menu-profile .profile-icon {
+  width: 90px;
+  height: 90px;
+  margin-bottom: 15px;
+  border: 3px solid rgba(78, 84, 200, 0.7);
+  box-shadow: 0 0 20px rgba(78, 84, 200, 0.6);
+}
+
+.dropdown-username {
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+  margin: 10px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.dropdown-menu-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.dropdown-menu-section {
+  margin: 25px 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(78, 84, 200, 0.2);
+}
+
+.dropdown-menu-section-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(78, 84, 200, 0.9);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.user-info-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-info-item:last-child {
+  border-bottom: none;
+}
+
+.user-info-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.user-info-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin: 25px 0;
+}
+
+.stat-item {
+  background: linear-gradient(135deg, rgba(78, 84, 200, 0.2), rgba(41, 98, 255, 0.1));
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid rgba(78, 84, 200, 0.2);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(78, 84, 200, 0.4);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #4a9fff;
+  margin-bottom: 5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Texto de los íconos */
 .icon-text {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   font-size: 16px;
+  font-weight: 600;
   color: #fff;
+  padding: 10px 15px;
+  border-radius: 50px;
+  background: linear-gradient(135deg, rgba(78, 84, 200, 0.2), rgba(41, 98, 255, 0.1));
+  transition: all 0.3s ease;
+  border: 1px solid rgba(78, 84, 200, 0.3);
+}
+
+.icon-text:hover {
+  background: linear-gradient(135deg, rgba(78, 84, 200, 0.3), rgba(41, 98, 255, 0.2));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Íconos generales */
 .icon {
-  font-size: 24px;
+  font-size: 22px;
   color: #fff;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
 }
 
-.icon:hover {
-  transform: scale(1.1);
+.icon-link {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.3), rgba(200, 35, 51, 0.2));
+  padding: 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.3);
 }
 
+.icon-link:hover {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.4), rgba(200, 35, 51, 0.3));
+  transform: scale(1.1) rotate(10deg);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), 0 0 15px rgba(220, 53, 69, 0.4);
+}
+
+/* Sección de carga de archivos */
 .upload-section {
-  margin-top: 20px;
-  margin-right: 1000px;
+  margin-top: 25px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 20px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid rgba(78, 84, 200, 0.2);
 }
 
-.upload-section input[type="file"] {
-  margin-bottom: 30px;
+.upload-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(78, 84, 200, 0.9);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.upload-section button {
-  left: 100px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: white;
-  background-color: #007bff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+.upload-description {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin-bottom: 10px;
 }
 
-.upload-section button:hover {
-  background-color: #0056b3;
+.upload-buttons {
+  display: flex;
+  gap: 15px;
+  width: 100%;
 }
 
 .custom-file-upload {
+  flex: 1;
   display: inline-block;
-  padding: 10px 20px;
-  font-size: 0.9rem;
-  font-weight: bold;
+  padding: 14px 0;
+  font-size: 14px;
+  font-weight: 600;
   color: white;
-  background-color: #92a9c3;
+  background: linear-gradient(135deg, #4a9fff, #4065f6);
   border: none;
-  border-radius: 5px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(74, 159, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-file-upload::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
 .custom-file-upload:hover {
-  background-color: #585b5e;
+  background: linear-gradient(135deg, #60b0ff, #526eff);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(74, 159, 255, 0.4);
+}
+
+.custom-file-upload:hover::before {
+  left: 100%;
+}
+
+.custom-file-upload:active {
+  transform: translateY(1px);
+}
+
+.upload-button {
+  flex: 1;
+  padding: 14px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.upload-button:hover {
+  background: linear-gradient(135deg, #5fd365, #39944c);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(76, 175, 80, 0.4);
+}
+
+.upload-button:hover::before {
+  left: 100%;
+}
+
+.upload-button:active {
+  transform: translateY(1px);
+}
+
+.file-selected {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 5px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 15px;
+  border-radius: 20px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 30px;
 }
 
 .modify-profile-button {
-  margin-top: 10px;
-  padding: 8px 16px;
-  background-color: #3498db;
+  width: 100%;
+  padding: 16px 0;
+  background: linear-gradient(135deg, #4a9fff, #4065f6);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(74, 159, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.modify-profile-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
 .modify-profile-button:hover {
-  background-color: #2980b9;
+  background: linear-gradient(135deg, #60b0ff, #526eff);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(74, 159, 255, 0.4);
+}
+
+.modify-profile-button:hover::before {
+  left: 100%;
+}
+
+.modify-profile-button:active {
+  transform: translateY(1px);
 }
 
 .delete-profile-button {
-  background-color: #e74c3c; /* Rojo */
+  width: 100%;
+  padding: 16px 0;
+  background: linear-gradient(135deg, #ff5252, #d32f2f);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
-  padding: 8px 16px;
-  transition: background-color 0.3s ease;
-  position:fixed;
-  left: 165px; /* Fijo a la izquierda */
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
+  position: relative;
+  overflow: hidden;
+  margin-top: 15px;
+}
+
+.delete-profile-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
 .delete-profile-button:hover {
-  background-color: #c0392b; /* Rojo más oscuro al pasar el mouse */
+  background: linear-gradient(135deg, #ff6868, #e33e3e);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(255, 82, 82, 0.4);
+}
+
+.delete-profile-button:hover::before {
+  left: 100%;
+}
+
+.delete-profile-button:active {
+  transform: translateY(1px);
 }

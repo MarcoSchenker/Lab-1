@@ -31,6 +31,7 @@ const AddFriendsPage: React.FC = () => {
   const [users, setUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<number>(0);
   const navigate = useNavigate();
 
   const loggedInUser = localStorage.getItem("username") || ""; // Usuario logueado
@@ -52,7 +53,17 @@ const AddFriendsPage: React.FC = () => {
       }
     };
 
+    const fetchPendingRequests = async () => {
+      try {
+        const response = await api.get(`/friend-requests?to=${loggedInUser}`);
+        setPendingRequests(response.data.length);
+      } catch (err) {
+        console.error("Error al obtener solicitudes de amistad pendientes:", err);
+      }
+    };
+
     fetchUsers();
+    fetchPendingRequests();
   }, [loggedInUser]);
 
   const handleSendFriendRequest = async (friendUsername: string) => {
@@ -75,53 +86,56 @@ const AddFriendsPage: React.FC = () => {
 
   return (
     <div className="AddFriendsPage">
-    <div className="homeIcon" onClick={() => navigate("/dashboard")}>
-      <FaHome title="Volver al Dashboard" />
-    </div>
-    <div className="flechita" onClick={() => navigate("/friends")}>
-      <img src= "/flecha.png"/>
-    </div>
+      <div className="homeIcon" onClick={() => navigate("/dashboard")}>
+        <FaHome title="Volver al Dashboard" />
+      </div>
+      <div className="flechita" onClick={() => navigate("/friends")}>
+        <img src= "/flecha.png"/>
+      </div>
       {/* Botón de solicitudes de amistad */}
       <div className="topRight">
         <button
-        className="friendRequestsButton"
-        onClick={() => navigate("/friends-request")}
+          className="friendRequestsButton"
+          onClick={() => navigate("/friends-request")}
         >
           Solicitudes de Amistad
+          {pendingRequests > 0 && (
+            <span className="notification-badge">{pendingRequests}</span>
+          )}
         </button>
       </div>
-    <div className="AddFriendsContainer">
-      <div className="searchHolder">
-        <h1 className="searchTitle">Buscar Amigos</h1>
-        <SearchBar
-          value={searchTerm}
-          searchHandler={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar usuarios..."
-        />
-        <div className="searchData">
-          {loading ? (
-            <p>Cargando usuarios...</p>
-          ) : error ? (
-            <p className="error">{error}</p>
-          ) : (
-            <ul>
-              {users
-                .filter((user) => user.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map((user, index) => (
-                  <li key={index} className="searchItem">
-                    <span className="userName">{user}</span>
-                    <FaUserPlus
-                      className="addFriendIcon"
-                      title="Envíar solicitud de amistad"
-                      onClick={() => handleSendFriendRequest(user)}
-                    />
-                  </li>
-                ))}
-            </ul>
-          )}
+      <div className="AddFriendsContainer">
+        <div className="searchHolder">
+          <h1 className="searchTitle">Buscar Amigos</h1>
+          <SearchBar
+            value={searchTerm}
+            searchHandler={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar usuarios..."
+          />
+          <div className="searchData">
+            {loading ? (
+              <p>Cargando usuarios...</p>
+            ) : error ? (
+              <p className="error">{error}</p>
+            ) : (
+              <ul>
+                {users
+                  .filter((user) => user.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((user, index) => (
+                    <li key={index} className="searchItem">
+                      <span className="userName">{user}</span>
+                      <FaUserPlus
+                        className="addFriendIcon"
+                        title="Envíar solicitud de amistad"
+                        onClick={() => handleSendFriendRequest(user)}
+                      />
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 };

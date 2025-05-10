@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaCoins, FaSignOutAlt, FaMedal } from 'react-icons/fa';
+import { FaCoins, FaSignOutAlt, FaMedal, FaUser, FaChartLine, FaTimes, FaCamera } from 'react-icons/fa';
+import { IoIosArrowForward } from 'react-icons/io';
+import { motion, AnimatePresence } from 'framer-motion';
 import './HeaderDashboard.css';
 import api from '../services/api';
 
 const Header: React.FC = () => {
-  const apiUrl = import.meta.env.VITE_API_URL; // Obtén la URL base del backend desde las variables de entorno 
-  const [userImage, setUserImage] = useState<string | null>(null); // Imagen por defecto
-  const loggedInUser = localStorage.getItem('username'); // Obtener el username del localStorage
+  const apiUrl = import.meta.env.VITE_API_URL;
+  const [userImage, setUserImage] = useState<string | null>(null);
+  const loggedInUser = localStorage.getItem('username');
   const navigate = useNavigate();
-  const [file, setFile] = useState<File | null>(null); // Archivo de imagen
-  const [isDropdownVisible, setIsDropdownVisible] = useState(false); // Estado para controlar el menú desplegable
-  const dropdownRef = useRef<HTMLDivElement>(null); // Referencia al menú desplegable
-  const [userId, setUserId] = useState<number | null>(null); // ID del usuario
-  const [userElo, setUserElo] = useState<number>(0); // Elo del usuario
-  const [userCoins, setUserCoins] = useState<number>(0); // Monedas del usuario
+  const [file, setFile] = useState<File | null>(null);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [userElo, setUserElo] = useState<number>(0);
+  const [userCoins, setUserCoins] = useState<number>(0);
   const [userStats, setUserStats] = useState({
     partidasJugadas: 0,
     partidasGanadas: 0,
@@ -23,12 +27,16 @@ const Header: React.FC = () => {
   });
 
   const toggleDropdown = () => {
-    setIsDropdownVisible(!isDropdownVisible); // Alterna la visibilidad del menú
+    setIsDropdownVisible(!isDropdownVisible);
+  };
+
+  const closeDropdown = () => {
+    setIsDropdownVisible(false);
   };
 
   const handleClickOutside = (event: MouseEvent) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setIsDropdownVisible(false); // Cierra el menú si se hace clic fuera de él
+      setIsDropdownVisible(false);
     }
   };
 
@@ -74,25 +82,23 @@ const Header: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [loggedInUser, isDropdownVisible]);
-
-  useEffect(() => {
-    console.log('Imagen de perfil actualizada:', userImage);
-  }, [userImage]);
-
-  useEffect(() => {
-    console.log('ID del usuario:', userId);
-    console.log('URL de la foto de perfil:', userImage);
-  }, [userId, userImage]);
+  }, [loggedInUser, isDropdownVisible, apiUrl]);
 
   const handleSignOut = () => {
-    localStorage.clear(); // Limpiamos el local storage
-    navigate('/'); // Redirige a la página de inicio
+    localStorage.clear();
+    navigate('/');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setSelectedFileName(e.target.files[0].name);
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -107,108 +113,231 @@ const Header: React.FC = () => {
 
     try {
       await api.post(`/usuarios/${loggedInUser}/foto-perfil`, formData);
-      alert('Foto de perfil subida exitosamente');
-
+      
       // Actualizar la foto de perfil después de subirla
-      const imageResponse = await api.get(`/usuarios/${userId}/foto-perfil`, {
-        responseType: 'blob',
-      });
-      const imageUrl = URL.createObjectURL(imageResponse.data);
+      const imageUrl = `${apiUrl}/usuarios/${userId}/foto?t=${new Date().getTime()}`;
       setUserImage(imageUrl);
+      
+      // Reset del input file
+      setFile(null);
+      setSelectedFileName(null);
+      
+      // Feedback visual
+      const toastElement = document.createElement('div');
+      toastElement.className = 'toast-notification success';
+      toastElement.textContent = 'Foto de perfil actualizada';
+      document.body.appendChild(toastElement);
+      
+      setTimeout(() => {
+        document.body.removeChild(toastElement);
+      }, 3000);
+      
     } catch (err) {
       console.error('Error al subir la foto de perfil:', err);
-      alert('Error al subir la foto de perfil');
+      
+      // Feedback visual de error
+      const toastElement = document.createElement('div');
+      toastElement.className = 'toast-notification error';
+      toastElement.textContent = 'Error al actualizar la foto';
+      document.body.appendChild(toastElement);
+      
+      setTimeout(() => {
+        document.body.removeChild(toastElement);
+      }, 3000);
     }
   };
+
+  // Animaciones para el dropdown
+  const dropdownVariants = {
+    hidden: { opacity: 0, x: 350 },
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 24 
+      } 
+    },
+    exit: { 
+      opacity: 0, 
+      x: 350,
+      transition: { 
+        ease: "easeInOut", 
+        duration: 0.3 
+      } 
+    }
+  };
+
+  // Porcentaje de victorias
+  const winPercentage = userStats.partidasJugadas > 0 
+    ? Math.round((userStats.partidasGanadas / userStats.partidasJugadas) * 100) 
+    : 0;
 
   return (
     <div className="header-component">
       <Link to="/dashboard" className="header-link">
         <img src="/CardLogo.png" alt="Logo" className="logo" />
       </Link>
+      
       <div className="top-right-icons">
         <div className="profile-info">
-        {userImage ? (
-          <div
-            className="profile-icon"
-            style={{
-              backgroundImage: `url(${userImage})`,
-              backgroundColor: 'transparent',
-            }}
-            onClick={toggleDropdown} // Muestra el menú al hacer clic en la imagen
-          ></div>
-        ) : (
-          <div
-            className="profile-icon"
-            style={{
-              backgroundColor: '#ccc', // Fondo gris mientras carga
-            }}
-          ></div>
-        )}
-          <div className="icon-text">
-            <FaCoins /> {userCoins}
+          <div className="icon-text coins">
+            <FaCoins className="coin-icon" /> {userCoins}
           </div>
-          <div className="icon-text">
-            <FaMedal /> {userElo}
+          <div className="icon-text elo">
+            <FaMedal className="medal-icon" /> {userElo}
           </div>
-          <Link to="/" className="icon-link" onClick={handleSignOut}>
-            <FaSignOutAlt className="icon" title="Cerrar sesión" />
-          </Link>
-        </div>
-        {isDropdownVisible && (
           <div
-            className={`dropdown-menu ${isDropdownVisible ? 'open' : ''}`}
-            ref={dropdownRef} // Asigna la referencia al menú
+            className="profile-icon-wrapper"
+            onClick={toggleDropdown}
           >
-            <div
-              className="profile-icon"
-              style={{
-                backgroundImage: `url(${userImage})`,
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-          ></div>
-          <button
-        className="modify-profile-button"
-        onClick={() => navigate('/modificar-perfil')} // Redirige a la página de modificar perfil
-      >
-        Modificar Perfil
-      </button>            
-            <p>Nombre de Usuario: {loggedInUser}</p> <br />
-            <p>Partidas Jugadas: {userStats.partidasJugadas}</p> <br />
-            <p>Partidas Ganadas: {userStats.partidasGanadas}</p> <br />
-            <p>Derrotas: {userStats.derrotas}</p> <br />
-            <p>ELO: {userStats.elo}</p> <br />
-            <div className="upload-section">
-              <label htmlFor="file-upload" className="custom-file-upload">
-                Seleccionar archivo
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                style={{ display: 'none' }} // Oculta el input
+            {userImage ? (
+              <div
+                className="profile-icon"
+                style={{
+                  backgroundImage: `url(${userImage})`,
+                }}
               />
-            <br>
-            </br>
-              <button onClick={handleUpload}>Subir Foto</button>
+            ) : (
+              <div className="profile-icon profile-icon-placeholder">
+                <FaUser />
+              </div>
+            )}
+          </div>
+          <button className="sign-out-button" onClick={handleSignOut} title="Cerrar sesión">
+            <FaSignOutAlt />
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isDropdownVisible && (
+          <motion.div 
+            className="dropdown-menu"
+            ref={dropdownRef}
+            variants={dropdownVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <button className="dropdown-menu-close" onClick={closeDropdown}>
+              <FaTimes />
+            </button>
+            
+            <div className="dropdown-menu-profile">
+              <div className="profile-avatar-container">
+                {userImage ? (
+                  <div
+                    className="profile-avatar"
+                    style={{
+                      backgroundImage: `url(${userImage})`,
+                    }}
+                  />
+                ) : (
+                  <div className="profile-avatar profile-avatar-placeholder">
+                    <FaUser />
+                  </div>
+                )}
+                <button className="change-photo-button" onClick={handleUploadClick}>
+                  <FaCamera />
+                </button>
+              </div>
+              <h2 className="dropdown-username">{loggedInUser}</h2>
+              <div className="dropdown-elo">
+                <FaMedal className="dropdown-medal-icon" /> {userStats.elo} ELO
+              </div>
             </div>
-            <br></br>
-            <div className="errase-button">
+            
+            <div className="dropdown-menu-section">
+              <h3 className="dropdown-menu-section-title">Estadísticas</h3>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <div className="stat-value">{userStats.partidasJugadas}</div>
+                  <div className="stat-label">Partidas</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-value">{userStats.partidasGanadas}</div>
+                  <div className="stat-label">Victorias</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-value">{userStats.derrotas}</div>
+                  <div className="stat-label">Derrotas</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-value">{winPercentage}%</div>
+                  <div className="stat-label">% Victoria</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="dropdown-menu-section upload-section">
+              <h3 className="dropdown-menu-section-title">Cambiar foto de perfil</h3>
+              <div className="upload-description">
+                Selecciona una nueva imagen para tu perfil
+              </div>
+              
+              <div className="upload-buttons">
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                  ref={fileInputRef}
+                />
+                
+                <button 
+                  className="custom-file-upload"
+                  onClick={handleUploadClick}
+                >
+                  Seleccionar archivo
+                </button>
+                
+                <button 
+                  className={`upload-button ${!file ? 'disabled' : ''}`}
+                  onClick={handleUpload}
+                  disabled={!file}
+                >
+                  Subir foto
+                </button>
+              </div>
+              
+              {selectedFileName && (
+                <div className="file-selected">
+                  {selectedFileName}
+                </div>
+              )}
+            </div>
+            
+            <div className="actions-container">
               <button
-                onClick={() => navigate('/eliminar-perfil')}
-                className="delete-profile-button"
+                className="profile-action-button modify-profile-button"
+                onClick={() => navigate('/modificar-perfil')}
               >
-                Borrar Perfil
+                <span>Modificar Perfil</span>
+                <IoIosArrowForward />
+              </button>
+              
+              <button
+                className="profile-action-button stats-button"
+                onClick={() => navigate('/user/' + userId)}
+              >
+                <span>Ver Estadísticas Completas</span>
+                <FaChartLine />
+              </button>
+              
+              <button
+                className="profile-action-button delete-profile-button"
+                onClick={() => navigate('/eliminar-perfil')}
+              >
+                <span>Eliminar Cuenta</span>
+                <IoIosArrowForward />
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 };

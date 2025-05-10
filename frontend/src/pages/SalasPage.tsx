@@ -236,9 +236,6 @@ const SalasPage: React.FC = () => {
       
       <div className="salas-content">
         <div className="salas-header">
-          <Link to="/dashboard" className="back-button">
-            <IoArrowBackOutline /> Volver
-          </Link>
           <h1>Salas Disponibles</h1>
           <div className="header-actions">
             <button 

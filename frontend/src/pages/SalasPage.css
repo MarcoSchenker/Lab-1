@@ -337,6 +337,21 @@
     background-color: #357abd;
   }
   
+  .flechitaa {
+    position:absolute;
+    width: 60px;
+    height: 80px;
+    top: 100px;
+    left: 50px;
+    cursor: pointer;
+    z-index: 2;
+    transition: transform 0.2s ease;
+    }
+    
+    .flechitaa:hover {
+    transform: scale(1.2);
+    }
+
   /* Responsive */
   @media (max-width: 768px) {
     .salas-header {
