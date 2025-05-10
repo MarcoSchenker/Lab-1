@@ -205,7 +205,7 @@ const Header: React.FC = () => {
               </div>
             )}
           </div>
-          <button className="sign-out-button" onClick={handleSignOut} title="Cerrar sesión">
+          <button className="bg-black" onClick={handleSignOut} title="Cerrar sesión">
             <FaSignOutAlt />
           </button>
         </div>
@@ -221,9 +221,7 @@ const Header: React.FC = () => {
             animate="visible"
             exit="exit"
           >
-            <button className="dropdown-menu-close" onClick={closeDropdown}>
-              <FaTimes />
-            </button>
+           
             
             <div className="dropdown-menu-profile">
               <div className="profile-avatar-container">
