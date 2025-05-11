@@ -1,9 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-
-import { IoPersonAddSharp } from "react-icons/io5";
-import { HiMiniTrophy } from "react-icons/hi2";
-import { motion } from 'framer-motion'; // Hace npm install motion nacu
+import { motion } from 'framer-motion';
 import Header from '../components/HeaderDashboard';
 import './DashboardPage.css';
 
@@ -32,21 +29,6 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="dashboard-container">
       <Header />
-
-      <motion.div 
-        className="right-icons"
-        initial={{ opacity: 0, x: 100 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <Link to="/friends" title="Amigos">
-          <IoPersonAddSharp className="icon" />
-        </Link>
-        <Link to="/ranking" title="Ranking">
-          <HiMiniTrophy className="icon" />
-        </Link>
-      </motion.div>
-
       <motion.div 
         className="game-modes"
         variants={containerVariants}
