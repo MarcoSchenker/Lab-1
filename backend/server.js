@@ -8,6 +8,8 @@ require('dotenv').config();
 const pool = require('./config/db');
 const { initializeDatabase } = require('./config/dbInit');
 const salasRoutes = require('./salasRoute');
+const skinsRoutes = require('./skinRoutes'); 
+const { authenticateToken } = require('./authMiddleware');
 
 // Inicializar Express
 const app = express();
@@ -19,6 +21,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/api/salas', salasRoutes);
+app.use('/api', skinsRoutes); // Todas las rutas de skins ahora tienen un prefijo /api
 
 
 // Inicializar la base de datos antes de arrancar el servidor
@@ -192,7 +195,6 @@ app.post('/login', async (req, res) => {
   const { nombre_usuario, contraseña } = req.body;
 
   try {
-    // Buscar el usuario en la base de datos
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE nombre_usuario = ?', [nombre_usuario]);
 
     if (rows.length === 0) {
@@ -200,7 +202,6 @@ app.post('/login', async (req, res) => {
     }
 
     const usuario = rows[0];
-    
     const bcrypt = require('bcrypt');
     const isMatch = await bcrypt.compare(contraseña, usuario.contraseña);
 
@@ -208,16 +209,52 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
-    // Generar un token JWT
     const jwt = require('jsonwebtoken');
-    const token = jwt.sign({ id: usuario.id, nombre_usuario: usuario.nombre_usuario }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
 
-    res.json({ message: 'Inicio de sesión exitoso', token, nombre_usuario: usuario.nombre_usuario });
+    // Generar el access token (válido por 24 horas)
+    const accessToken = jwt.sign(
+      { id: usuario.id, nombre_usuario: usuario.nombre_usuario },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Generar el refresh token (válido por 7 días)
+    const refreshToken = jwt.sign(
+      { id: usuario.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Inicio de sesión exitoso',
+      accessToken,
+      refreshToken,
+      nombre_usuario: usuario.nombre_usuario,
+    });
   } catch (err) {
     console.error('Error al iniciar sesión:', err.message);
     res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
+
+app.post('/refresh-token', (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ error: 'Refresh token no proporcionado' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    const newAccessToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({ accessToken: newAccessToken });
+  } catch (err) {
+    console.error('Error al verificar el refresh token:', err.message);
+    res.status(401).json({ error: 'Refresh token inválido o expirado' });
   }
 });
 
@@ -277,170 +314,159 @@ app.get('/skins', async (req, res) => {
   }
 });
 
-// Endpoint para obtener la skin actual de un usuario
-app.get('/usuarios/:usuario_id/skin', async (req, res) => {
-  const { usuario_id } = req.params;
-  
+// Obtener las skins desbloqueadas por un usuario
+app.get('/skins/user', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await pool.query(`
-      SELECT s.* FROM skins s
-      INNER JOIN perfiles p ON s.id = p.skin_id
-      WHERE p.usuario_id = ?
-    `, [usuario_id]);
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'El usuario no tiene skin asignada' });
-    }
-    
-    res.json(rows[0]);
-  } catch (err) {
-    console.error('Error al obtener la skin del usuario:', err.message);
-    res.status(500).json({ error: 'Error al obtener la skin del usuario' });
-  }
-});
+    const userId = req.user.id;
 
-// Endpoint para cambiar la skin de un usuario (entre las desbloqueadas)
-app.put('/usuarios/:usuario_id/skin', async (req, res) => {
-  const { usuario_id } = req.params;
-  const { skin_id } = req.body;
-  
-  if (!skin_id) {
-    return res.status(400).json({ error: 'El ID de la skin es obligatorio' });
-  }
-  
-  try {
-    // Verificar que la skin exista y esté desbloqueada para el usuario
-    const [skinRows] = await pool.query(`
-      SELECT * FROM skins_desbloqueadas 
-      WHERE usuario_id = ? AND skin_id = ?
-    `, [usuario_id, skin_id]);
-    
-    if (skinRows.length === 0) {
-      return res.status(403).json({ error: 'Skin no desbloqueada para este usuario' });
-    }
-    
-    // Actualizar el perfil del usuario
-    await pool.query('UPDATE perfiles SET skin_id = ? WHERE usuario_id = ?', [skin_id, usuario_id]);
-    
-    res.json({ message: 'Skin actualizada exitosamente' });
-  } catch (err) {
-    console.error('Error al actualizar la skin:', err.message);
-    res.status(500).json({ error: 'Error al actualizar la skin' });
-  }
-});
-
-// Endpoint para obtener todas las skins desbloqueadas por un usuario
-app.get('/usuarios/:usuario_id/skins-desbloqueadas', async (req, res) => {
-  const { usuario_id } = req.params;
-  
-  try {
-    const [rows] = await pool.query(`
-      SELECT s.* FROM skins s
-      INNER JOIN skins_desbloqueadas sd ON s.id = sd.skin_id
+    const [skins] = await pool.query(`
+      SELECT s.id, s.codigo, s.nombre, s.precio, sd.fecha_desbloqueo
+      FROM skins_desbloqueadas sd
+      JOIN skins s ON sd.skin_id = s.id
       WHERE sd.usuario_id = ?
-    `, [usuario_id]);
-    
-    res.json(rows);
-  } catch (err) {
-    console.error('Error al obtener skins desbloqueadas:', err.message);
-    res.status(500).json({ error: 'Error al obtener skins desbloqueadas' });
+    `, [userId]);
+
+    res.json(skins);
+  } catch (error) {
+    console.error('Error al obtener skins del usuario:', error);
+    res.status(500).json({ error: 'Error al obtener skins del usuario' });
   }
 });
 
-// Endpoint para obtener skins disponibles para comprar (no desbloqueadas)
-app.get('/usuarios/:usuario_id/skins-disponibles', async (req, res) => {
-  const { usuario_id } = req.params;
-  
+// Obtener la skin actualmente seleccionada por el usuario
+app.get('/skins/selected', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await pool.query(`
-      SELECT s.*, p.monedas AS monedas_usuario FROM skins s
-      CROSS JOIN perfiles p
+    const userId = req.user.id;
+
+    const [result] = await pool.query(`
+      SELECT s.id, s.codigo, s.nombre
+      FROM perfiles p
+      JOIN skins s ON p.skin_id = s.id
       WHERE p.usuario_id = ?
-      AND s.id NOT IN (
-        SELECT skin_id FROM skins_desbloqueadas WHERE usuario_id = ?
-      )
-    `, [usuario_id, usuario_id]);
-    
-    res.json(rows);
-  } catch (err) {
-    console.error('Error al obtener skins disponibles:', err.message);
-    res.status(500).json({ error: 'Error al obtener skins disponibles' });
+    `, [userId]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'No se encontró la skin seleccionada' });
+    }
+
+    res.json(result[0]);
+  } catch (error) {
+    console.error('Error al obtener skin seleccionada:', error);
+    res.status(500).json({ error: 'Error al obtener skin seleccionada' });
   }
 });
 
-// Endpoint para comprar una skin
-app.post('/usuarios/:usuario_id/comprar-skin', async (req, res) => {
-  const { usuario_id } = req.params;
-  const { skin_id } = req.body;
-  
-  if (!skin_id) {
-    return res.status(400).json({ error: 'El ID de la skin es obligatorio' });
-  }
-  
+// Seleccionar una skin para usar
+app.post('/skins/select/:skinId', authenticateToken, async (req, res) => {
+  const skinId = req.params.skinId;
+  const userId = req.user.id;
+
+  const connection = await pool.getConnection();
+
   try {
-    // Iniciar transacción
-    await pool.query('START TRANSACTION');
-    
-    // Verificar que la skin exista y no esté desbloqueada
-    const [skinRows] = await pool.query(`
-      SELECT s.* FROM skins s
-      WHERE s.id = ?
-      AND NOT EXISTS (
-        SELECT 1 FROM skins_desbloqueadas
-        WHERE usuario_id = ? AND skin_id = ?
-      )
-    `, [skin_id, usuario_id, skin_id]);
-    
-    if (skinRows.length === 0) {
-      await pool.query('ROLLBACK');
-      return res.status(404).json({ error: 'Skin no disponible o ya desbloqueada' });
+    await connection.beginTransaction();
+
+    // Verificar si el usuario tiene desbloqueada la skin
+    const [skinCheck] = await connection.query(`
+      SELECT 1 FROM skins_desbloqueadas
+      WHERE usuario_id = ? AND skin_id = ?
+    `, [userId, skinId]);
+
+    if (skinCheck.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ error: 'No tienes desbloqueada esta skin' });
     }
-    
-    const skin = skinRows[0];
-    
-    // Verificar que el usuario tenga suficientes monedas
-    const [perfilRows] = await pool.query('SELECT monedas FROM perfiles WHERE usuario_id = ?', [usuario_id]);
-    
-    if (perfilRows.length === 0) {
-      await pool.query('ROLLBACK');
+
+    // Actualizar el perfil con la nueva skin seleccionada
+    await connection.query(`
+      UPDATE perfiles SET skin_id = ?
+      WHERE usuario_id = ?
+    `, [skinId, userId]);
+
+    await connection.commit();
+
+    res.json({ message: 'Skin seleccionada correctamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al seleccionar skin:', error);
+    res.status(500).json({ error: 'Error al seleccionar skin' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Comprar/desbloquear una skin
+app.post('/skins/unlock/:skinId', authenticateToken, async (req, res) => {
+  const skinId = req.params.skinId;
+  const userId = req.user.id;
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Verificar si el usuario ya tiene la skin
+    const [skinCheck] = await connection.query(`
+      SELECT 1 FROM skins_desbloqueadas
+      WHERE usuario_id = ? AND skin_id = ?
+    `, [userId, skinId]);
+
+    if (skinCheck.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({ error: 'Ya tienes desbloqueada esta skin' });
+    }
+
+    // Obtener el precio de la skin y las monedas del usuario
+    const [skinData] = await connection.query(`
+      SELECT precio FROM skins WHERE id = ?
+    `, [skinId]);
+
+    const [userData] = await connection.query(`
+      SELECT monedas FROM perfiles WHERE usuario_id = ?
+    `, [userId]);
+
+    if (skinData.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Skin no encontrada' });
+    }
+
+    if (userData.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ error: 'Perfil de usuario no encontrado' });
     }
-    
-    const monedas = perfilRows[0].monedas;
-    
-    if (monedas < skin.precio) {
-      await pool.query('ROLLBACK');
-      return res.status(403).json({ 
-        error: 'Monedas insuficientes', 
-        monedas: monedas, 
-        precio: skin.precio,
-        faltante: skin.precio - monedas
-      });
+
+    const skinPrice = skinData[0].precio;
+    const userCoins = userData[0].monedas;
+
+    // Verificar si el usuario tiene suficientes monedas
+    if (userCoins < skinPrice) {
+      await connection.rollback();
+      return res.status(402).json({ error: 'No tienes suficientes monedas para desbloquear esta skin' });
     }
-    
-    // Descontar monedas del perfil
-    await pool.query(
-      'UPDATE perfiles SET monedas = monedas - ? WHERE usuario_id = ?',
-      [skin.precio, usuario_id]
-    );
-    
-    // Desbloquear la skin para el usuario
-    await pool.query(
-      'INSERT INTO skins_desbloqueadas (usuario_id, skin_id) VALUES (?, ?)',
-      [usuario_id, skin_id]
-    );
-    
-    // Confirmar transacción
-    await pool.query('COMMIT');
-    
-    res.json({ 
-      message: 'Skin comprada exitosamente', 
-      monedas_restantes: monedas - skin.precio 
+
+    // Descontar monedas y desbloquear skin
+    await connection.query(`
+      UPDATE perfiles SET monedas = monedas - ?
+      WHERE usuario_id = ?
+    `, [skinPrice, userId]);
+
+    await connection.query(`
+      INSERT INTO skins_desbloqueadas (usuario_id, skin_id)
+      VALUES (?, ?)
+    `, [userId, skinId]);
+
+    await connection.commit();
+
+    res.json({
+      message: 'Skin desbloqueada correctamente',
+      newBalance: userCoins - skinPrice
     });
-  } catch (err) {
-    await pool.query('ROLLBACK');
-    console.error('Error al comprar skin:', err.message);
-    res.status(500).json({ error: 'Error al comprar skin' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al desbloquear skin:', error);
+    res.status(500).json({ error: 'Error al desbloquear skin' });
+  } finally {
+    connection.release();
   }
 });
 
@@ -914,3 +940,5 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🔥 Servidor escuchando en http://localhost:${PORT}`);
 });
+
+module.exports = { app, server, io };

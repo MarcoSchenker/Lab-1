@@ -149,3 +149,37 @@ body {
   background-size: contain;
   opacity: 0.9;
 }
+
+.game-mode.skins {
+  position: relative;
+  background: linear-gradient(135deg, rgba(219, 119, 57, 0.8), rgba(150, 65, 20, 0.9));
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px rgba(219, 119, 57, 0.3);
+}
+
+.game-mode.skins::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.7s;
+}
+
+.game-mode.skins:hover {
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.9), rgba(150, 65, 20, 0.9));
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4), 0 0 30px rgba(219, 119, 57, 0.5);
+}
+
+.game-mode.tienda::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background-size: contain;
+  opacity: 0.9;
+}

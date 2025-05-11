@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'; // Quité useRef
+import React, { useState, useMemo, useCallback, useEffect } from 'react'; // Quité useRef
 import { useNavigate } from 'react-router-dom';
 import { Partida } from '../game/iaPro/partida';
 import { Jugador } from '../game/iaPro/jugador';
@@ -13,8 +13,16 @@ import GameLog from '../components/GameLog';
 import CallDisplay from '../components/CallDisplay';
 import StartGameScreen from '../components/StartGameScreen';
 import EndGameScreen from '../components/GameOverScreen';
+import api from '../services/api'; // Asegúrate de que la ruta sea correcta
+import axios from 'axios';
 
 interface CartaConInfoUI extends Naipe { esHumano?: boolean;}
+
+interface Skin {
+    id: number;
+    nombre: string;
+    ruta: string;
+  }
 
 interface GameState {
     partidaTerminada: boolean;
@@ -33,6 +41,8 @@ interface GameState {
     estadoJuego: 'seleccionando_puntos' | 'jugando' | 'terminado'; // Nuevo estado para flujo
     limitePuntosSeleccionado: number | null; // Para guardar 15 o 30
     mostrandoConfirmacionSalir: boolean;
+    skinPath: string; // Ruta base de la skin seleccionada
+
 }
 const initialState: GameState = {
     ganadorPartida: null,
@@ -57,10 +67,12 @@ const initialState: GameState = {
     numeroManoActual: 0,
     mostrandoCartelReparto: false, // Empieza sin mostrar
     mostrandoConfirmacionSalir: false,
+    skinPath: '/cartas/mazoOriginal', // Ruta base predeterminada
+
 };
 
-const IMAGE_BASE_PATH = '/cartas/mazoOriginal';
 const GAME_BACKGROUND_IMAGE = '/tablebackground.png';
+
 const GamePage: React.FC = () => {
     const [gameState, setGameState] = useState<GameState>(initialState);
     const navigate = useNavigate();
@@ -190,6 +202,41 @@ const GamePage: React.FC = () => {
 
     }, []); // El array vacío asegura que partida se crea solo una vez
 
+    useEffect(() => {
+        const fetchSelectedSkin = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+    
+                const response = await api.get('/api/skins/selected', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+    
+                if (response.data && response.data.nombre) {
+                    const newSkinPath = `/cartas/mazo${response.data.nombre}`;
+                    console.log('Skin seleccionada:', response.data.nombre);
+                    console.log('Ruta generada:', newSkinPath);
+                    setGameState((prev) => {
+                        const updatedState = {
+                            ...prev,
+                            skinPath: newSkinPath, // Actualiza la ruta base
+                        };
+                        console.log('Estado actualizado:', updatedState);
+                        return updatedState;
+                    });
+            }} catch (error) {
+                console.error('Error al obtener la skin seleccionada:', error);
+            }
+        };
+    
+        fetchSelectedSkin();
+    }, []);
+    
+    useEffect(() => {
+        console.log('Valor actual de skinPath:', gameState.skinPath);
+    }, [gameState.skinPath]);
+
+
     // --- Manejadores de Eventos de la UI ---
 
     const handleStartGame = useCallback((puntosLimite: 15 | 30) => {
@@ -197,6 +244,7 @@ const GamePage: React.FC = () => {
         // Resetear estado visual principal ANTES de iniciar la lógica
         setGameState(prev => ({
              ...initialState, // Volver al estado inicial limpio
+             skinPath: prev.skinPath, // Mantener la skin seleccionada
              estadoJuego: 'jugando',
              partidaIniciada: true, // Marcar como iniciada para mostrar el tablero
              limitePuntosSeleccionado: puntosLimite,
@@ -205,6 +253,7 @@ const GamePage: React.FC = () => {
         }));
         partida.iniciar("Humano", "IA", puntosLimite); // Nombres y límite de puntos
     }, [partida]);
+
     const handlePlayCard = useCallback((carta: Naipe) => {
         // Validaciones básicas en UI (Turno, estado, acción posible)
         const esTurnoJugadorHumano = gameState.turnoActual?.jugador.esHumano === true;
@@ -219,6 +268,8 @@ const GamePage: React.FC = () => {
             console.warn("Intento de jugar carta inválido", {partidaTerminada: gameState.partidaTerminada, esTurnoJugadorHumano, puedeJugarCarta: gameState.accionesPosibles.puedeJugarCarta})
         }
     }, [partida, gameState.partidaTerminada, gameState.turnoActual, gameState.accionesPosibles.puedeJugarCarta]); // Dependencias
+
+    
 
     const handleCanto = useCallback((canto: Canto) => {
          // Validaciones básicas en UI
@@ -263,6 +314,10 @@ const GamePage: React.FC = () => {
     const handleCancelExit = useCallback(() => {
         setGameState(prev => ({ ...prev, mostrandoConfirmacionSalir: false })); // Simplemente ocultar modal
     }, []);
+    
+    if (!gameState.skinPath) {
+        return <div>Cargando skin seleccionada...</div>; // Muestra un estado de carga
+    }
 
     // Determina qué pantalla mostrar
     const renderScreen = () => {
@@ -294,7 +349,7 @@ const GamePage: React.FC = () => {
                                   esTurno={gameState.turnoActual === gameState.equipoSegundo}
                                   onCardClick={() => {}}
                                   puedeJugarCarta={false}
-                                  imageBasePath={IMAGE_BASE_PATH}
+                                  imageBasePath={gameState.skinPath} // Usa la ruta de skin seleccionada
                               />
                           </div>
 
@@ -303,7 +358,7 @@ const GamePage: React.FC = () => {
                               <GameBoard
                                   cartasMesa={gameState.cartasMesa}
                                   numeroManoActual={gameState.numeroManoActual}
-                                  imageBasePath={IMAGE_BASE_PATH}
+                                  imageBasePath={gameState.skinPath} // Usa la ruta de skin seleccionada
                               />
                           </div>
 
@@ -315,7 +370,7 @@ const GamePage: React.FC = () => {
                                   esTurno={gameState.turnoActual?.jugador?.esHumano === true}
                                   onCardClick={handlePlayCard}
                                   puedeJugarCarta={gameState.accionesPosibles.puedeJugarCarta}
-                                  imageBasePath={IMAGE_BASE_PATH}
+                                  imageBasePath={gameState.skinPath} // Usa la ruta de skin seleccionada
                               />
                           </div>
 
@@ -343,6 +398,7 @@ const GamePage: React.FC = () => {
                 return <div>Cargando...</div>;
         }
     };
+    
 
 
     return (

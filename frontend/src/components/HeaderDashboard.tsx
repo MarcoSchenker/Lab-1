@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaCoins, FaSignOutAlt, FaMedal, FaUser, FaChartLine, FaTimes, FaCamera } from 'react-icons/fa';
+import { FaCoins, FaSignOutAlt, FaMedal, FaUser, FaChartLine, FaCamera } from 'react-icons/fa';
 import { IoIosArrowForward } from 'react-icons/io';
 import { motion, AnimatePresence } from 'framer-motion';
 import './HeaderDashboard.css';

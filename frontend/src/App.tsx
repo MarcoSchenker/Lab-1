@@ -13,6 +13,7 @@ import EditProfile from './pages/EditProfile';
 import DeleteProfile from './components/DeleteProfile';
 import LeaderBoardPage from './pages/LeaderBoardPage';
 import SalasPage from './pages/SalasPage';
+import SkinPage from './pages/SkinPage';
 
 function App() {
   return (
@@ -82,6 +83,7 @@ function App() {
         <Route path="/modificar-perfil" element={<AuthRoute><EditProfile /> </AuthRoute>} />
         <Route path="/eliminar-perfil" element={<AuthRoute><DeleteProfile /> </AuthRoute>} />
         <Route path="/salas" element={<AuthRoute><SalasPage /> </AuthRoute>} />
+        <Route path="/skins" element={<AuthRoute><SkinPage /> </AuthRoute>} />
         
       </Routes>
     </Router>
