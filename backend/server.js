@@ -9,6 +9,7 @@ const pool = require('./config/db');
 const { initializeDatabase } = require('./config/dbInit');
 const salasRoutes = require('./salasRoute');
 const skinsRoutes = require('./skinRoutes'); 
+const paymentRoutes = require('./paymentRoutes');
 const { authenticateToken } = require('./authMiddleware');
 
 // Inicializar Express
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/api/salas', salasRoutes);
 app.use('/api', skinsRoutes); // Todas las rutas de skins ahora tienen un prefijo /api
+app.use('/api', paymentRoutes); // Todas las rutas de pagos ahora tienen un prefijo /api
 
 
 // Inicializar la base de datos antes de arrancar el servidor

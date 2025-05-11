@@ -380,3 +380,45 @@
       max-width: 280px;
     }
   }
+  .comprar-monedas-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffa502, #ff7b02);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.comprar-monedas-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(135deg, #ffb732, #ff9232);
+}
+
+.comprar-monedas-btn .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Actualización para el responsive */
+@media (max-width: 768px) {
+  .skin-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .volver-btn,
+  .coins-display,
+  .comprar-monedas-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

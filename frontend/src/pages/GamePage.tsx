@@ -14,15 +14,8 @@ import CallDisplay from '../components/CallDisplay';
 import StartGameScreen from '../components/StartGameScreen';
 import EndGameScreen from '../components/GameOverScreen';
 import api from '../services/api'; // Asegúrate de que la ruta sea correcta
-import axios from 'axios';
 
 interface CartaConInfoUI extends Naipe { esHumano?: boolean;}
-
-interface Skin {
-    id: number;
-    nombre: string;
-    ruta: string;
-  }
 
 interface GameState {
     partidaTerminada: boolean;
@@ -314,7 +307,7 @@ const GamePage: React.FC = () => {
     const handleCancelExit = useCallback(() => {
         setGameState(prev => ({ ...prev, mostrandoConfirmacionSalir: false })); // Simplemente ocultar modal
     }, []);
-    
+
     if (!gameState.skinPath) {
         return <div>Cargando skin seleccionada...</div>; // Muestra un estado de carga
     }

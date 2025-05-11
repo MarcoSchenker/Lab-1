@@ -1,0 +1,350 @@
+/* StorePage.css */
+
+.store-page-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: url('/FondoSkin.png') no-repeat center center;
+  background-size: cover;
+  color: #6d2b00;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Montserrat', Arial, sans-serif;
+}
+
+.store-page-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 250, 230, 0.05);
+  z-index: 0;
+}
+
+.store-page-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.store-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.store-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #5a1a00;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.store-controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.volver-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #6d3200, #a05000);
+  color: #ffe6b3;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.volver-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(135deg, #7d4000, #b05a00);
+}
+
+.volver-btn .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.coins-display {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #a37b00, #ebc137);
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.coin-icon {
+  width: 25px;
+  height: 25px;
+  color: #ffe6b3;
+  margin-right: 10px;
+}
+
+.coin-count {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffe6b3;
+}
+
+.notification {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.notification.error {
+  background-color: rgba(169, 50, 38, 0.9);
+  color: #fff;
+  border-left: 5px solid #6d2b00;
+}
+
+.notification.success {
+  background-color: rgba(39, 123, 69, 0.9);
+  color: #fff;
+  border-left: 5px solid #1e5631;
+}
+
+.notification-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(109, 43, 0, 0.2);
+  border-top: 5px solid #6d2b00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Grid de paquetes */
+.packages-grid {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.package-item {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+}
+
+.package-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, #8a4500, #d18700, #8a4500);
+  opacity: 0.7;
+}
+
+.package-item::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.7s;
+}
+
+.package-item:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25);
+}
+
+.package-item:hover::after {
+  left: 100%;
+}
+
+.package-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ffd64d, #ffc107);
+  color: #6d2b00;
+  border-radius: 50%;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.package-details {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.package-coins {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #6d2b00;
+}
+
+.package-description {
+  font-size: 0.9rem;
+  color: #a05000;
+  margin-bottom: 15px;
+}
+
+.package-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #5a1a00;
+  margin-bottom: 5px;
+}
+
+.buy-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #218838, #28a745);
+  color: white;
+}
+
+.buy-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #28a745, #34ce57);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.buy-btn:disabled {
+  background: linear-gradient(135deg, #6c757d, #868e96);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.payment-info {
+  width: 100%;
+  max-width: 700px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.payment-info h3 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  color: #5a1a00;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.payment-logo {
+  height: 40px;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .packages-grid {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .store-header {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .store-title {
+    font-size: 2.2rem;
+  }
+  
+  .package-item {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 576px) {
+  .store-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .volver-btn,
+  .coins-display {
+    width: 100%;
+    justify-content: center;
+  }
+}
