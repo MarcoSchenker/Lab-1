@@ -281,7 +281,7 @@ const SalasPage: React.FC = () => {
               {filtro === 'todas' ? 'Todas' : filtro === 'publicas' ? 'Públicas' : 'Privadas'}
             </button>
             <button 
-              className="refresh-button"
+              className="bg-black"
               onClick={fetchSalas}
               title="Actualizar lista de salas"
             >

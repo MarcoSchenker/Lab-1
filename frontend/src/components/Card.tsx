@@ -1,7 +1,7 @@
 // src/components/Card.tsx
-import React from 'react';
-import { Naipe } from '../game/iaPro/naipe'; // Ajusta la ruta si es necesario
-import { Palo } from '../game/iaPro/types'; // Importar Palo para el mapeo
+import React, { useState, useEffect } from 'react';
+import { Naipe } from '../game/iaPro/naipe';
+import { Palo } from '../game/iaPro/types';
 
 interface CardProps {
     carta: Naipe | null; // La carta a mostrar, o null para un placeholder/dorso
@@ -14,20 +14,18 @@ interface CardProps {
 
 // Función helper para obtener el nombre de archivo correcto según tu formato
 function getNaipeImageFilename(carta: Naipe): string {
-     // Mapeo de Palo a nombre en inglés para archivo
-     let paloArchivo: string;
-     switch (carta.palo) {
-         case Palo.Oro:    paloArchivo = 'Gold'; break;
-         case Palo.Copa:   paloArchivo = 'Cups'; break;
-         case Palo.Espada: paloArchivo = 'Swords'; break; // Espada -> Swords
-         case Palo.Basto:  paloArchivo = 'Bastos'; break; // Basto -> Bastos
-         default:          paloArchivo = carta.palo; // Fallback (no debería ocurrir)
-     }
-     const numeroArchivo = carta.numero; // Usar el número (1-12)
-     // Asumiendo extensión .png (ajusta si es diferente)
-     return `${numeroArchivo}${paloArchivo}.jpg`;
+    // Mapeo de Palo a nombre en inglés para archivo
+    let paloArchivo: string;
+    switch (carta.palo) {
+        case Palo.Oro:    paloArchivo = 'Gold'; break;
+        case Palo.Copa:   paloArchivo = 'Cups'; break;
+        case Palo.Espada: paloArchivo = 'Swords'; break;
+        case Palo.Basto:  paloArchivo = 'Bastos'; break;
+        default:          paloArchivo = carta.palo; // Fallback
+    }
+    const numeroArchivo = carta.numero;
+    return `${numeroArchivo}${paloArchivo}`; // Devolvemos sin extensión
 }
-
 
 const Card: React.FC<CardProps> = ({
     carta,
@@ -35,13 +33,19 @@ const Card: React.FC<CardProps> = ({
     onClick,
     disabled = false,
     className = '',
-    // Asegúrate que la ruta base sea correcta desde la raíz de tu servidor web
-    // Si las imágenes están en la carpeta 'public', la ruta probablemente sea así:
     imageBasePath = '/cartas/mazoOriginal',
 }) => {
-    const esClickeable = onClick && !disabled && !bocaAbajo && carta;
-    //const esClickeable = true;
+    // Estado para manejar errores de carga de imagen
+    const [imageExtension, setImageExtension] = useState<string>('.jpg');
+    const [isImageError, setIsImageError] = useState<boolean>(false);
+    
+    // Reiniciar estado de error cuando cambia la carta o la ruta base
+    useEffect(() => {
+        setIsImageError(false);
+        setImageExtension('.jpg'); // Intentar primero con jpg
+    }, [carta, imageBasePath]);
 
+    const esClickeable = onClick && !disabled && !bocaAbajo && carta;
 
     const handleClick = () => {
         if (esClickeable) {
@@ -49,13 +53,33 @@ const Card: React.FC<CardProps> = ({
         }
     };
 
+    // Función para manejar errores de carga de imagen
+    const handleImageError = () => {
+        if (imageExtension === '.jpg') {
+            // Si falla .jpg, intentar con .png
+            setImageExtension('.png');
+        } else {
+            // Si ambos fallan, marcar como error definitivo
+            setIsImageError(true);
+        }
+    };
+
     // Determinar el nombre del archivo de imagen
-    const imageFilename = (bocaAbajo || !carta)
-        ? 'reverse.png' // Nombre exacto del archivo del reverso
-        : getNaipeImageFilename(carta); // Obtener nombre de archivo específico
+    let imageFileName: string;
+    if (bocaAbajo || !carta) {
+        // Para el dorso, intenta ambas extensiones
+        imageFileName = `reverse${imageExtension}`;
+    } else {
+        // Para carta normal
+        const baseFileName = getNaipeImageFilename(carta);
+        imageFileName = `${baseFileName}${imageExtension}`;
+    }
 
-    const imageSrc = `${imageBasePath}/${imageFilename}`;
-
+    const imageSrc = `${imageBasePath}/${imageFileName}`;
+    
+    // Imagen de respaldo (fallback) si ambas extensiones fallan
+    const fallbackImageSrc = '/cartas/mazoOriginal/reverse.png';
+    
     const altText = (bocaAbajo || !carta) ? 'Carta' : carta.getNombre();
 
     const baseClasses = 'w-36 h-auto md:w-24 lg:w-32 rounded shadow-md transition-all duration-200 ease-in-out border border-black';
@@ -66,18 +90,18 @@ const Card: React.FC<CardProps> = ({
         <div
             className={`${baseClasses} ${clickableClasses} ${disabledClasses} ${className}`}
             onClick={handleClick}
-            // Atributos para accesibilidad
             aria-disabled={!esClickeable}
             role={esClickeable ? 'button' : undefined}
-            title={esClickeable ? `Jugar ${altText}` : altText} // Tooltip
-            tabIndex={esClickeable ? 0 : undefined} // Permite focus con teclado si es clickeable
-            onKeyPress={esClickeable ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); } : undefined} // Permite activar con Enter/Espacio
+            title={esClickeable ? `Jugar ${altText}` : altText}
+            tabIndex={esClickeable ? 0 : undefined}
+            onKeyPress={esClickeable ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); } : undefined}
         >
             <img
-                src={imageSrc}
+                src={isImageError ? fallbackImageSrc : imageSrc}
                 alt={altText}
-                className="w-full h-full object-contain rounded block" // 'block' para evitar espacio extra debajo
-                loading="lazy" // Carga diferida para imágenes
+                className="w-full h-full object-contain rounded block"
+                loading="lazy"
+                onError={handleImageError}
             />
         </div>
     );

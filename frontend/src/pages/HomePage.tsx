@@ -61,7 +61,8 @@ const HomePage = () => {
     try {
       const response = await loginUser({ nombre_usuario: nombreUsuario, contraseña: password });
       localStorage.setItem('username', response.data.nombre_usuario); // Guarda el nombre de usuario
-      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('token', response.data.accessToken); // Guarda el access token
+      localStorage.setItem('refreshToken', response.data.refreshToken); // Guarda el refresh token
       setSuccessMessage('Inicio de sesión exitoso. Redirigiendo a tu dashboard...');
       setTimeout(() => navigate('/dashboard'), 3000); // Redirigir después de 3 segundos
     } catch (err) {
@@ -71,6 +72,8 @@ const HomePage = () => {
       setAuthing(false);
     }
   };
+
+  
 
   return (
     <div className="h-screen w-screen bg-[url('/Fondo.png')] bg-cover bg-center relative flex items-center justify-center">

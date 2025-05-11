@@ -1,4 +1,9 @@
 {
+    "compilerOptions": {
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      // Otras configuraciones...
+    },
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
