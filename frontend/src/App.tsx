@@ -24,6 +24,7 @@ function App() {
         <Route path="/" element={ <AuthRedirect><HomePage /></AuthRedirect>}/>
         <Route path="/register" element={<AuthRedirect><RegisterPage /></AuthRedirect>}/>
 
+
         {/* Rutas protegidas */}
         <Route path="/dashboard" element={<AuthRoute><DashboardPage /></AuthRoute>}/>
         <Route path="/stats/:userId"element={<AuthRoute><StatsPage /></AuthRoute>}/>
