@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaSignOutAlt, FaMedal, FaUser, FaChartLine, FaCamera } from 'react-icons/fa';
+import { IoPersonAddSharp } from "react-icons/io5";
+import { HiMiniTrophy } from "react-icons/hi2";
 import { IoIosArrowForward } from 'react-icons/io';
 import { motion, AnimatePresence } from 'framer-motion';
 import './HeaderDashboard.css';
@@ -26,53 +28,21 @@ const Header: React.FC = () => {
     elo: 0,
   });
 
-  const toggleDropdown = () => {
-    setIsDropdownVisible(!isDropdownVisible);
-  };
+  const toggleDropdown = useCallback(() => {
+    requestAnimationFrame(() => {
+      setIsDropdownVisible(prev => !prev);
+    });
+  }, []);
 
-  const closeDropdown = () => {
-    setIsDropdownVisible(false);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setIsDropdownVisible(false);
-    }
-  };
-
+  // Efecto para manejar el clic fuera del menú desplegable
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Obtener el ID del usuario
-        const idResponse = await api.get('/usuarios/id', { params: { username: loggedInUser } });
-        const userId = idResponse.data.id;
-        setUserId(userId);
-
-        // Obtener estadísticas del usuario
-        const statsResponse = await api.get(`/estadisticas/${userId}`);
-        setUserStats({
-          partidasJugadas: statsResponse.data.partidas_jugadas,
-          partidasGanadas: statsResponse.data.victorias,
-          derrotas: statsResponse.data.derrotas,
-          elo: statsResponse.data.elo,
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        requestAnimationFrame(() => {
+          setIsDropdownVisible(false);
         });
-        setUserElo(statsResponse.data.elo);
-
-        // Obtener monedas del usuario
-        const coinsResponse = await api.get(`/usuarios/${userId}/monedas`);
-        setUserCoins(coinsResponse.data.monedas);
-
-        // Obtener foto de perfil
-        const imageUrl = `${apiUrl}/usuarios/${userId}/foto?t=${new Date().getTime()}`; // Evitar caché
-        setUserImage(imageUrl);
-      } catch (err) {
-        console.error('Error al obtener datos del usuario:', err);
       }
     };
-
-    if (loggedInUser) {
-      fetchUserData();
-    }
 
     if (isDropdownVisible) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -82,7 +52,42 @@ const Header: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [loggedInUser, isDropdownVisible, apiUrl]);
+  }, [isDropdownVisible]); // Dependencia correcta
+
+  // Efecto para obtener los datos del usuario
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!loggedInUser) return; // Salir si no hay usuario logueado
+
+      try {
+        const idResponse = await api.get('/usuarios/id', { params: { username: loggedInUser } });
+        const currentUserId = idResponse.data.id;
+        setUserId(currentUserId);
+
+        const statsResponse = await api.get(`/estadisticas/${currentUserId}`);
+        setUserStats({
+          partidasJugadas: statsResponse.data.partidas_jugadas,
+          partidasGanadas: statsResponse.data.victorias,
+          derrotas: statsResponse.data.derrotas,
+          elo: statsResponse.data.elo,
+        });
+        setUserElo(statsResponse.data.elo);
+
+        const coinsResponse = await api.get(`/usuarios/${currentUserId}/monedas`);
+        setUserCoins(coinsResponse.data.monedas);
+
+        // Se mantiene el timestamp para evitar caché en la imagen de perfil
+        const imageUrl = `${apiUrl}/usuarios/${currentUserId}/foto?t=${new Date().getTime()}`;
+        setUserImage(imageUrl);
+
+      } catch (err) {
+        console.error('Error al obtener datos del usuario:', err);
+        // Considera mostrar un feedback al usuario aquí si falla la carga de datos
+      }
+    };
+
+    fetchUserData();
+  }, [loggedInUser, apiUrl]);
 
   const handleSignOut = () => {
     localStorage.clear();
@@ -103,8 +108,8 @@ const Header: React.FC = () => {
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      alert('Por favor selecciona una imagen');
+    if (!file || !userId) { // Asegurarse que userId esté disponible
+      alert('Por favor selecciona una imagen y asegúrate de que el usuario esté cargado.');
       return;
     }
 
@@ -112,66 +117,51 @@ const Header: React.FC = () => {
     formData.append('foto', file);
 
     try {
-      await api.post(`/usuarios/${loggedInUser}/foto-perfil`, formData);
+      // Usar userId en lugar de loggedInUser para la URL si el endpoint espera el ID
+      await api.post(`/usuarios/${userId}/foto-perfil`, formData);
       
-      // Actualizar la foto de perfil después de subirla
       const imageUrl = `${apiUrl}/usuarios/${userId}/foto?t=${new Date().getTime()}`;
       setUserImage(imageUrl);
       
-      // Reset del input file
       setFile(null);
       setSelectedFileName(null);
       
-      // Feedback visual
-      const toastElement = document.createElement('div');
-      toastElement.className = 'toast-notification success';
-      toastElement.textContent = 'Foto de perfil actualizada';
-      document.body.appendChild(toastElement);
-      
-      setTimeout(() => {
-        document.body.removeChild(toastElement);
-      }, 3000);
+      // Considera un sistema de notificaciones más robusto que crear elementos directamente en el body.
+      console.log('Foto de perfil actualizada');
       
     } catch (err) {
       console.error('Error al subir la foto de perfil:', err);
-      
-      // Feedback visual de error
-      const toastElement = document.createElement('div');
-      toastElement.className = 'toast-notification error';
-      toastElement.textContent = 'Error al actualizar la foto';
-      document.body.appendChild(toastElement);
-      
-      setTimeout(() => {
-        document.body.removeChild(toastElement);
-      }, 3000);
+      console.log('Error al actualizar la foto');
     }
   };
 
-  // Animaciones para el dropdown
+  // Variantes de animación para Framer Motion
   const dropdownVariants = {
-    hidden: { opacity: 0, x: 350 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 24 
-      } 
+    hidden: {
+      opacity: 0,
+      x: "100%",
+      pointerEvents: 'none' as const,
+      transition: {
+        type: "tween",
+        ease: "easeOut",
+        duration: 0.25 // Duración ajustada para la salida
+      }
     },
-    exit: { 
-      opacity: 0, 
-      x: 350,
-      transition: { 
-        ease: "easeInOut", 
-        duration: 0.3 
-      } 
-    }
+    visible: {
+      opacity: 1,
+      x: 0, 
+      pointerEvents: 'auto' as const,
+      transition: {
+        type: "spring", // Spring para una sensación más natural al entrar
+        stiffness: 300, // Ajusta estos valores según la sensación deseada
+        damping: 30,
+        mass: 0.7
+      }
+    },
   };
 
-  // Porcentaje de victorias
-  const winPercentage = userStats.partidasJugadas > 0 
-    ? Math.round((userStats.partidasGanadas / userStats.partidasJugadas) * 100) 
+  const winPercentage = userStats.partidasJugadas > 0
+    ? Math.round((userStats.partidasGanadas / userStats.partidasJugadas) * 100)
     : 0;
 
   return (
@@ -182,15 +172,28 @@ const Header: React.FC = () => {
       
       <div className="top-right-icons">
         <div className="profile-info">
+           <Link to="/friends" className="icon-text friends" title="Amigos">
+            <IoPersonAddSharp className="friends-icon"/>
+            <span>Friends</span> 
+          </Link>
+          <Link to="/ranking" className="icon-text ranking" title="Ranking">
+            <HiMiniTrophy className="trophy-icon" />
+            <span>Ranking</span> 
+          </Link>
           <div className="icon-text coins">
-            <FaCoins className="coin-icon" /> {userCoins}
+            <FaCoins className="coin-icon" title="Total coins"/> {userCoins}
           </div>
-          <div className="icon-text elo">
+          <div className="icon-text elo" title="Puntos ELO">
             <FaMedal className="medal-icon" /> {userElo}
           </div>
+          
           <div
             className="profile-icon-wrapper"
             onClick={toggleDropdown}
+            title="Profile"
+            role="button" // Mejoras de accesibilidad
+            tabIndex={0}  // Mejoras de accesibilidad
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleDropdown(); }} // Mejoras de accesibilidad
           >
             {userImage ? (
               <div
@@ -205,24 +208,22 @@ const Header: React.FC = () => {
               </div>
             )}
           </div>
-          <button className="bg-black" onClick={handleSignOut} title="Cerrar sesión">
-            <FaSignOutAlt />
+          <button className="sign-out-button" onClick={handleSignOut} title="Log out">
+            <FaSignOutAlt/>
           </button>
         </div>
       </div>
 
       <AnimatePresence>
         {isDropdownVisible && (
-          <motion.div 
+          <motion.div
             className="dropdown-menu"
             ref={dropdownRef}
             variants={dropdownVariants}
             initial="hidden"
             animate="visible"
-            exit="exit"
-          >
-           
-            
+            exit="hidden"
+          > 
             <div className="dropdown-menu-profile">
               <div className="profile-avatar-container">
                 {userImage ? (
@@ -237,11 +238,14 @@ const Header: React.FC = () => {
                     <FaUser />
                   </div>
                 )}
-                <button className="change-photo-button" onClick={handleUploadClick}>
-                  <FaCamera />
-                </button>
+                <div className="change-photo-button" onClick={handleUploadClick} title='Cambiar foto de perfil'>
+                  <FaCamera/>
+                </div>
               </div>
               <h2 className="dropdown-username">{loggedInUser}</h2>
+              <div className="dropdown-coins">
+                <FaCoins className="dropdown-coin-icon" /> {userCoins} monedas
+              </div>
               <div className="dropdown-elo">
                 <FaMedal className="dropdown-medal-icon" /> {userStats.elo} ELO
               </div>
@@ -272,7 +276,7 @@ const Header: React.FC = () => {
             <div className="dropdown-menu-section upload-section">
               <h3 className="dropdown-menu-section-title">Cambiar foto de perfil</h3>
               <div className="upload-description">
-                Selecciona una nueva imagen para tu perfil
+                Selecciona una nueva imagen para tu perfil y luego haz clic en "Subir foto".
               </div>
               
               <div className="upload-buttons">
@@ -285,14 +289,14 @@ const Header: React.FC = () => {
                   ref={fileInputRef}
                 />
                 
-                <button 
+                <button
                   className="custom-file-upload"
                   onClick={handleUploadClick}
                 >
                   Seleccionar archivo
                 </button>
                 
-                <button 
+                <button
                   className={`upload-button ${!file ? 'disabled' : ''}`}
                   onClick={handleUpload}
                   disabled={!file}
@@ -319,7 +323,7 @@ const Header: React.FC = () => {
               
               <button
                 className="profile-action-button stats-button"
-                onClick={() => navigate('/user/' + userId)}
+                onClick={() => userId && navigate('/user/' + userId)}
               >
                 <span>Ver Estadísticas Completas</span>
                 <FaChartLine />
