@@ -39,7 +39,6 @@ function App() {
         <Route path="/salas" element={<AuthRoute><SalasPage /></AuthRoute>} />
         <Route path="/skins" element={<AuthRoute><SkinPage /></AuthRoute>} />
         <Route path="/store" element={<AuthRoute><StorePage /></AuthRoute>} />
-        <Route path="/game-page/:roomId" element={<AuthRoute><GamePage /></AuthRoute>} />
       </Routes>
     </Router>
   );
