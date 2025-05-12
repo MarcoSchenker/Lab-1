@@ -1,15 +1,23 @@
-/* Contenedor del Header */
+/* Header */
 .header-component {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 30px;
+  padding: 32px 30px;
+  min-height: 100px;
+  background: linear-gradient(135deg, rgba(16, 20, 33, 0.97), rgba(24, 29, 49, 0.99));
+  color: #fff;
+  box-shadow:
+    0 2px 10px rgba(78, 84, 200, 0.75),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+  border-bottom: 2px solid rgba(78, 84, 200, 0.5);
+  backdrop-filter: blur(20px);
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   z-index: 1000;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 /* Enlace del Header */
@@ -27,10 +35,11 @@
 
 /* Logo */
 .logo {
-  height: 50px;
-  margin-right: 15px;
+  height: 100px;
+  margin-right: 20px;
   filter: drop-shadow(0 0 10px rgba(78, 84, 200, 0.7));
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  will-change: transform; /* Optimización para animaciones */
 }
 
 .logo:hover {
@@ -40,7 +49,7 @@
 
 /* Íconos en la parte derecha */
 .top-right-icons {
-  margin-right: 10px;
+  margin-right: 10px; /* Considera si este margen es necesario o si el gap en profile-info es suficiente */
   display: flex;
   align-items: center;
   gap: 20px;
@@ -50,32 +59,43 @@
 .profile-info {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 22px;
   background: linear-gradient(135deg, rgba(41, 98, 255, 0.2), rgba(65, 120, 255, 0.1));
-  padding: 8px 16px;
+  padding: 12px 22px;
   border-radius: 50px;
   border: 1px solid rgba(78, 84, 200, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 15px rgba(78, 84, 200, 0.2);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: 100px;
 }
 
 .profile-info:hover {
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3), 0 0 20px rgba(78, 84, 200, 0.4);
-  border: 1px solid rgba(78, 84, 200, 0.5);
+  border: 1px solid rgba(78, 84, 200, 0.5); /* Ligeramente más visible al hacer hover */
+}
+
+.profile-icon-wrapper { /* Añadido para el contenedor del icono de perfil clickeable */
+  cursor: pointer;
+  display: flex; /* Para asegurar que el contenido se alinee bien si es necesario */
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-icon {
-  width: 50px;
-  height: 50px;
+  width: 110px; /* Aumentado ligeramente para consistencia con el hover */
+  height: 110px; /* Aumentado ligeramente */
   border-radius: 50%;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  cursor: pointer;
   border: 2px solid rgba(78, 84, 200, 0.7);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; /* Añadido box-shadow a la transición */
   box-shadow: 0 0 15px rgba(78, 84, 200, 0.5);
-  position: relative;
+  position: relative; /* Necesario para el pseudo-elemento ::after */
+  will-change: transform, border-color; /* Optimización */
+  display: flex; /* Para centrar el icono de FaUser si no hay imagen */
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-icon:hover {
@@ -84,51 +104,58 @@
   box-shadow: 0 0 20px rgba(78, 84, 200, 0.8);
 }
 
+/* Estilo para el placeholder de FaUser cuando no hay imagen */
+.profile-icon-placeholder > svg {
+  font-size: 50px; /* Ajusta según sea necesario */
+  color: #fff;
+}
+
+
+/* Efecto de brillo en el borde del icono de perfil */
 .profile-icon::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: -2px; /* Ajustar para que el borde se alinee con el borde existente */
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
   border-radius: 50%;
   border: 2px solid transparent;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent) border-box;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+  background-origin: border-box;
+  background-clip: content-box, border-box; /* Esto puede ser complejo de lograr solo con CSS */
   -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  mask-composite: exclude; /* 'xor' es más estándar que 'exclude' */
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none; /* Para que no interfiera con el hover del icono principal */
 }
 
 .profile-icon:hover::after {
   opacity: 1;
 }
 
-/* Menú desplegable */
+/* Menú desplegable (Dropdown) */
 .dropdown-menu {
   position: fixed;
   top: 0;
   right: 0;
   height: 100vh;
-  width: 350px;
+  width: 450px; /* Considera usar max-width y un % para responsividad */
   background: linear-gradient(135deg, rgba(16, 20, 33, 0.97), rgba(24, 29, 49, 0.99));
   color: #fff;
   padding: 30px;
   z-index: 1200;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  transform: translateX(100%);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
   overflow-y: auto;
   backdrop-filter: blur(20px);
   border-left: 1px solid rgba(78, 84, 200, 0.4);
+  box-sizing: border-box; /* Buena práctica */
 }
 
-.dropdown-menu.open {
-  transform: translateX(0);
-}
-
-.dropdown-menu-header {
+.dropdown-menu-header { /* No veo esta clase en tu TSX, considera si es necesaria */
   display: flex;
   align-items: center;
   gap: 15px;
@@ -137,21 +164,61 @@
   border-bottom: 1px solid rgba(78, 84, 200, 0.3);
 }
 
-.dropdown-menu-profile {
+.profile-avatar-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
-  padding: 20px 0;
-  position: relative;
+  position: relative; /* Para el botón de cambiar foto */
+  margin-bottom: 20px;
 }
 
-.dropdown-menu-profile .profile-icon {
-  width: 90px;
-  height: 90px;
-  margin-bottom: 15px;
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 3px solid rgba(78, 84, 200, 0.7);
   box-shadow: 0 0 20px rgba(78, 84, 200, 0.6);
+  display: flex; /* Para centrar el icono de FaUser si no hay imagen */
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar-placeholder > svg { /* Estilo para el icono dentro del avatar placeholder */
+  font-size: 60px;
+  color: white;
+}
+
+.change-photo-button {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: rgba(41, 98, 255, 0.8);
+  color: white; /* El color del texto, pero el SVG usa 'fill' */
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease; /* Añadida transición de transform */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.change-photo-button:hover {
+  background-color: rgba(65, 120, 255, 1);
+  transform: scale(1.1); /* Efecto hover */
+}
+
+/* Estilo para el icono SVG dentro del botón de cambiar foto */
+.change-photo-button svg {
+  width: 18px; /* Tamaño explícito para el SVG */
+  height: 18px; /* Tamaño explícito para el SVG */
+  fill: #fff; /* Asegura que el SVG sea blanco */
 }
 
 .dropdown-username {
@@ -160,30 +227,33 @@
   color: white;
   margin: 10px 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
 }
 
-.dropdown-menu-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
+.dropdown-elo,
+.dropdown-coins { /* .dropdown-coins no se usa en el TSX, solo .dropdown-elo */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.3s ease;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-top: 5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.dropdown-menu-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  transform: rotate(90deg);
+.dropdown-medal-icon,
+.dropdown-coin-icon { /* .dropdown-coin-icon no se usa en el TSX */
+  margin-right: 8px; /* Incrementado un poco el margen */
+  font-size: 1.2em; /* Para que sea relativo al texto */
+}
+
+.dropdown-medal-icon {
+  color: #ffd700;
+}
+
+.dropdown-coin-icon { /* No usado */
+  color: #f39c12;
 }
 
 .dropdown-menu-section {
@@ -203,34 +273,10 @@
   font-weight: 600;
 }
 
-.user-info-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-info-item:last-child {
-  border-bottom: none;
-}
-
-.user-info-label {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.user-info-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
-  margin: 25px 0;
 }
 
 .stat-item {
@@ -263,19 +309,22 @@
   letter-spacing: 0.5px;
 }
 
-/* Texto de los íconos */
+/* Texto de los íconos en el header (Coins, ELO, Friends, Ranking) */
 .icon-text {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
+  gap: 10px; /* Espacio entre icono y texto */
+  font-size: 18px; /* Ligeramente reducido para mejor ajuste */
   font-weight: 600;
   color: #fff;
-  padding: 10px 15px;
+  padding: 8px 16px; /* Ajustado el padding */
   border-radius: 50px;
   background: linear-gradient(135deg, rgba(78, 84, 200, 0.2), rgba(41, 98, 255, 0.1));
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
   border: 1px solid rgba(78, 84, 200, 0.3);
+  min-height: 44px; /* Usar min-height */
+  text-decoration: none; /* Para los Links */
+  will-change: transform, background;
 }
 
 .icon-text:hover {
@@ -284,30 +333,71 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Íconos generales */
-.icon {
-  font-size: 22px;
+/* Íconos SVG dentro de .icon-text */
+.icon-text svg {
+  font-size: 24px; /* Tamaño base para los iconos SVG */
+  /* margin-right: 8px; No es necesario si usas gap en .icon-text */
+  vertical-align: middle; /* A veces ayuda con la alineación */
+}
+.coin-icon { color: #f39c12; } 
+.medal-icon { color: #ffd700; }
+.friends-icon { color: #82aaff; }
+.trophy-icon { color: #ffc107; }
+
+
+/* Estilos específicos para el ícono de amigos */
+.icon-text.friends { /* Aplicado a Link, que envuelve al icono */
+  background: linear-gradient(135deg, rgba(106, 57, 219, 0.3), rgba(41, 98, 255, 0.1));
   color: #fff;
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
-.icon-link {
+.icon-text.friends:hover {
+  background: linear-gradient(135deg, rgba(106, 57, 219, 0.4), rgba(41, 98, 255, 0.2));
+  color: #fff;
+}
+
+/* Estilos específicos para el ícono de ranking */
+.icon-text.ranking { 
+  background: linear-gradient(135deg, rgba(255, 184, 0, 0.3), rgba(255, 140, 0.1));
+  cursor: pointer;
+  color: #fff;
+}
+
+.icon-text.ranking:hover {
+  background: linear-gradient(135deg, rgba(255, 184, 0, 0.4), rgba(255, 140, 0.2));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: #fff;
+}
+
+/* Botón de cerrar sesión */
+.sign-out-button {
   background: linear-gradient(135deg, rgba(220, 53, 69, 0.3), rgba(200, 35, 51, 0.2));
-  padding: 10px;
+  color: #ffffff; /* Color de texto, si hubiera */
+  border: none;
   border-radius: 50%;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease; /* Añadido box-shadow */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  will-change: transform, background-color;
+  padding: 0; /* Para asegurar que el icono se centre bien */
 }
 
-.icon-link:hover {
-  background: linear-gradient(135deg, rgba(220, 53, 69, 0.4), rgba(200, 35, 51, 0.3));
-  transform: scale(1.1) rotate(10deg);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), 0 0 15px rgba(220, 53, 69, 0.4);
+/* Estilo para el icono SVG dentro del botón de cerrar sesión */
+.sign-out-button svg {
+  width: 20px; /* Tamaño explícito para el SVG */
+  height: 20px; /* Tamaño explícito para el SVG */
+  fill: #fff; /* Asegura que el SVG sea blanco */
+}
+.sign-out-button:hover {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.5), rgba(200, 35, 51, 0.4));
+  transform: scale(1.1);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada en hover */
 }
 
 /* Sección de carga de archivos */
@@ -316,7 +406,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 20px; /* Espacio entre elementos */
   width: 100%;
   background: rgba(255, 255, 255, 0.05);
   padding: 25px;
@@ -328,7 +418,7 @@
   font-size: 16px;
   font-weight: 600;
   color: rgba(78, 84, 200, 0.9);
-  margin-bottom: 5px;
+  margin-bottom: 5px; /* Reducido, ya que hay gap en el contenedor */
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -337,74 +427,57 @@
   font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 10px; /* Reducido */
 }
 
 .upload-buttons {
   display: flex;
   gap: 15px;
-  width: 100%;
+  width: 100%; /* Para que los botones ocupen el ancho disponible */
+}
+
+.custom-file-upload, /* Estilo base para botones de subida */
+.upload-button {
+  flex: 1; /* Para que ambos botones compartan el espacio */
+  padding: 14px 0; /* 0 para left/right ya que el texto se centra */
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease; /* Considera especificar propiedades */
+  text-align: center;
+  position: relative; /* Para el pseudo-elemento ::before */
+  overflow: hidden; /* Para el efecto del ::before */
 }
 
 .custom-file-upload {
-  flex: 1;
-  display: inline-block;
-  padding: 14px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
   background: linear-gradient(135deg, #4a9fff, #4065f6);
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
   box-shadow: 0 4px 12px rgba(74, 159, 255, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.custom-file-upload::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.custom-file-upload:hover {
-  background: linear-gradient(135deg, #60b0ff, #526eff);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 15px rgba(74, 159, 255, 0.4);
-}
-
-.custom-file-upload:hover::before {
-  left: 100%;
-}
-
-.custom-file-upload:active {
-  transform: translateY(1px);
 }
 
 .upload-button {
-  flex: 1;
-  padding: 14px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
   background: linear-gradient(135deg, #4caf50, #2e7d32);
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-  position: relative;
-  overflow: hidden;
 }
 
+.upload-button.disabled {
+  background: linear-gradient(135deg, #aaa, #888);
+  cursor: not-allowed;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.upload-button.disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.upload-button.disabled::before {
+  display: none; /* Ocultar efecto en disabled */
+}
+
+
+.custom-file-upload::before,
 .upload-button::before {
   content: '';
   position: absolute;
@@ -413,32 +486,43 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  transition: left 0.5s ease; /* 'ease' en lugar de solo 'left' */
 }
 
-.upload-button:hover {
-  background: linear-gradient(135deg, #5fd365, #39944c);
+.custom-file-upload:hover,
+.upload-button:not(.disabled):hover {
   transform: translateY(-3px);
+}
+
+.custom-file-upload:hover {
+  background: linear-gradient(135deg, #60b0ff, #526eff);
+  box-shadow: 0 8px 15px rgba(74, 159, 255, 0.4);
+}
+
+.upload-button:not(.disabled):hover {
+  background: linear-gradient(135deg, #5fd365, #39944c);
   box-shadow: 0 8px 15px rgba(76, 175, 80, 0.4);
 }
 
-.upload-button:hover::before {
+.custom-file-upload:hover::before,
+.upload-button:not(.disabled):hover::before {
   left: 100%;
 }
 
-.upload-button:active {
+.custom-file-upload:active,
+.upload-button:not(.disabled):active {
   transform: translateY(1px);
 }
 
 .file-selected {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
-  margin-top: 5px;
+  margin-top: 10px; /* Incrementado un poco */
   text-align: center;
   background: rgba(255, 255, 255, 0.1);
   padding: 8px 15px;
   border-radius: 20px;
-  max-width: 200px;
+  max-width: 90%; /* Para que no sea demasiado ancho si el nombre es largo */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -449,27 +533,41 @@
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin-top: 30px;
+  margin-top: 30px; /* Mantenido */
 }
 
-.modify-profile-button {
+/* Estilo base para botones de acción del perfil */
+.profile-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Para separar el texto del icono */
   width: 100%;
-  padding: 16px 0;
-  background: linear-gradient(135deg, #4a9fff, #4065f6);
+  padding: 16px 24px; /* Aumentado el padding vertical */
+  border-radius: 12px;
+  font-size: 16px; /* Reducido ligeramente */
+  font-weight: 600;
+  /* margin-top: 20px; /* Eliminado, ya que .actions-container tiene gap */
   color: white;
   border: none;
-  border-radius: 12px;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(74, 159, 255, 0.3);
-  position: relative;
-  overflow: hidden;
+  transition: all 0.3s ease; /* Especificar propiedades para mejor performance */
+  /* transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease; */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative; /* Para el pseudo-elemento ::before */
+  overflow: hidden; /* Para el efecto del ::before */
+  text-align: left; /* Alineación del texto a la izquierda */
 }
 
-.modify-profile-button::before {
+.profile-action-button > span { 
+  flex-grow: 1;
+}
+
+.profile-action-button svg {
+  font-size: 20px;
+  margin-left: 10px;
+}
+
+.profile-action-button::before {
   content: '';
   position: absolute;
   top: 0;
@@ -477,62 +575,49 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  transition: left 0.5s ease;
+}
+
+.profile-action-button:hover::before {
+  left: 100%;
+}
+
+.profile-action-button:active {
+  transform: translateY(1px);
+}
+
+/* Botón de modificar perfil */
+.modify-profile-button {
+  background: linear-gradient(135deg, #0b0715, #2f2059);
+  box-shadow: 0 4px 12px rgba(58, 63, 107, 0.3);
 }
 
 .modify-profile-button:hover {
-  background: linear-gradient(135deg, #60b0ff, #526eff);
+  background: linear-gradient(135deg, #19122b, #2f2059);
   transform: translateY(-3px);
-  box-shadow: 0 8px 15px rgba(74, 159, 255, 0.4);
+  box-shadow: 0 8px 15px rgba(58, 63, 107, 0.4);
 }
 
-.modify-profile-button:hover::before {
-  left: 100%;
+/* Botón de estadísticas */
+.stats-button {
+  background: linear-gradient(135deg, #0b0715, #2f2059);
+  box-shadow: 0 4px 12px rgba(58, 63, 107, 0.3);
 }
 
-.modify-profile-button:active {
-  transform: translateY(1px);
+.stats-button:hover {
+  background: linear-gradient(135deg, #19122b, #2f2059);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(58, 63, 107, 0.3);
 }
 
+/* Botón de eliminar cuenta */
 .delete-profile-button {
-  width: 100%;
-  padding: 16px 0;
-  background: linear-gradient(135deg, #ff5252, #d32f2f);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
-  position: relative;
-  overflow: hidden;
-  margin-top: 15px;
-}
-
-.delete-profile-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  background: linear-gradient(135deg, #5d141c, #961724);
+  box-shadow: 0 4px 12px rgba(122, 61, 68, 0.3);
 }
 
 .delete-profile-button:hover {
-  background: linear-gradient(135deg, #ff6868, #e33e3e);
+  background: linear-gradient(135deg, #971e2e, #b30e1e);
   transform: translateY(-3px);
-  box-shadow: 0 8px 15px rgba(255, 82, 82, 0.4);
-}
-
-.delete-profile-button:hover::before {
-  left: 100%;
-}
-
-.delete-profile-button:active {
-  transform: translateY(1px);
+  box-shadow: 0 8px 15px rgba(122, 61, 68, 0.4);
 }
