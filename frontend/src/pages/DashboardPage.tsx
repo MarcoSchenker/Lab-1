@@ -42,12 +42,6 @@ const DashboardPage: React.FC = () => {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Link to="/torneo" className="game-mode">
-            <div>Torneo</div>
-          </Link>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
           <Link to="/salas" className="game-mode">
             <div>Salas</div>
           </Link>
