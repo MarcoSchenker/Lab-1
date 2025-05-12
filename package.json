@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "mercadopago": "^2.5.0",
     "motion": "^12.10.5"
   }
 }

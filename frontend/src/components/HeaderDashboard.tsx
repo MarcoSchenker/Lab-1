@@ -108,33 +108,29 @@ const Header: React.FC = () => {
   };
 
   const handleUpload = async () => {
-    if (!file || !userId) { // Asegurarse que userId esté disponible
-      alert('Por favor selecciona una imagen y asegúrate de que el usuario esté cargado.');
-      return;
-    }
+  if (!file || !loggedInUser) {
+    alert('Por favor selecciona una imagen y asegúrate de que tu sesión esté activa.');
+    return;
+  }
+  const formData = new FormData();
+  formData.append('foto', file);
+  try {
+    await api.post(`/usuarios/${loggedInUser}/foto-perfil`, formData);
 
-    const formData = new FormData();
-    formData.append('foto', file);
+    const currentUserId = userId !== null ? userId : (await api.get('/usuarios/id', { params: { username: loggedInUser } })).data.id;
 
-    try {
-      // Usar userId en lugar de loggedInUser para la URL si el endpoint espera el ID
-      await api.post(`/usuarios/${userId}/foto-perfil`, formData);
-      
-      const imageUrl = `${apiUrl}/usuarios/${userId}/foto?t=${new Date().getTime()}`;
-      setUserImage(imageUrl);
-      
-      setFile(null);
-      setSelectedFileName(null);
-      
-      // Considera un sistema de notificaciones más robusto que crear elementos directamente en el body.
-      console.log('Foto de perfil actualizada');
-      
-    } catch (err) {
-      console.error('Error al subir la foto de perfil:', err);
-      console.log('Error al actualizar la foto');
-    }
-  };
+    const imageUrl = `${apiUrl}/usuarios/${currentUserId}/foto?t=${new Date().getTime()}`;
+    setUserImage(imageUrl);
 
+    setFile(null);
+    setSelectedFileName(null);
+
+    console.log('Foto de perfil actualizada con éxito');
+  } catch (err) {
+    console.error('Error al subir la foto de perfil:', err);
+    console.log('Error al actualizar la foto');
+  }
+};
   // Variantes de animación para Framer Motion
   const dropdownVariants = {
     hidden: {
@@ -297,9 +293,9 @@ const Header: React.FC = () => {
                 </button>
                 
                 <button
-                  className={`upload-button ${!file ? 'disabled' : ''}`}
+                  className={`upload-button ${!file || userId === null ? 'disabled' : ''}`}
                   onClick={handleUpload}
-                  disabled={!file}
+                  disabled={!file || userId === null}
                 >
                   Subir foto
                 </button>
