@@ -112,10 +112,8 @@ const Header: React.FC = () => {
     alert('Por favor selecciona una imagen y asegúrate de que tu sesión esté activa.');
     return;
   }
-
   const formData = new FormData();
   formData.append('foto', file);
-
   try {
     await api.post(`/usuarios/${loggedInUser}/foto-perfil`, formData);
 
@@ -133,7 +131,6 @@ const Header: React.FC = () => {
     console.log('Error al actualizar la foto');
   }
 };
-
   // Variantes de animación para Framer Motion
   const dropdownVariants = {
     hidden: {
