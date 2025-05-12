@@ -16,7 +16,7 @@ router.get('/salas/test', (req, res) => {
 });
 
 // Obtener todas las salas disponibles con filtros
-router.get('/salas', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     console.log('Obteniendo salas con filtro:', req.query.filtro);
     const { filtro = 'todas' } = req.query;
@@ -68,7 +68,7 @@ router.get('/salas', authenticateToken, async (req, res) => {
 });
 
 // Crear una nueva sala
-router.post('/salas/crear', authenticateToken, async (req, res) => {
+router.post('/crear', authenticateToken, async (req, res) => {
   let connection;
   try {
     console.log('Creando sala con datos:', req.body);
@@ -177,7 +177,7 @@ router.post('/salas/crear', authenticateToken, async (req, res) => {
 
 
 // Unirse a una sala pública
-router.post('/salas/unirse', authenticateToken, async (req, res) => {
+router.post('/unirse', authenticateToken, async (req, res) => {
   let connection;
   try {
     console.log('Intentando unirse a sala con datos:', req.body);
@@ -250,7 +250,7 @@ router.post('/salas/unirse', authenticateToken, async (req, res) => {
 });
 
 // Unirse a una sala privada mediante código de acceso
-router.post('/salas/unirse-privada', authenticateToken, async (req, res) => {
+router.post('/unirse-privada', authenticateToken, async (req, res) => {
   let connection;
   try {
     connection = await pool.getConnection();
@@ -337,7 +337,7 @@ router.post('/salas/unirse-privada', authenticateToken, async (req, res) => {
 });
 
 // Abandonar una sala
-router.post('/salas/abandonar', authenticateToken, async (req, res) => {
+router.post('/abandonar', authenticateToken, async (req, res) => {
   let connection;
   try {
     connection = await pool.getConnection();
