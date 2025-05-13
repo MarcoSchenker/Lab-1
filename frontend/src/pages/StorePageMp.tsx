@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../services/api';
-import './StorePage.css';
+import './StorePageMp.css';
 
 interface CoinPackage {
   id: number;
@@ -11,14 +11,13 @@ interface CoinPackage {
   description: string;
 }
 
-const StorePage: React.FC = () => {
+const StorePageMp: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [userCoins, setUserCoins] = useState<number>(0);
   const [processing, setProcessing] = useState<boolean>(false);
-  const [userId, setUserId] = useState<number | null>(null);
-
+  
   const navigate = useNavigate();
 
   // Paquetes de monedas disponibles
@@ -28,18 +27,24 @@ const StorePage: React.FC = () => {
     { id: 3, coins: 300, price: 4000, description: 'Paquete premium con 50% extra' },
   ];
 
-  // Animaciones
+  // Definimos las animaciones
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: { 
+        staggerChildren: 0.1
+      } 
     }
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5 }
+    }
   };
 
   const getToken = () => localStorage.getItem('token');
@@ -53,55 +58,48 @@ const StorePage: React.FC = () => {
     };
   };
 
-  // Obtener el ID del usuario logueado
-  const fetchUserId = async () => {
-    try {
-      const username = localStorage.getItem('username');
-      if (!username) return;
-      const res = await api.get(`/usuarios/id?username=${username}`);
-      setUserId(res.data.id);
-    } catch (err) {
-      setError('No se pudo obtener el usuario.');
-    }
-  };
-
-  // Obtener monedas del usuario
-  const fetchUserCoins = async (uid?: number) => {
+  const fetchUserData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const id = uid ?? userId;
-      if (!id) return;
-      const res = await api.get(`/usuarios/${id}/monedas`);
-      setUserCoins(res.data.monedas || 0);
+
+      // Obtener monedas del usuario
+      const userProfileResponse = await api.get('/api/usuarios/profile', axiosConfig());
+      setUserCoins(userProfileResponse.data.monedas || 0);
     } catch (err: any) {
-      setError('Error al cargar monedas.');
+      if (err.response?.status === 401) {
+        console.error('Token inválido o expirado. Redirigiendo al inicio de sesión.');
+        navigate('/');
+      } else {
+        console.error('Error al cargar datos:', err.message);
+        setError('Error al cargar datos. Verifica la conexión con el servidor.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Comprar monedas (agregar directamente)
   const handleBuyCoins = async (packageId: number) => {
     try {
       setProcessing(true);
-      setError(null);
-      setSuccessMessage(null);
-
       const selectedPackage = coinPackages.find(pkg => pkg.id === packageId);
-      if (!selectedPackage || !userId) {
-        setError('Paquete o usuario no encontrado');
-        return;
+      
+      if (!selectedPackage) {
+        throw new Error('Paquete no encontrado');
       }
 
-      // Llamar al endpoint para sumar monedas
-      await api.post(`/usuarios/${userId}/monedas`, { cantidad: selectedPackage.coins }, axiosConfig());
+      // Iniciar proceso de pago con Mercado Pago
+      const response = await api.post('/api/pagos/crear', {
+        packageId: selectedPackage.id,
+        price: selectedPackage.price,
+        coins: selectedPackage.coins
+      }, axiosConfig());
 
-      setSuccessMessage(`¡Se han agregado ${selectedPackage.coins} monedas a tu cuenta!`);
-      fetchUserCoins(userId);
-      setTimeout(() => setSuccessMessage(null), 4000);
+      // Redirigir al usuario a la página de pago de Mercado Pago
+      window.location.href = response.data.init_point;
     } catch (err: any) {
-      setError('Error al agregar monedas. Intenta nuevamente.');
+      console.error('Error al procesar la compra:', err.message);
+      setError('Error al procesar la compra. Intenta nuevamente.');
       setTimeout(() => setError(null), 3000);
     } finally {
       setProcessing(false);
@@ -109,12 +107,24 @@ const StorePage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUserId();
+    fetchUserData();
+    
+    // Verificar si hay un resultado de pago en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    
+    if (status === 'approved') {
+      setSuccessMessage('¡Compra exitosa! Tus monedas han sido acreditadas.');
+      fetchUserData(); // Actualizar el saldo de monedas
+      // Limpiar la URL para evitar recargar el estado
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } else if (status === 'rejected') {
+      setError('El pago fue rechazado. Intenta con otro método de pago.');
+      setTimeout(() => setError(null), 5000);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
-
-  useEffect(() => {
-    if (userId) fetchUserCoins(userId);
-  }, [userId]);
 
   return (
     <div className="store-page-container">
@@ -228,4 +238,4 @@ const StorePage: React.FC = () => {
   );
 };
 
-export default StorePage;
+export default StorePageMp;
