@@ -14,8 +14,6 @@ interface Stats {
   username: string;
 }
 
-
-
 const StatsPage: React.FC = () => {
   const { usuario_id } = useParams<{ usuario_id: string }>();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -26,33 +24,32 @@ const StatsPage: React.FC = () => {
   // Variantes para animaciones
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1, 
-      transition: { 
+    visible: {
+      opacity: 1,
+      transition: {
         staggerChildren: 0.2,
-        delayChildren: 0.3 
-      } 
+        delayChildren: 0.3
+      }
     }
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       transition: { duration: 0.5 }
     }
   };
 
   useEffect(() => {
-    
     const fetchData = async () => {
       setLoading(true);
       try {
         // Obtener estadísticas del usuario
         const statsResponse = await api.get(`/estadisticas/${usuario_id}`);
         setStats(statsResponse.data);
-        
+
         // Obtener imagen de perfil
         const imageUrl = `${apiUrl}/usuarios/${usuario_id}/foto?t=${new Date().getTime()}`;
         setUserImage(imageUrl);
@@ -62,7 +59,7 @@ const StatsPage: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [usuario_id, apiUrl]);
 
@@ -91,27 +88,27 @@ const StatsPage: React.FC = () => {
   }
 
   // Calcular la tasa de victoria
-  const winRate = stats.partidas_jugadas > 0 
-    ? Math.round((stats.victorias / stats.partidas_jugadas) * 100) 
+  const winRate = stats.partidas_jugadas > 0
+    ? Math.round((stats.victorias / stats.partidas_jugadas) * 100)
     : 0;
 
   return (
+    
     <div className="stats-container">
       <Header />
-      
-      <motion.div 
+      <motion.div
         className="stats-content"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div 
+        <motion.div
           className="profile-header"
           variants={itemVariants}
         >
           <div className="profile-photo-container">
-            <div 
-              className="profile-photo" 
+            <div
+              className="profile-photo"
               style={{
                 backgroundImage: userImage ? `url(${userImage})` : 'none'
               }}
@@ -120,7 +117,7 @@ const StatsPage: React.FC = () => {
             </div>
             <div className="glow-effect"></div>
           </div>
-          
+
           <h1 className="player-name">{stats.username}</h1>
           <div className="player-rank">
             <FaMedal className="rank-icon" />
@@ -128,7 +125,7 @@ const StatsPage: React.FC = () => {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="stats-cards"
           variants={containerVariants}
         >
@@ -173,15 +170,15 @@ const StatsPage: React.FC = () => {
           </motion.div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="advanced-stats"
           variants={itemVariants}
         >
           <div className="win-rate-container">
             <h3>Tasa de Victoria</h3>
             <div className="win-rate-bar-container">
-              <div 
-                className="win-rate-bar" 
+              <div
+                className="win-rate-bar"
                 style={{ width: `${winRate}%` }}
               >
                 <span className="win-rate-text">{winRate}%</span>
@@ -191,6 +188,7 @@ const StatsPage: React.FC = () => {
         </motion.div>
       </motion.div>
     </div>
+  
   );
 };
 
@@ -200,7 +198,7 @@ function getRankName(elo: number): string {
   if (elo >= 2000) return "Ancho de Bastos";
   if (elo >= 1700) return "7 de Espada";
   if (elo >= 1500) return "7 de Oro";
-  if (elo >= 1200) return "3 de Espada";
+  if (elo >= 1200) return "3 de Bastos";
   if (elo >= 1000) return "2 de Copa";
   if (elo >= 700) return "Ancho Falso";
   if (elo >= 500) return "12 de Oro";
