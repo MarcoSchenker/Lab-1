@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* justify-content: flex-start; */ /* No centres verticalmente */
   background: url('/FondoSkin.png') no-repeat center center;
   background-size: cover;
   color: #6d2b00;
@@ -32,7 +32,7 @@
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 30px;
+  padding: 0 12px; /* Solo padding lateral, arriba/cero */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -43,7 +43,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin-top: 0px;   /* Espacio desde arriba del todo */
+  margin-bottom: 60px;
 }
 
 .store-title {
@@ -53,6 +54,9 @@
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
   text-transform: uppercase;
   letter-spacing: 2px;
+  margin-bottom: 100px;
+  margin: 0; /* Elimina margen por defecto */
+  padding: 0;
 }
 
 .store-controls {
@@ -168,7 +172,8 @@
   gap: 30px;
   width: 100%;
   flex-wrap: wrap;
-  margin-bottom: 40px;
+  margin-top: 120px; /* <-- Esto baja las tarjetas, ajusta el valor a gusto */
+  margin-bottom: 50px;
 }
 
 .package-item {
