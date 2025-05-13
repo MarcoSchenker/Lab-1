@@ -6,19 +6,12 @@ const { authenticateToken } = require('./authMiddleware');
 
 // Middleware de diagnóstico para ver todas las solicitudes
 router.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
-});
-
-// Endpoint de prueba para verificar que las rutas funcionan
-router.get('/salas/test', (req, res) => {
-  res.json({ mensaje: 'Las rutas de salas están funcionando correctamente' });
 });
 
 // Obtener todas las salas disponibles con filtros
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    console.log('Obteniendo salas con filtro:', req.query.filtro);
     const { filtro = 'todas' } = req.query;
     let query = `
       SELECT 
@@ -28,27 +21,25 @@ router.get('/', authenticateToken, async (req, res) => {
         p.max_jugadores, 
         p.tiempo_expiracion,
         p.fecha_inicio,
+        p.creador,
         COUNT(jp.id) as jugadores_actuales
       FROM partidas p
       LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
       WHERE p.estado = 'en curso'
     `;
 
-    // Aplicar filtro si es necesario
     if (filtro === 'publicas') {
       query += ` AND p.tipo = 'publica'`;
     } else if (filtro === 'privadas') {
       query += ` AND p.tipo = 'privada'`;
     }
 
-    // Agrupar y ordenar
     query += `
       GROUP BY p.codigo_sala
       ORDER BY p.fecha_inicio DESC
     `;
 
     const [salas] = await pool.query(query);
-    console.log(`Se encontraron ${salas.length} salas`);
 
     // Eliminar salas expiradas
     const ahora = new Date();
@@ -62,7 +53,6 @@ router.get('/', authenticateToken, async (req, res) => {
 
     res.json(salasActualizadas);
   } catch (error) {
-    console.error('Error al obtener salas:', error);
     res.status(500).json({ error: 'Error al obtener salas', detalle: error.message });
   }
 });
@@ -71,30 +61,23 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/crear', authenticateToken, async (req, res) => {
   let connection;
   try {
-    console.log('Creando sala con datos:', req.body);
-    console.log('Usuario autenticado:', req.user);
-    
-    // Verificar que el body no esté vacío
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({ error: 'El cuerpo de la solicitud está vacío' });
     }
-    
+
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
     const { tipo, puntos_victoria, max_jugadores, codigo_acceso } = req.body;
     const usuarioId = req.user.id;
-    const codigoSala = uuidv4().substring(0, 8); // Generar código único para la sala
-    
-    // Configurar tiempo de expiración para salas privadas (30 minutos)
-    let tiempoExpiracion = null;
-    if (tipo === 'privada') {
-      const expiracion = new Date();
-      expiracion.setMinutes(expiracion.getMinutes() + 30);
-      tiempoExpiracion = expiracion;
-    }
+    const usuarioNombre = req.user.nombre_usuario;
+    const codigoSala = uuidv4().substring(0, 8);
 
-    // Validar los datos recibidos
+    // Tiempo de expiración para TODAS las salas (5 minutos)
+    const ahora = new Date();
+    const expiracion = new Date(ahora.getTime() + 3);
+    const tiempoExpiracion = expiracion.toISOString().slice(0, 19).replace('T', ' ');
+
     if (!tipo || (tipo !== 'publica' && tipo !== 'privada')) {
       await connection.rollback();
       return res.status(400).json({ error: 'Tipo de sala inválido' });
@@ -105,72 +88,38 @@ router.post('/crear', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'El código de acceso debe tener al menos 4 caracteres' });
     }
 
-    // Asegurar que puntos_victoria y max_jugadores sean números
     const puntosVictoria = parseInt(puntos_victoria) || 15;
     const maxJugadores = parseInt(max_jugadores) || 4;
-
-    // Agregar fecha de inicio actual
     const fechaInicio = new Date();
 
-    console.log('Insertando sala con código:', codigoSala);
-    
-    try {
-      // Insertar la nueva sala
-      await connection.query(
-        `INSERT INTO partidas 
-         (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado, fecha_inicio) 
-         VALUES (?, ?, ?, ?, ?, ?, 'en curso', ?)`,
-        [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion, fechaInicio]
-      );
-    } catch (dbError) {
-      console.error('Error al insertar partida:', dbError);
-      await connection.rollback();
-      return res.status(500).json({ error: 'Error al insertar partida en la base de datos', detalle: dbError.message });
-    }
+    await connection.query(
+      `INSERT INTO partidas 
+       (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado, fecha_inicio, creador) 
+       VALUES (?, ?, ?, ?, ?, ?, 'en curso', ?, ?)`,
+      [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion, fechaInicio, usuarioNombre]
+    );
 
-    console.log('Sala creada, registrando usuario como anfitrión');
-    
-    try {
-      // Registrar al usuario como jugador (anfitrión) de la sala
-      await connection.query(
-        `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, true)`,
-        [codigoSala, usuarioId]
-      );
-    } catch (dbError) {
-      console.error('Error al registrar usuario como anfitrión:', dbError);
-      await connection.rollback();
-      return res.status(500).json({ error: 'Error al registrar usuario como anfitrión', detalle: dbError.message });
-    }
+    await connection.query(
+      `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, true)`,
+      [codigoSala, usuarioId]
+    );
 
     await connection.commit();
-    console.log('Sala creada exitosamente');
-    
-    // Asegurarnos de enviar una respuesta JSON válida siempre con content-type correcto
+
     res.setHeader('Content-Type', 'application/json');
-    return res.status(201).json({ 
-      mensaje: 'Sala creada con éxito', 
-      codigo_sala: codigoSala 
+    return res.status(201).json({
+      mensaje: 'Sala creada con éxito',
+      codigo_sala: codigoSala
     });
   } catch (error) {
-    console.error('Error detallado al crear sala:', error);
     if (connection) {
-      try {
-        await connection.rollback();
-      } catch (rollbackError) {
-        console.error('Error en rollback:', rollbackError);
-      }
+      try { await connection.rollback(); } catch {}
     }
-    
-    // Asegurarnos de enviar una respuesta JSON válida incluso en caso de error
     res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({ error: 'Error al crear sala', detalle: error.message });
   } finally {
     if (connection) {
-      try {
-        connection.release();
-      } catch (releaseError) {
-        console.error('Error al liberar conexión:', releaseError);
-      }
+      try { connection.release(); } catch {}
     }
   }
 });

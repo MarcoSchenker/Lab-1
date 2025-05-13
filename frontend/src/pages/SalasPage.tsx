@@ -13,6 +13,7 @@ interface Sala {
   jugadores_actuales: number;
   fecha_inicio: string;
   tiempo_expiracion: string | null;
+  creador?: string;
 }
 
 const SalasPage: React.FC = () => {
@@ -47,18 +48,18 @@ const SalasPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/salas`, {
+      // Agregar el filtro como query param
+      const response = await fetch(`/api/salas?filtro=${filtro}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         },
       });
 
-      
       if (!response.ok) {
         throw new Error('Error al cargar las salas');
       }
-      
+
       const data = await response.json();
       setSalas(data);
     } catch (error) {
@@ -398,8 +399,11 @@ const SalasPage: React.FC = () => {
                   <div className="sala-puntos">
                     A {sala.puntos_victoria} puntos
                   </div>
-                  
-                  {sala.tipo === 'privada' && sala.tiempo_expiracion && (
+                  <div className="sala-creador">
+                    Creador: {sala.creador || 'Desconocido'}
+                  </div>
+                  {/* Elimina esta condición para que aparezca en todas las salas */}
+                  {sala.tiempo_expiracion && (
                     <div className="sala-expiracion">
                       Expira en: {formatearTiempoRestante(sala.tiempo_expiracion)}
                     </div>
@@ -464,7 +468,7 @@ const SalasPage: React.FC = () => {
                       Generar
                     </button>
                   </div>
-                  <small>Las salas privadas expirarán después de 30 minutos</small>
+                  <small>Las salas privadas expirarán después de 5 minutos</small>
                 </div>
               )}
               

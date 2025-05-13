@@ -128,7 +128,7 @@ const StorePage: React.FC = () => {
           <h1 className="store-title">Tienda de Monedas</h1>
           <div className="store-controls">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(-1)}
               className="volver-btn"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">

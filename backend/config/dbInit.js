@@ -323,6 +323,8 @@ await addColumnIfNotExists(connection, 'partidas', 'codigo_acceso', 'VARCHAR(10)
 await addColumnIfNotExists(connection, 'partidas', 'puntos_victoria', 'INT DEFAULT 15');
 await addColumnIfNotExists(connection, 'partidas', 'max_jugadores', 'INT DEFAULT 4');
 await addColumnIfNotExists(connection, 'partidas', 'tiempo_expiracion', 'TIMESTAMP NULL');
+await addColumnIfNotExists(connection, 'partidas', 'creador', 'VARCHAR(255) NULL');
+console.log('Tabla partidas actualizada con campo creador');
 console.log('Tabla partidas actualizada con nuevos campos');
 
 // Actualizar la tabla jugadores_partidas para incluir si el jugador es anfitrión
@@ -345,7 +347,7 @@ async function createIndexIfNotExists(connection, tableName, indexName, indexDef
   }
 }
 
-// Crear índices en la tabla `partidas`
+// Crear índices en la tabla `partidas` 
 await createIndexIfNotExists(connection, 'partidas', 'idx_partidas_estado', 'estado');
 await createIndexIfNotExists(connection, 'partidas', 'idx_partidas_tipo', 'tipo');
 console.log('Índice creado para búsqueda rápida por tipo de partida');
