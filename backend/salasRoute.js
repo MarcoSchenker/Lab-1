@@ -75,8 +75,17 @@ router.post('/crear', authenticateToken, async (req, res) => {
 
     // Tiempo de expiración para TODAS las salas (5 minutos)
     const ahora = new Date();
-    const expiracion = new Date(ahora.getTime() + 3);
-    const tiempoExpiracion = expiracion.toISOString().slice(0, 19).replace('T', ' ');
+    const expiracion = new Date(ahora.getTime() + (3 * 60 * 1000));
+    function toMySQLDatetime(date) {
+  const pad = (n) => n < 10 ? '0' + n : n;
+      return date.getFullYear() + '-' +
+        pad(date.getMonth() + 1) + '-' +
+        pad(date.getDate()) + ' ' +
+        pad(date.getHours()) + ':' +
+        pad(date.getMinutes()) + ':' +
+        pad(date.getSeconds());
+    }
+    const tiempoExpiracion = toMySQLDatetime(expiracion);
 
     if (!tipo || (tipo !== 'publica' && tipo !== 'privada')) {
       await connection.rollback();
