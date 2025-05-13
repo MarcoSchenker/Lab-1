@@ -327,8 +327,7 @@ const SalasPage: React.FC = () => {
 
   return (
     <div className="salas-container">
-      
-      
+      <Header />
       <div className="salas-content">
         <div className="salas-header">
           <h1>Salas Disponibles</h1>

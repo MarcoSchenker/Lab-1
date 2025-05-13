@@ -119,6 +119,8 @@ body {
   transform: translateY(-5px);
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4), 0 0 30px rgba(78, 84, 200, 0.5);
   background: linear-gradient(135deg, rgba(88, 95, 224, 0.9), rgba(37, 41, 88, 0.9));
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .game-mode:hover::before {
@@ -145,7 +147,6 @@ body {
   transform: translateY(-50%);
   width: 40px;
   height: 40px;
-  background: url('/CarritoDeCompras.png') no-repeat center center;
   background-size: contain;
   opacity: 0.9;
 }
