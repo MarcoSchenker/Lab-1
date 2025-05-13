@@ -21,6 +21,7 @@ const SalasPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showJoinPrivateModal, setShowJoinPrivateModal] = useState(false);
   const [codigoPrivado, setCodigoPrivado] = useState('');
+  const [salaSeleccionada, setSalaSeleccionada] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'publicas' | 'privadas'>('todas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +47,13 @@ const SalasPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/salas?filtro=${filtro}`, {
+      const response = await fetch(`/api/salas`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
       });
+
       
       if (!response.ok) {
         throw new Error('Error al cargar las salas');
@@ -127,17 +130,21 @@ const SalasPage: React.FC = () => {
       
       // Si la respuesta no es 2xx, lanzar error
       if (!response.ok) {
-        // Intenta extraer el mensaje de error de la respuesta JSON
-        try {
+        const contentType = response.headers.get("content-type");
+
+        let errorMessage = `Error del servidor: ${response.status}`;
+        if (contentType?.includes("application/json")) {
           const errorData = await response.json();
-          throw new Error(errorData.error || `Error del servidor: ${response.status}`);
-        } catch (jsonError) {
-          // Si no es JSON, obtener el texto
+          errorMessage = errorData.error || errorMessage;
+        } else {
           const errorText = await response.text();
-          console.error('Respuesta de error no-JSON:', errorText);
-          throw new Error(`Error del servidor: ${response.status} - No es una respuesta JSON válida`);
+          console.error("Respuesta de error no-JSON:", errorText);
+          errorMessage = errorText || errorMessage;
         }
+
+        throw new Error(errorMessage);
       }
+
       
       // Solo llegar aquí si la respuesta es exitosa (2xx)
       const contentType = response.headers.get('content-type');
@@ -162,10 +169,19 @@ const SalasPage: React.FC = () => {
     }
   };
 
-  // Función para unirse a una sala pública
-  const unirseASala = async (codigoSala: string) => {
+  // Función para unirse a una sala
+  const unirseASala = async (sala: Sala) => {
     try {
       setError(null);
+      
+      // Si es una sala privada, mostrar el modal para ingresar código
+      if (sala.tipo === 'privada') {
+        setSalaSeleccionada(sala.codigo_sala);
+        setShowJoinPrivateModal(true);
+        return;
+      }
+      
+      // Si es una sala pública, unirse directamente
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/salas/unirse`, {
         method: 'POST',
@@ -173,7 +189,7 @@ const SalasPage: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ codigo_sala: codigoSala }),
+        body: JSON.stringify({ codigo_sala: sala.codigo_sala }),
       });
 
       if (!response.ok) {
@@ -181,41 +197,76 @@ const SalasPage: React.FC = () => {
         throw new Error(errorData.error || 'Error al unirse a la sala');
       }
 
-      navigate(`/game-page/${codigoSala}`);
+      navigate(`/game-page/${sala.codigo_sala}`);
     } catch (error: any) {
       console.error('Error al unirse a la sala:', error);
       setError(error.message || 'Error al unirse a la sala');
     }
   };
 
-  // Función para unirse a una sala privada
+  // Función para unirse a una sala privada con código específico desde el modal
   const unirseASalaPrivada = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setError(null);
-      if (!codigoPrivado || codigoPrivado.length < 4) {
-        setError('Por favor, introduce un código de acceso válido');
-        return;
-      }
       
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/salas/unirse-privada`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ codigo_acceso: codigoPrivado }),
-      });
+      // Si estamos usando el modal para unirse a una sala específica
+      if (salaSeleccionada) {
+        if (!codigoPrivado || codigoPrivado.length < 4) {
+          setError('Por favor, introduce un código de acceso válido');
+          return;
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Código inválido o sala llena');
+        const token = localStorage.getItem('token');
+        // Unirse a una sala específica con código
+        const response = await fetch(`/api/salas/unirse`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            codigo_sala: salaSeleccionada,
+            codigo_acceso: codigoPrivado 
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Código inválido o sala llena');
+        }
+
+        setShowJoinPrivateModal(false);
+        setCodigoPrivado('');
+        setSalaSeleccionada(null);
+        navigate(`/game-page/${salaSeleccionada}`);
+      } else {
+        // Unirse a través de código sin conocer la sala
+        if (!codigoPrivado || codigoPrivado.length < 4) {
+          setError('Por favor, introduce un código de acceso válido');
+          return;
+        }
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/salas/unirse-privada`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ codigo_acceso: codigoPrivado }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Código inválido o sala llena');
+        }
+
+        const data = await response.json();
+        setShowJoinPrivateModal(false);
+        setCodigoPrivado('');
+        navigate(`/game-page/${data.codigo_sala}`);
       }
-
-      const data = await response.json();
-      setShowJoinPrivateModal(false);
-      navigate(`/game-page/${data.codigo_sala}`);
     } catch (error: any) {
       console.error('Error al unirse a la sala privada:', error);
       setError(error.message || 'Error al unirse a la sala privada');
@@ -264,9 +315,19 @@ const SalasPage: React.FC = () => {
     setFiltro(siguienteFiltro);
   };
 
+  const abrirModalUnirseConCodigo = () => {
+    setSalaSeleccionada(null); // No estamos usando una sala específica
+    setCodigoPrivado(''); // Limpiar código anterior
+    setShowJoinPrivateModal(true);
+  };
+
+  const handleVolverAtras = () => {
+    navigate(-1); // Volver a la página anterior
+  };
+
   return (
     <div className="salas-container">
-      <Header />
+      
       
       <div className="salas-content">
         <div className="salas-header">
@@ -299,7 +360,7 @@ const SalasPage: React.FC = () => {
         <div className="join-private-section">
           <button 
             className="join-private-button"
-            onClick={() => setShowJoinPrivateModal(true)}
+            onClick={abrirModalUnirseConCodigo}
           >
             <IoLockClosed /> Unirse con código
           </button>
@@ -348,10 +409,10 @@ const SalasPage: React.FC = () => {
                 
                 <button 
                   className="unirse-button"
-                  onClick={() => unirseASala(sala.codigo_sala)}
+                  onClick={() => unirseASala(sala)}
                   disabled={salaEstaLlena(sala)}
                 >
-                  {salaEstaLlena(sala) ? 'Sala Llena' : 'Unirse'}
+                  {salaEstaLlena(sala) ? 'Sala Llena' : sala.tipo === 'privada' ? 'Ingresar código' : 'Unirse'}
                 </button>
               </div>
             ))}
@@ -456,7 +517,7 @@ const SalasPage: React.FC = () => {
       {showJoinPrivateModal && (
         <div className="modal-backdrop" onClick={() => setShowJoinPrivateModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>Unirse a Sala Privada</h2>
+            <h2>{salaSeleccionada ? 'Ingresar Código de Acceso' : 'Unirse a Sala Privada'}</h2>
             <form onSubmit={unirseASalaPrivada}>
               <div className="form-group">
                 <label htmlFor="codigo_privado">Código de Acceso:</label>
@@ -468,17 +529,22 @@ const SalasPage: React.FC = () => {
                   placeholder="Ingresa el código de acceso"
                   maxLength={6}
                   required
+                  autoFocus
                 />
               </div>
               
               {error && <div className="form-error">{error}</div>}
               
               <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowJoinPrivateModal(false)}>
+                <button type="button" className="cancel-button" onClick={() => {
+                  setShowJoinPrivateModal(false);
+                  setSalaSeleccionada(null);
+                  setCodigoPrivado('');
+                }}>
                   Cancelar
                 </button>
                 <button type="submit" className="join-button">
-                  Unirse
+                  {salaSeleccionada ? 'Ingresar' : 'Unirse'}
                 </button>
               </div>
             </form>
