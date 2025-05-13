@@ -5,10 +5,9 @@
     width: 100%;
     position: relative;
     overflow: hidden;
-    padding-top: 17vh;
+    padding-top: 15vh;
     background: url('fondo.jpg') no-repeat center center fixed;
     background-size: cover;
-
 }
 
 .stats-container::before {
