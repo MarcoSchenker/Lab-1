@@ -32,8 +32,7 @@ const DashboardPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="dashboard-skinpage-title">Bienvenido</h1>
-          <p className="dashboard-skinpage-subtitle">¿Qué te gustaría hacer hoy?</p>
+      
         </motion.div>
         <motion.div 
           className="dashboard-skinpage-cards"

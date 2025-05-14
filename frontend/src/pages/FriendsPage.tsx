@@ -4,6 +4,7 @@ import { FaUserPlus } from "react-icons/fa";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import Header from "../components/Header";
 
 interface Friend {
   usuario_id: number;
@@ -45,6 +46,7 @@ const FriendsPage: React.FC = () => {
 
   return (
     <div className="FriendsPage">
+      <Header />
       <div className="modern-friends-header">
         <motion.button
           className="volver-btn"

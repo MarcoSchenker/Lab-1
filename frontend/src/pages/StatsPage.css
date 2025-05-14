@@ -5,7 +5,7 @@
     width: 100%;
     position: relative;
     overflow: hidden;
-    padding-top: 15vh;
+    padding-top: 8vh;
     background: url('/FondoStats.png') no-repeat center center fixed;
     background-size: cover;
 }
