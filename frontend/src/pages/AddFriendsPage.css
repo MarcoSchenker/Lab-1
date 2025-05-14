@@ -5,7 +5,7 @@
   justify-content: center;
   min-height: 100vh;
   width: 100vw;
-  background: url('/FondoAmigos.jpg') no-repeat center center fixed;
+  background: url('/fondoAmigos.png') no-repeat center center fixed;
   background-size: cover; /* Asegura que el fondo cubra toda la pantalla */
   background-attachment: fixed; /* Fija el fondo para que no se mueva al hacer scroll */
   position: relative;
@@ -216,4 +216,13 @@
   align-items: center;
   font-size: 0.75rem;
   font-weight: bold;
+}
+.add-friends-search-box {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 32px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }

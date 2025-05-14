@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import Header from '../components/HeaderDashboard';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { FaTrophy, FaGamepad, FaSkull, FaMedal } from 'react-icons/fa';
 import { motion } from 'framer-motion';
@@ -20,6 +19,7 @@ const StatsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [userImage, setUserImage] = useState<string | null>(null);
   const apiUrl = import.meta.env.VITE_API_URL;
+  const navigate = useNavigate();
 
   // Variantes para animaciones
   const containerVariants = {
@@ -66,7 +66,6 @@ const StatsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="stats-container loading">
-        <Header />
         <div className="loading-spinner">
           <div className="spinner"></div>
           <p>Cargando estadísticas...</p>
@@ -78,7 +77,6 @@ const StatsPage: React.FC = () => {
   if (!stats) {
     return (
       <div className="stats-container error">
-        <Header />
         <div className="error-message">
           <h2>No hay estadísticas disponibles</h2>
           <p>No pudimos encontrar información para este usuario.</p>
@@ -93,102 +91,123 @@ const StatsPage: React.FC = () => {
     : 0;
 
   return (
-    
     <div className="stats-container">
-      <Header />
-      <motion.div
-        className="stats-content"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.div
-          className="profile-header"
-          variants={itemVariants}
+      <div className="skin-page-content" style={{ marginTop: 0 }}>
+        <motion.div 
+          className="skin-header"
+          style={{ marginTop: 0, marginBottom: 10 }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="profile-photo-container">
-            <div
-              className="profile-photo"
-              style={{
-                backgroundImage: userImage ? `url(${userImage})` : 'none'
-              }}
+          <h1 className="stats-title">
+            Estadísticas de <span style={{ color: "#d9d5d4" }}>{stats.username}   </span>  
+          </h1>
+          <div className="skin-controls">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="volver-btn"
             >
-              {!userImage && <span className="photo-placeholder">{stats.username.charAt(0)}</span>}
-            </div>
-            <div className="glow-effect"></div>
-          </div>
-
-          <h1 className="player-name">{stats.username}</h1>
-          <div className="player-rank">
-            <FaMedal className="rank-icon" />
-            <span className="rank-text">Rango: {getRankName(stats.elo)}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+              Volver
+            </button>
           </div>
         </motion.div>
-
         <motion.div
-          className="stats-cards"
+          className="stats-content"
           variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          <motion.div className="stat-card" variants={itemVariants}>
-            <div className="stat-icon elo">
-              <FaMedal />
-            </div>
-            <div className="stat-info">
-              <h3 className="stat-value">{stats.elo}</h3>
-              <p className="stat-label">ELO</p>
-            </div>
-          </motion.div>
-
-          <motion.div className="stat-card" variants={itemVariants}>
-            <div className="stat-icon victories">
-              <FaTrophy />
-            </div>
-            <div className="stat-info">
-              <h3 className="stat-value">{stats.victorias}</h3>
-              <p className="stat-label">Victorias</p>
-            </div>
-          </motion.div>
-
-          <motion.div className="stat-card" variants={itemVariants}>
-            <div className="stat-icon defeats">
-              <FaSkull />
-            </div>
-            <div className="stat-info">
-              <h3 className="stat-value">{stats.derrotas}</h3>
-              <p className="stat-label">Derrotas</p>
-            </div>
-          </motion.div>
-
-          <motion.div className="stat-card" variants={itemVariants}>
-            <div className="stat-icon games">
-              <FaGamepad />
-            </div>
-            <div className="stat-info">
-              <h3 className="stat-value">{stats.partidas_jugadas}</h3>
-              <p className="stat-label">Partidas Jugadas</p>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="advanced-stats"
-          variants={itemVariants}
-        >
-          <div className="win-rate-container">
-            <h3>Tasa de Victoria</h3>
-            <div className="win-rate-bar-container">
+          <motion.div
+            className="profile-header"
+            variants={itemVariants}
+          >
+            <div className="profile-photo-container">
               <div
-                className="win-rate-bar"
-                style={{ width: `${winRate}%` }}
+                className="profile-photo"
+                style={{
+                  backgroundImage: userImage ? `url(${userImage})` : 'none'
+                }}
               >
-                <span className="win-rate-text">{winRate}%</span>
+                {!userImage && <span className="photo-placeholder">{stats.username.charAt(0)}</span>}
+              </div>
+              <div className="glow-effect"></div>
+            </div>
+
+            <h1 className="player-name">{stats.username}</h1>
+            <div className="player-rank">
+              <FaMedal className="rank-icon" />
+              <span className="rank-text">Rango: {getRankName(stats.elo)}</span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="stats-cards"
+            variants={containerVariants}
+          >
+            <motion.div className="stat-card" variants={itemVariants}>
+              <div className="stat-icon elo">
+                <FaMedal />
+              </div>
+              <div className="stat-info">
+                <h3 className="stat-value">{stats.elo}</h3>
+                <p className="stat-label">ELO</p>
+              </div>
+            </motion.div>
+
+            <motion.div className="stat-card" variants={itemVariants}>
+              <div className="stat-icon victories">
+                <FaTrophy />
+              </div>
+              <div className="stat-info">
+                <h3 className="stat-value">{stats.victorias}</h3>
+                <p className="stat-label">Victorias</p>
+              </div>
+            </motion.div>
+
+            <motion.div className="stat-card" variants={itemVariants}>
+              <div className="stat-icon defeats">
+                <FaSkull />
+              </div>
+              <div className="stat-info">
+                <h3 className="stat-value">{stats.derrotas}</h3>
+                <p className="stat-label">Derrotas</p>
+              </div>
+            </motion.div>
+
+            <motion.div className="stat-card" variants={itemVariants}>
+              <div className="stat-icon games">
+                <FaGamepad />
+              </div>
+              <div className="stat-info">
+                <h3 className="stat-value">{stats.partidas_jugadas}</h3>
+                <p className="stat-label">Partidas Jugadas</p>
+              </div>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            className="advanced-stats"
+            variants={itemVariants}
+          >
+            <div className="win-rate-container">
+              <h3>Tasa de Victoria</h3>
+              <div className="win-rate-bar-container">
+                <div
+                  className="win-rate-bar"
+                  style={{ width: `${winRate}%` }}
+                >
+                  <span className="win-rate-text">{winRate}%</span>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
-  
   );
 };
 
