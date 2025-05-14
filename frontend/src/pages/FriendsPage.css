@@ -5,7 +5,7 @@
   justify-content: center;
   min-height: 100vh;
   width: 100vw;
-  background: url('/FondoAmigos.jpg') no-repeat center center fixed;
+  background: url('/aa.png') no-repeat center center fixed;
   background-size: cover;
   background-attachment: fixed;
   position: relative;
@@ -176,3 +176,140 @@ align-items: center;
 font-size: 0.75rem;
 font-weight: bold;
 }
+
+/* Modern glass y cards */
+.FriendsContainer,
+.friendRequestContainer,
+.AddFriendsContainer {
+  background: rgba(40, 40, 60, 0.85) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(24,29,49,0.35), 0 1.5px 8px #4e54c855 !important;
+  border: 1.5px solid #4a90e2 !important;
+  color: #eaf6ff !important;
+}
+
+.friendsTitle, .title, .searchTitle {
+  color: #eaf6ff !important;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.friendItem, .friendRequestItem, .searchItem {
+  background: rgba(60, 70, 110, 0.85) !important;
+  border-radius: 10px !important;
+  margin-bottom: 14px !important;
+  color: #eaf6ff !important;
+  border: 1px solid #4a90e2 !important;
+  box-shadow: 0 2px 8px #4e54c822 !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.friendItem:hover, .friendRequestItem:hover, .searchItem:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 8px 24px #4e54c855;
+  background: rgba(74, 144, 226, 0.18) !important;
+}
+
+.friendName, .userName {
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.addFriendsIcon {
+  position: absolute;
+  top: 1px;
+  right: 45px;
+  font-size: 2.7rem;
+  color: #4a90e2;
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.2s;
+}
+.addFriendsIcon:hover {
+  transform: scale(1.15);
+  color: #6c5ce7;
+}
+
+.modern-friends-header {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 30px auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 18px;
+  position: relative;
+  z-index: 2;
+}
+
+.friendRequestsButton {
+  margin-top: 0;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, #4a90e2 0%, #357ABD 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s, box-shadow 0.3s;
+  position: relative;
+  box-shadow: 0 2px 8px #4e54c822;
+}
+.friendRequestsButton:hover {
+  background: linear-gradient(135deg, #357ABD 0%, #2A6099 100%);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #ff3b3b;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px #4e54c822;
+}
+
+/* Botón volver estilo SkinPage */
+.volver-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #4a90e2 0%, #357ABD 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  z-index: 2;
+}
+.volver-btn:hover {
+  transform: translateY(-3px) scale(1.04);
+  background: linear-gradient(135deg, #357ABD 0%, #2A6099 100%);
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .modern-friends-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .addFriendsIcon {
+    top: 20px;
+    right: 20px;
+  }
+}
+
