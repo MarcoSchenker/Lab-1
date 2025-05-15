@@ -225,6 +225,40 @@ function getActiveGame(codigoSala) {
     return activeGames[codigoSala];
 }
 
+/**
+ * Guarda el estado de la partida en la base de datos
+ * @param {string} codigo_sala - Código de la sala
+ * @param {Object} estadoPartida - Estado de la partida
+ */
+async function guardarEstadoPartida(codigo_sala, estadoPartida) {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        
+        // Asegurar que trucoPendientePorEnvidoPrimero se persista correctamente
+        const truco_pendiente_flag = estadoPartida.trucoPendientePorEnvidoPrimero ? 1 : 0;
+        
+        // Convertir objetos JSON a strings para guardar en la base de datos
+        const estado_envido = JSON.stringify(estadoPartida.envidoState);
+        const estado_truco = JSON.stringify(estadoPartida.trucoState);
+        
+        await connection.query(`
+            UPDATE partidas_estado 
+            SET estado_envido = ?,
+                estado_truco = ?,
+                truco_pendiente_por_envido_primero = ?, 
+                fecha_ultima_modificacion = CURRENT_TIMESTAMP
+            WHERE codigo_sala = ?
+        `, [estado_envido, estado_truco, truco_pendiente_flag, codigo_sala]);
+        
+    } catch (error) {
+        console.error('Error al guardar estado de la partida:', error);
+        throw error;
+    } finally {
+        if (connection) connection.release();
+    }
+}
+
 module.exports = {
     initializeGameLogic,
     crearNuevaPartida,
@@ -232,4 +266,5 @@ module.exports = {
     obtenerEstadoJuegoParaJugador,
     manejarDesconexionJugador,
     getActiveGame,
+    guardarEstadoPartida,
 };

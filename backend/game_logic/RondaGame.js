@@ -47,25 +47,88 @@ class RondaGame {
 
     manejarCanto(jugadorId, tipoCanto, detalleCanto) { // detalleCanto no se usa mucho aquí
         if (tipoCanto.includes('ENVIDO') || tipoCanto === 'FALTA_ENVIDO') {
+            // Verificar la regla "Envido Primero"
+            if (this.trucoHandler.estaPendienteDeRespuesta() && 
+                this.turnoHandler.manoActual === 1 && // Solo en primera mano
+                !this.envidoHandler.cantado) { // No se ha cantado envido previamente
+                
+                // Guardar el estado del truco para retomarlo después
+                this.trucoPendientePorEnvidoPrimero = true;
+                console.log("Invocando regla de Envido Primero: Se interrumpe el truco para resolver el envido");
+                
+                return this.envidoHandler.registrarCanto(jugadorId, tipoCanto);
+            }
             return this.envidoHandler.registrarCanto(jugadorId, tipoCanto);
         } else if (tipoCanto === 'TRUCO' || tipoCanto === 'RETRUCO' || tipoCanto === 'VALE_CUATRO') {
             return this.trucoHandler.registrarCanto(jugadorId, tipoCanto);
+        } else {
+            console.warn(`Canto desconocido: ${tipoCanto}`);
+            return false;
         }
-        console.warn(`Canto desconocido: ${tipoCanto}`);
-        return false;
     }
 
     manejarRespuestaCanto(jugadorId, respuesta, cantoRespondidoTipo, nuevoCantoSiMas) {
         // cantoRespondidoTipo y nuevoCantoSiMas pueden ser útiles para lógica más fina,
         // pero la respuesta misma (QUIERO, NO_QUIERO, o un nuevo canto) es clave.
         if (this.envidoHandler.estaPendienteDeRespuesta()) {
-            return this.envidoHandler.registrarRespuesta(jugadorId, respuesta);
+            const resultado = this.envidoHandler.registrarRespuesta(jugadorId, respuesta);
+            
+            // Si el envido ha sido completamente resuelto y hay un truco pendiente por Envido Primero
+            if (resultado && 
+                this.trucoPendientePorEnvidoPrimero && 
+                !this.envidoHandler.estaPendienteDeRespuesta() &&
+                !this.envidoHandler.estadoResolucion.includes('querido_pendiente_puntos')) {
+                
+                console.log("Envido resuelto, retomando el truco pendiente por Envido Primero");
+                this.trucoPendientePorEnvidoPrimero = false;
+                
+                // Notificar que ahora se debe responder al truco
+                this._actualizarEstadoParaNotificar('retomar_truco_pendiente', {
+                    trucoState: this.trucoHandler.getEstado()
+                });
+            }
+            return resultado;
         } else if (this.trucoHandler.estaPendienteDeRespuesta()) {
             return this.trucoHandler.registrarRespuesta(jugadorId, respuesta);
-        }
-        // Si es una declaración de puntos del envido
-        if (this.envidoHandler.estadoResolucion === 'querido_pendiente_puntos' && !isNaN(parseInt(respuesta))) {
-            return this.envidoHandler.registrarPuntosDeclarados(jugadorId, parseInt(respuesta));
+        } else if (this.envidoHandler.estadoResolucion === 'querido_pendiente_puntos') {
+            // Si es "Son Buenas" para el envido
+            if (respuesta === 'SON_BUENAS_ENVIDO') {
+                const resultado = this.envidoHandler.registrarSonBuenas(jugadorId);
+                
+                // Si el envido se ha resuelto completamente y hay truco pendiente por Envido Primero
+                if (resultado && 
+                    this.trucoPendientePorEnvidoPrimero && 
+                    this.envidoHandler.estadoResolucion === 'resuelto') {
+                    
+                    console.log("Envido resuelto con 'Son Buenas', retomando el truco pendiente");
+                    this.trucoPendientePorEnvidoPrimero = false;
+                    
+                    // Notificar que ahora se debe responder al truco
+                    this._actualizarEstadoParaNotificar('retomar_truco_pendiente', {
+                        trucoState: this.trucoHandler.getEstado()
+                    });
+                }
+                return resultado;
+            } 
+            // Si son puntos declarados para el envido
+            else if (!isNaN(parseInt(respuesta))) {
+                const resultado = this.envidoHandler.registrarPuntosDeclarados(jugadorId, parseInt(respuesta));
+                
+                // Similar a la lógica anterior, verificar si ahora debemos retomar el truco
+                if (resultado && 
+                    this.trucoPendientePorEnvidoPrimero && 
+                    this.envidoHandler.estadoResolucion === 'resuelto') {
+                    
+                    console.log("Puntos de envido declarados, retomando el truco pendiente por Envido Primero");
+                    this.trucoPendientePorEnvidoPrimero = false;
+                    
+                    // Notificar que ahora se debe responder al truco
+                    this._actualizarEstadoParaNotificar('retomar_truco_pendiente', {
+                        trucoState: this.trucoHandler.getEstado()
+                    });
+                }
+                return resultado;
+            }
         }
 
         console.warn(`No hay canto pendiente de respuesta para el jugador ${jugadorId} o respuesta desconocida ${respuesta}`);

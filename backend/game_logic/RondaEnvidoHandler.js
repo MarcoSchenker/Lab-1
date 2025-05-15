@@ -307,26 +307,28 @@ class RondaEnvidoHandler {
     }
 
     resolverDependenciaTrucoYRestaurarTurno() {
-        this.puedeCantarEnvidoGeneral = false; 
-        if(this.ronda.trucoPendientePorEnvidoPrimero) {
-            this.ronda.trucoPendientePorEnvidoPrimero = false;
-            const equipoQueDebeResponderTruco = this.ronda.trucoHandler.equipoDebeResponderTruco;
-            if(equipoQueDebeResponderTruco) {
-                 this.ronda.turnoHandler.setTurnoA(equipoQueDebeResponderTruco.jugadores[0].id);
-                 this.ronda.notificarEstado('turno_para_responder_truco_post_envido', { estadoGlobal: this.ronda.obtenerEstadoRonda() });
-                 return; 
+        // Restaurar turno al jugador que estaba en turno antes del envido, o al ganador de envido si no hay truco pendiente
+        if (this.ronda.trucoPendientePorEnvidoPrimero) {
+            console.log("Hay un truco pendiente por Envido Primero que debe ser resuelto");
+            // La notificación se maneja en RondaGame -> manejarRespuestaCanto
+        } else {
+            // Si no hay truco pendiente, restaurar el turno normal
+            if (this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId) {
+                this.ronda.turnoHandler.setTurnoA(this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId);
+                this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId = null;
+            } else {
+                // Si no hay referencia a un turno anterior, establecer al ganador del envido
+                // o al mano si no hay ganador determinado todavía
+                if (this.ganadorEnvidoEquipoId) {
+                    const jugadorGanadorPrimero = this.ronda.jugadoresEnOrden.find(
+                        j => j.equipoId === this.ganadorEnvidoEquipoId
+                    );
+                    if (jugadorGanadorPrimero) this.ronda.turnoHandler.setTurnoA(jugadorGanadorPrimero.id);
+                } else {
+                    const manoJugador = this.ronda.jugadorManoRonda;
+                    if (manoJugador) this.ronda.turnoHandler.setTurnoA(manoJugador.id);
+                }
             }
-        }
-        
-        this.ronda.notificarEstado('envido_finalizado_restaurar_turno_cartas', { estadoGlobal: this.ronda.obtenerEstadoRonda() });
-        const jugadorQueDebeJugarCarta = this.ronda.turnoHandler.determinarProximoJugadorParaCarta();
-        if (jugadorQueDebeJugarCarta) {
-            this.ronda.turnoHandler.setTurnoA(jugadorQueDebeJugarCarta.id);
-        } else if (this.ronda.turnoHandler.jugadorTurnoActual) { 
-             this.ronda.turnoHandler.setTurnoA(this.ronda.turnoHandler.jugadorTurnoActual.id);
-        }
-        else { 
-            this.ronda.turnoHandler.setTurnoA(this.ronda.jugadorManoRonda.id);
         }
     }
 
@@ -349,6 +351,82 @@ class RondaEnvidoHandler {
             puedeCantarEnvidoGeneral: this.puedeCantarEnvidoGeneral,
             equipoRespondedorCantoId: this.equipoRespondedorCanto ? this.equipoRespondedorCanto.id : null
         };
+    }
+    /**
+     * Registra cuando un jugador dice "Son Buenas" en respuesta al envido
+     * @param {string} jugadorId ID del jugador que dice Son Buenas
+     * @returns {boolean} true si se registró correctamente
+     */
+    registrarSonBuenas(jugadorId) {
+        // Validar que el jugador puede declarar puntos ahora
+        if (this.estadoResolucion !== 'querido_pendiente_puntos') {
+            this.ronda.notificarEstado('error_accion_juego', {
+                jugadorId,
+                mensaje: 'No es momento de decir "Son Buenas" para el envido.'
+            });
+            return false;
+        }
+
+        // Verificar que sea el turno del jugador para declarar puntos
+        const jugadorDeclarante = this.ronda.jugadoresEnOrden.find(j => j.id === jugadorId);
+        if (!jugadorDeclarante || jugadorDeclarante.id !== this.jugadorTurnoDeclararPuntosId) {
+            this.ronda.notificarEstado('error_accion_juego', {
+                jugadorId,
+                mensaje: 'No es tu turno para decir "Son Buenas".'
+            });
+            return false;
+        }
+
+        // Solo el segundo equipo en declarar puede decir "Son Buenas"
+        if (!this.maxPuntosDeclaradosInfo.equipoId || this.maxPuntosDeclaradosInfo.equipoId === jugadorDeclarante.equipoId) {
+            this.ronda.notificarEstado('error_accion_juego', {
+                jugadorId,
+                mensaje: 'El primer equipo debe declarar sus puntos, no puede decir "Son Buenas".'
+            });
+            return false;
+        }
+
+        // El jugador acepta que tiene menos puntos, el otro equipo gana
+        this.ganadorEnvidoEquipoId = this.maxPuntosDeclaradosInfo.equipoId;
+        
+        // Marcar el envido como resuelto completamente
+        this.estadoResolucion = 'resuelto';
+        this.declaracionEnCurso = false;
+
+        // Calcular puntos
+        const ultimoCantoNormalizado = this.valorTipoCantoActual;
+        if (ultimoCantoNormalizado === 'FALTA_ENVIDO' || ultimoCantoNormalizado.includes('FALTA_ENVIDO')) {
+            this.puntosEnJuegoCalculados = this._calcularPuntosFaltaEnvido();
+        } else {
+            this.puntosEnJuegoCalculados = VALORES_CANTO_ENVIDO[ultimoCantoNormalizado].querido;
+        }
+        this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
+        
+        // Persistir la acción
+        this.ronda.persistirAccion({
+            tipo_accion: 'SON_BUENAS_ENVIDO',
+            usuario_id_accion: jugadorId,
+            detalle_accion: {
+                equipoGanador: this.ganadorEnvidoEquipoId,
+                puntos: this.puntosEnJuegoCalculados
+            }
+        });
+        
+        this.ronda._actualizarEstadoParaNotificar('envido_resuelto', {
+            jugadorId,
+            respuesta: 'SON_BUENAS_ENVIDO',
+            puntosGanador: this.maxPuntosDeclaradosInfo.puntos,
+            equipoGanadorId: this.ganadorEnvidoEquipoId,
+            puntosGanados: this.puntosEnJuegoCalculados,
+            dijoBuenasEquipoId: jugadorDeclarante.equipoId
+        });
+        
+        console.log(`Envido resuelto con "Son Buenas". Equipo ${this.ganadorEnvidoEquipoId} gana ${this.puntosEnJuegoCalculados} puntos.`);
+        
+        // Verificar si hay truco pendiente por "Envido Primero"
+        this.resolverDependenciaTrucoYRestaurarTurno();
+        
+        return true;
     }
 }
 

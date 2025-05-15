@@ -11,7 +11,7 @@ const salasRoutes = require('./salasRoute');
 const skinsRoutes = require('./skinRoutes'); 
 const gameRoutes = require('./gameRoutes');
 const paymentRoutes = require('./paymentRoutes');
-const { authenticateToken } = require('./authMiddleware');
+const { authenticateToken } = require('./middleware/authMiddleware');
 const gameLogicHandler = require('./game_logic/gameLogicHandler');
 
 // Inicializar Express
@@ -46,10 +46,49 @@ io.on('connection', (socket) => {
 
     socket.on('cliente_responder_canto', async (data) => {
         const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
-        // Extraer datos relevantes de 'data' para 'datosAccion'
+        const { respuesta, canto_respondido_tipo, nuevo_canto_si_mas, puntos_envido } = data;
+        
         if (codigo_sala && usuario_id) {
-            gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', data);
+            // Si es "Son Buenas" para el envido
+            if (respuesta === 'SON_BUENAS_ENVIDO') {
+                gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
+                    respuesta, 
+                    cantoRespondidoTipo: 'ENVIDO'
+                });
+            } 
+            // Si son puntos declarados para el envido
+            else if (!isNaN(parseInt(respuesta)) && respuesta > 0) {
+                gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
+                    respuesta: parseInt(respuesta), // Convertir a número
+                    cantoRespondidoTipo: 'ENVIDO',
+                    puntos: parseInt(respuesta)
+                });
+            }
+            // Si es una respuesta normal
+            else {
+                gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
+                    respuesta, 
+                    cantoRespondidoTipo: canto_respondido_tipo,
+                    nuevoCantoSiMas: nuevo_canto_si_mas 
+                });
+            }
         }
+    });
+
+    socket.on('cliente_son_buenas_envido', async (data) => {
+        const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
+        
+        if (codigo_sala && usuario_id) {
+            gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
+                respuesta: 'SON_BUENAS_ENVIDO', 
+                cantoRespondidoTipo: 'ENVIDO'
+            });
+        }
+    });
+
+    // También necesitamos asegurarnos de manejar el evento específico para "retomar_truco_pendiente"
+    socket.on('retomar_truco_pendiente', (data) => {
+        socket.emit('retomar_truco_pendiente', data);
     });
 
     socket.on('cliente_irse_al_mazo', async () => {

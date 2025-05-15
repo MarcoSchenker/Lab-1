@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('./config/db');
-const { authenticateToken } = require('./authMiddleware');
+const { authenticateToken } = require('./middleware/authMiddleware');
 const gameLogicHandler = require('../game_logic/gameLogicHandler');
 
 /**

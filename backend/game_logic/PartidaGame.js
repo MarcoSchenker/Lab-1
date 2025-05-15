@@ -255,7 +255,7 @@ class PartidaGame {
         // Construye el objeto de estado completo para enviar a los clientes.
         // Debe incluir información de la partida, equipos, jugadores (con cartas filtradas),
         // y el estado de la ronda actual.
-        return {
+        let estadoGlobal = {
             codigoSala: this.codigoSala,
             tipoPartida: this.tipoPartida,
             puntosObjetivo: this.puntosObjetivo,
@@ -281,7 +281,20 @@ class PartidaGame {
             estadoRondaActual: this.rondaActual ? this.rondaActual.obtenerEstadoRonda() : null,
             historialRondas: this.historialRondas,
             // Información adicional que el cliente necesite
+            
+            // Estado de la ronda actual
+            rondaActual: {
+                numeroRonda: this.numeroRondaActual,
+                jugadorManoId: this.rondaActual ? this.rondaActual.jugadorManoRonda.id : null,
+                ganadorRondaEquipoId: this.rondaActual ? this.rondaActual.ganadorRondaEquipoId : null,
+                turnoInfo: this.rondaActual ? this.rondaActual.turnoHandler.getEstado() : null,
+                envidoInfo: this.rondaActual ? this.rondaActual.envidoHandler.getEstado() : null,
+                trucoInfo: this.rondaActual ? this.rondaActual.trucoHandler.getEstado() : null,
+                trucoPendientePorEnvidoPrimero: this.rondaActual ? this.rondaActual.trucoPendientePorEnvidoPrimero : false
+            }
         };
+        
+        return estadoGlobal;
     }
     
     persistirEstadoPartida() {
@@ -293,12 +306,15 @@ class PartidaGame {
                 tipo_partida: this.tipoPartida,
                 puntos_objetivo: this.puntosObjetivo,
                 ronda_actual_numero: this.numeroRondaActual,
-                jugador_mano_ronda_id: this.rondaActual ? this.rondaActual.jugadorManoRonda.id : null, // Mano de la ronda actual
-                jugador_turno_id: this.rondaActual && this.rondaActual.jugadorTurnoActual ? this.rondaActual.jugadorTurnoActual.id : null,
-                // ... más campos de la tabla partidas_estado
-                // ... estado de equipos y jugadores (puntos, cartas encriptadas o referenciadas)
+                jugador_mano_ronda_id: this.rondaActual ? this.rondaActual.jugadorManoRonda.id : null,
+                jugador_turno_id: this.rondaActual && this.rondaActual.turnoHandler.jugadorTurnoActual ? 
+                                 this.rondaActual.turnoHandler.jugadorTurnoActual.id : null,
+                estado_envido: this.rondaActual ? JSON.stringify(this.rondaActual.envidoHandler.getEstado()) : null,
+                estado_truco: this.rondaActual ? JSON.stringify(this.rondaActual.trucoHandler.getEstado()) : null,
+                truco_pendiente_por_envido_primero: this.rondaActual ? this.rondaActual.trucoPendientePorEnvidoPrimero : false,
             };
-            // this.persistirPartida(this.idEnDB, estadoParaDB); // Necesitaríamos un ID de la partida en la DB
+            
+            this.persistirPartida(this.idEnDB, estadoParaDB);
         }
     }
 
