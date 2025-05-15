@@ -84,7 +84,7 @@ async function initializeDatabase() {
         orden_juego_ronda_actual JSON NULL,
         fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         fecha_ultima_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (codigo_sala) REFERENCES salas(codigo_sala) ON DELETE CASCADE,
+        FOREIGN KEY (codigo_sala) REFERENCES partidas(codigo_sala) ON DELETE CASCADE,
         FOREIGN KEY (jugador_turno_id) REFERENCES usuarios(id) ON DELETE SET NULL,
         FOREIGN KEY (jugador_mano_ronda_id) REFERENCES usuarios(id) ON DELETE SET NULL
       );

@@ -8,9 +8,9 @@ require('dotenv').config();
 const pool = require('./config/db');
 const { initializeDatabase } = require('./config/dbInit');
 const salasRoutes = require('./salasRoute');
-const skinsRoutes = require('./skinRoutes'); 
-const gameRoutes = require('./gameRoutes');
-const paymentRoutes = require('./paymentRoutes');
+const skinsRoutes = require('./routes/skinRoutes'); 
+const gameRoutes = require('./routes/gameRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const { authenticateToken } = require('./middleware/authMiddleware');
 const gameLogicHandler = require('./game_logic/gameLogicHandler');
 

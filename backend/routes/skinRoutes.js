@@ -1,8 +1,8 @@
 // Arreglando los endpoints de skins
 const express = require('express');
 const router = express.Router();
-const pool = require('./config/db');
-const { authenticateToken } = require('./middleware/authMiddleware');
+const pool = require('../config/db');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Endpoint para listar todas las skins disponibles
 router.get('/skins', async (req, res) => {

@@ -1,8 +1,8 @@
 // routes/paymentRoutes.js
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('./middleware/authMiddleware');
-const paymentController = require('./paymentController');
+const { authenticateToken } = require('../middleware/authMiddleware');
+const paymentController = require('../controllers/paymentController');
 
 // Inicializar tablas necesarias para pagos
 paymentController.setupPaymentTables();
