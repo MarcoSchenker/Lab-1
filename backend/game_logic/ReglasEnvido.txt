@@ -1,0 +1,58 @@
+IR AL MAZO: para este proyecto haremos que solo el jugador pie pueda irse al mazo (ya que sera el que unico que puede ver las cartas de todo su equipo)
+- Si el pie se va al mazo antes de que se cante truco entonces se le suma un punto al otro equipo.
+- En el 1v1 ambos jugadores son pie.
+- Si se acepto el truco, entonces el equipo no puede irse al mazo y el contrario tampoco (Esto lo implementamos para 
+evitar que si se acepta el truco y luego un equipo se va al mazo se cuenten mal los puntos, que se sume 1 en vez de 2 por ejemplo).
+REGLAS ESPECIFICAS ENVIDO:
+Estos solo pueden ser jugados en la primera mano, ya que de forma que sea en la 2da o 3ra no podrá cantarse.
+En caso del envido los jugadores con el derecho a cantarlo serán los pie de cada equipo (3v3 o 2v2), de lo 
+contrario este no será dado por alto a no ser que un pie lo cante. en el 1v1 cualquiera puede cantarlo.
+
+De presentarse el pie a rendir el envido, el primer jugador en decir su tanto es el "mano" de la ronda. El siguiente jugador en cantar es el 
+más cercano del equipo contrario que, en caso de no superarlo debe decir "me paso" dejar al siguiente 
+jugador de su equipo cantar su tanto; de poder superarlo, indica su puntaje y corresponde a sus rivales superarlo en orden. Eventualmente, el pie de alguno de los equipos 
+tendrá que cantar sus tantos y si no puede superarlo concluye en que «son buenas». De haber un empate 
+entre 2 jugadores de distintos equipos, el jugador mano será quien gane. El jugador que diga "son buenas" 
+sea quien sea mano o pie, cerró el juego.
+
+Por ejemplo, con cuatro jugadores en el siguiente orden y los siguientes tantos entre paréntesis: 
+Jugador1Mano(7), Jugador2(7), Jugador3(26), Jugador4(25). El jugador1 canta primero tener 7 puntos, 
+luego el Jugador2 responde me paso (ya que empata con el jugador mano), luego el Jugador4 canta 25 
+(canta antes que el Jugador3, quien juega con el Jugador1 y van ganando los puntos de este) y por 
+último el Jugador3 canta 26. Como no hay más jugadores del otro equipo para intentar ganarle a los 26
+ del Jugador3, ellos (el equipo de: Jugador3 y Jugador1) ganan los puntos del envido.
+
+Si un jugador tiene mas envido que el jugador previo, y su envido podría cambiar el resultado del envido,
+ este jugador se ve obligado a revelar su número de envido aunque no piense que vaya a ganar con este número.
+
+Al terminar la Ronda se muestran las cartas del jugador que gano el ENVIDO (solo las cartas del envido)
+Puntos
+Envido	2
+Real envido	3
+Envido, envido	4
+Envido, real envido	5
+Envido, envido, real envido	7
+Falta envido: Se suma la diferencia de puntos entre el maximo de puntos que tienen los dos equipos y a los puntos a los que se juegan
+
+Por única vez, un envido puede repetirse a continuación de otro envido.
+
+Si el envido se quiere, el ganador gana los puntos acumulados en la apuesta, excepto si se cantó «Falta Envido», en cuyo caso solo 
+gana la cantidad de puntos que le faltan al equipo que con más puntos para ganar, la falta envido la puede cantar cualquier jugador 
+de la mesa siempre y cuando no haya finalizado la primera vuelta.
+
+Si el envido no se quiere, y si en ningún momento se elevó la apuesta, el ganador gana un punto. En cambio, si en algún momento 
+se elevó la apuesta, el ganador gana los puntos acumulados de todas las apuestas, exceptuando la última.
+
+Puntos si se quiere	Puntos si no se quiere
+Envido	2	1
+Real envido	3	1
+Falta envido	*	1
+Envido, envido	4	2
+Envido, real envido	5	2
+Envido, falta envido	*	2
+Real envido, falta envido	*	3
+Envido, envido, real envido	7	4
+Envido, envido, falta envido	*	4
+Envido, real envido, falta envido	*	5
+Envido, envido, real envido, falta envido	*	7
+(*) En el falta envido los puntos se cuentan como la diferencia de lo que le falta al equipo que tiene mas puntos para llegar al limite. (15 o 30)

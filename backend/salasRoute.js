@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('./config/db');
 const { v4: uuidv4 } = require('uuid');
-const { authenticateToken } = require('./authMiddleware');
+const { authenticateToken } = require('./middleware/authMiddleware');
 
 // Middleware de diagnóstico para ver todas las solicitudes
 router.use((req, res, next) => {

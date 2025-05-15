@@ -54,10 +54,103 @@ async function initializeDatabase() {
         codigo_sala VARCHAR(50) PRIMARY KEY,
         fecha_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         fecha_fin TIMESTAMP NULL,
-        estado ENUM('en curso', 'finalizada') DEFAULT 'en curso'
+        puntos_victoria INT DEFAULT 15,
+        max_jugadores INT DEFAULT 2,
+        jugadores_actuales INT DEFAULT 0,
+        creador_id INT,
+        estado ENUM('esperando', 'en_juego', 'finalizada') DEFAULT 'esperando',
+        FOREIGN KEY (creador_id) REFERENCES usuarios(id) ON DELETE SET NULL
       )
     `);
     console.log('Tabla partidas verificada o creada');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS partidas_estado (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        codigo_sala VARCHAR(255) NOT NULL UNIQUE,
+        estado_partida ENUM('esperando_configuracion', 'en_curso', 'pausada', 'finalizada') DEFAULT 'esperando_configuracion',
+        tipo_partida ENUM('1v1', '2v2', '3v3') NOT NULL,
+        jugadores_configurados INT NOT NULL,
+        puntaje_objetivo INT DEFAULT 15,
+        ronda_actual_numero INT DEFAULT 1,
+        mano_actual_numero_en_ronda INT DEFAULT 1,
+        jugador_turno_id INT NULL,
+        jugador_mano_ronda_id INT NULL,
+        mazo_estado JSON NULL,
+        cartas_en_mesa_mano_actual JSON NULL,
+        estado_envido JSON NULL,
+        estado_truco JSON NULL,
+        truco_pendiente_por_envido_primero BOOLEAN DEFAULT FALSE,
+        orden_juego_ronda_actual JSON NULL,
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        fecha_ultima_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (codigo_sala) REFERENCES salas(codigo_sala) ON DELETE CASCADE,
+        FOREIGN KEY (jugador_turno_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+        FOREIGN KEY (jugador_mano_ronda_id) REFERENCES usuarios(id) ON DELETE SET NULL
+      );
+    `);
+    console.log('Tabla partidas_estado creada.');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS partidas_equipos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        partida_estado_id INT NOT NULL,
+        nombre_equipo VARCHAR(50),
+        puntos_partida INT DEFAULT 0,
+        FOREIGN KEY (partida_estado_id) REFERENCES partidas_estado(id) ON DELETE CASCADE
+      );
+    `);
+    console.log('Tabla partidas_equipos creada.');
+
+     await connection.query(`
+      CREATE TABLE IF NOT EXISTS partidas_jugadores (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        partida_estado_id INT NOT NULL,
+        usuario_id INT NOT NULL,
+        partida_equipo_id INT NOT NULL,
+        cartas_mano JSON NULL, -- Array de objetos Naipe
+        es_pie_equipo BOOLEAN DEFAULT FALSE,
+        orden_en_equipo INT DEFAULT 1, -- Para saber el orden dentro del equipo si es necesario
+        estado_conexion ENUM('conectado', 'desconectado') DEFAULT 'conectado',
+        UNIQUE KEY idx_partida_usuario (partida_estado_id, usuario_id), -- Un jugador solo puede estar una vez por partida
+        FOREIGN KEY (partida_estado_id) REFERENCES partidas_estado(id) ON DELETE CASCADE,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+        FOREIGN KEY (partida_equipo_id) REFERENCES partidas_equipos(id) ON DELETE CASCADE
+      );
+    `);
+    console.log('Tabla partidas_jugadores creada.');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS partidas_rondas_historial (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        partida_estado_id INT NOT NULL,
+        numero_ronda INT NOT NULL,
+        ganador_ronda_equipo_id INT NULL,
+        puntos_obtenidos_envido INT DEFAULT 0,
+        puntos_obtenidos_truco INT DEFAULT 0,
+        detalle_manos JSON NULL, -- [{ numero_mano, jugadas: [{usuario_id, naipe}], ganador_mano_equipo_id, fue_parda }]
+        fecha_finalizacion_ronda TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (partida_estado_id) REFERENCES partidas_estado(id) ON DELETE CASCADE,
+        FOREIGN KEY (ganador_ronda_equipo_id) REFERENCES partidas_equipos(id) ON DELETE SET NULL
+      );
+    `);
+    console.log('Tabla partidas_rondas_historial creada.');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS partidas_acciones_historial (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        partida_estado_id INT NOT NULL,
+        ronda_numero INT NOT NULL,
+        mano_numero_en_ronda INT NULL,
+        usuario_id_accion INT NOT NULL,
+        tipo_accion ENUM('JUGAR_CARTA', 'CANTO_ENVIDO', 'CANTO_TRUCO', 'RESPUESTA_CANTO', 'IRSE_AL_MAZO', 'DECLARAR_PUNTOS_ENVIDO', 'SON_BUENAS_ENVIDO') NOT NULL,
+        detalle_accion JSON NULL, 
+        timestamp_accion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (partida_estado_id) REFERENCES partidas_estado(id) ON DELETE CASCADE,
+        FOREIGN KEY (usuario_id_accion) REFERENCES usuarios(id) -- No ON DELETE CASCADE para mantener historial si se borra usuario
+      );
+    `);
+    console.log('Tabla partidas_acciones_historial creada.');
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS estadisticas (

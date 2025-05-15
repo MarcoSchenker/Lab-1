@@ -1,0 +1,150 @@
+Canto de TRUCO
+
+El canto de "Truco" puede ser realizado por cualquier jugador durante su turno de juego.
+El valor del canto aumenta los puntos en juego:
+
+Truco: vale 2 puntos
+Retruco: vale 3 puntos
+Vale cuatro: vale 4 puntos
+
+
+Respuestas posibles al canto de Truco:
+
+"Quiero": se acepta el envite y se juega por los puntos propuestos
+"No quiero": se rechaza y el cantante gana 1 punto (o los puntos del envite anterior)
+"Retruco": se aumenta la apuesta a 3 puntos
+"Vale cuatro" (en respuesta al retruco): se aumenta la apuesta a 4 puntos
+
+
+Un jugador solo puede cantar truco cuando es su turno de jugar una carta o después de que su oponente haya jugado una carta.
+Una vez cantado el truco
+
+Turnos de juego
+
+El turno inicial lo tiene la "mano" (el jugador a la derecha del que repartió).
+Los turnos siguen en sentido antihorario.
+El ganador de cada baza (o "mano") es quien tiene el derecho de jugar primero en la siguiente baza.
+Si hay empate en una baza, mantiene la mano quien la tenía inicialmente.
+Cada jugador debe jugar una carta en su turno, a menos que esté respondiendo a un canto.
+Un jugador no puede jugar fuera de su turno, excepto para cantar o responder a un canto.
+Si un jugador canta truco, el turno para responder pasa inmediatamente al oponente, interrumpiendo temporalmente el orden normal de juego.
+Después de resolver el canto (aceptando o rechazando), se retoma el orden normal de juego.
+En caso de empate en las tres bazas, gana quien fue mano en la primera baza.
+
+Ejemplos:  Aclaración detallada
+
+Jugar carta en turno: Cada jugador debe esperar su turno para jugar una carta. El orden sigue en sentido antihorario.
+Responder a un canto: Cuando un jugador canta "truco", cualquier jugador del equipo contrario puede responder al canto (aceptando, rechazando o subiendo), incluso si no es su turno para jugar carta.
+Cantar fuera de turno: Un jugador puede cantar "truco" en su turno o inmediatamente después de que un oponente haya jugado una carta, aunque no sea estrictamente su turno para jugar.
+Interrupción del juego: Cuando se canta "truco", el flujo normal de juego se detiene momentáneamente hasta que se resuelva el canto (con un "quiero", "no quiero" o una suba).
+
+Ejemplo en un juego 2v2
+Supongamos dos equipos:
+
+Equipo A: A1 y A2
+Equipo B: B1 y B2
+
+Orden de asientos: A1, B1, A2, B2 (sentido antihorario)
+Situación 1:
+
+A1 juega su carta primero (por ser mano)
+B1 es el siguiente en turno, pero antes de jugar canta "TRUCO"
+En este momento, cualquiera del Equipo A (A1 o A2) puede responder al canto, aunque no sea su turno
+Supongamos que A2 responde "QUIERO"
+Se retoma el juego normal: B1 juega su carta, luego A2 y finalmente B2
+
+Situación 2:
+
+A1 juega su carta
+B1 juega su carta
+A2 juega su carta
+B2, antes de jugar, canta "TRUCO"
+Ahora A1 o A2 pueden responder, aunque sea el turno de B2
+A1 decide responder "RETRUCO"
+B1 o B2 pueden responder a este retruco
+B2 responde "QUIERO"
+B2 finalmente juega su carta, completando la primera baza
+
+Ejemplo en un juego 3v3
+Equipos:
+
+Equipo A: A1, A2 y A3
+Equipo B: B1, B2 y B3
+
+Orden: A1, B1, A2, B2, A3, B3
+Situación:
+
+A1 juega su carta
+B1 juega su carta
+A2 juega su carta y luego canta "TRUCO" (puede cantar después de jugar su carta)
+Cualquiera del Equipo B (B1, B2 o B3) puede responder
+B3 (que aún no ha jugado) responde "RETRUCO"
+Cualquiera del Equipo A puede responder a esta suba
+A3 responde "VALE CUATRO"
+Cualquiera del Equipo B puede responder
+B2 responde "QUIERO"
+Se retoma el orden normal: B2 juega su carta, luego A3 y finalmente B3
+
+Puntos clave a recordar
+
+Sobre el canto de truco:
+
+Puede realizarlo cualquier jugador en su turno o inmediatamente después de jugar su carta
+Interrumpe temporalmente la secuencia normal de juego
+
+
+Sobre las respuestas:
+
+Cualquier miembro del equipo contrario puede responder al canto, independientemente de su posición en el turno
+El equipo puede decidir internamente quién responderá basándose en la estrategia
+
+
+Retomando el juego:
+
+Después de resolver el canto, se continúa con el orden normal desde donde se interrumpió
+El jugador que estaba en turno cuando se cantó truco es quien debe continuar jugando
+-------
+Extensión de la Situación 1 con recanto a Retruco
+Vamos a extender la Situación 1 del ejemplo 2v2, agregando un recanto a Retruco en la siguiente mano (baza):
+Equipos:
+
+Equipo A: A1 y A2
+Equipo B: B1 y B2
+
+Orden de asientos: A1, B1, A2, B2 (sentido antihorario)
+Situación 1 extendida:
+Primera baza:
+
+A1 juega su carta primero (por ser mano)
+B1 es el siguiente en turno, pero antes de jugar canta "TRUCO"
+A2 responde "QUIERO"
+Se retoma el juego normal: B1 juega su carta, luego A2 y finalmente B2
+Supongamos que el Equipo A gana esta primera baza con la carta de A1
+
+Segunda baza:
+
+Como el Equipo A ganó la primera baza, A1 tiene el derecho de iniciar la segunda baza
+A1 juega su carta
+B1 juega su carta
+A2, que ya ha aceptado el truco previamente, ahora decide recantar "RETRUCO" después de jugar su carta
+En este punto, cualquier miembro del Equipo B (B1 o B2) puede responder al recanto
+B2 responde "QUIERO"
+B2 juega su carta, completando la segunda baza
+
+Puntos importantes sobre el recanto:
+
+Un equipo que ha aceptado un canto de truco puede, en cualquier momento posterior durante la misma mano (mientras se está jugando por las tres bazas), aumentar la apuesta recontando "RETRUCO".
+El recanto siempre corresponde al equipo que no realizó el último canto. Es decir:
+
+Si el Equipo B cantó "TRUCO", luego el Equipo A puede cantar "RETRUCO"
+Si el Equipo A cantó "RETRUCO", luego el Equipo B puede cantar "VALE CUATRO"
+
+
+El recanto puede ocurrir en cualquier momento después de resolver el canto anterior, incluso en una baza diferente a aquella en la que se cantó el truco original.
+Al igual que con el canto inicial, cualquier miembro del equipo puede realizar el recanto cuando sea su turno o inmediatamente después de jugar su carta.
+Similarmente, cualquier miembro del equipo contrario puede responder al recanto, independientemente de su posición en el orden de juego.
+Si el Equipo B rechaza el "RETRUCO" con un "NO QUIERO", el Equipo A se llevará 2 puntos (el valor del TRUCO).
+Si el Equipo B acepta el "RETRUCO" con un "QUIERO", se jugarán las bazas restantes por 3 puntos.
+El Equipo B también podría responder "VALE CUATRO", elevando la apuesta a 4 puntos, ante lo cual el Equipo A tendría que decidir si acepta o no.
+
+Esta dinámica de recantos hace que cada mano sea potencialmente más valiosa y estratégica, ya que los equipos pueden decidir subir la apuesta en cualquier momento que consideren favorable, incluso después de ver cómo se desarrolla parte del juego.
