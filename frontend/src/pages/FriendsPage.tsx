@@ -4,7 +4,7 @@ import { FaUserPlus } from "react-icons/fa";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import Header from "../components/Header";
+import Header from "../components/HeaderDashboard";
 
 interface Friend {
   usuario_id: number;
