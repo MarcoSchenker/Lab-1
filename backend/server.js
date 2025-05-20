@@ -296,6 +296,24 @@ app.post('/usuario-anonimo', async (req, res) => {
     );
     
     const userId = result.insertId;
+
+    const fs = require('fs');
+    const path = require('path');
+    const defaultImagePath = path.join(__dirname, './public/foto_anonima.jpg');
+    let defaultImage;
+
+    try {
+      defaultImage = fs.readFileSync(defaultImagePath);
+    } catch (err) {
+      console.error('Error al leer foto_anonima.jpg:', err.message);
+      // Continuar sin imagen en caso de error
+    }
+
+    // Insertar la imagen por defecto en la tabla imagenes_perfil
+    if (defaultImage) {
+      await pool.query('INSERT INTO imagenes_perfil (usuario_id, imagen) VALUES (?, ?)', 
+        [userId, defaultImage]);
+    }
     
     // Generar token JWT
     const jwt = require('jsonwebtoken');

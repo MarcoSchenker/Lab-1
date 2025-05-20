@@ -172,7 +172,7 @@ const Header: React.FC = () => {
       
       <div className="top-right-icons">
         <div className="profile-info">
-          {!isAnonymous && (
+          {!isAnonymous ? (
             <>
               <Link to="/friends" className="icon-text friends" title="Amigos">
                 <IoPersonAddSharp className="friends-icon"/>
@@ -183,7 +183,18 @@ const Header: React.FC = () => {
                 <span>Ranking</span>
               </Link>
             </>
-          )}
+            ) : (
+              // Botón de registro para usuarios anónimos
+              <button 
+                onClick={handleSignOut} 
+                className="icon-text register-btn" 
+                title="Registrarse"
+              >
+                <FaUser className="register-icon"/>
+                <span>Registrarse</span>
+              </button>
+              )}
+          
           <div className="icon-text coins">
             <FaCoins className="coin-icon" title="Total coins"/> {userCoins}
           </div>
