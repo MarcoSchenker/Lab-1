@@ -616,3 +616,34 @@
   transform: translateY(-3px);
   box-shadow: 0 8px 15px rgba(122, 61, 68, 0.4);
 }
+
+.anonymous-badge {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background-color: rgba(255, 87, 51, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  z-index: 100;
+  animation: fadeInOut 3s linear infinite;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Cambiar estilo para usuarios anónimos */
+.profile-icon-wrapper[title="Usuario anónimo"] {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.profile-icon-wrapper[title="Usuario anónimo"]:hover {
+  transform: none;
+  box-shadow: none;
+}

@@ -1,5 +1,6 @@
 // Importar módulos
 const express = require('express');
+const crypto = require('crypto');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -267,6 +268,55 @@ app.get("/usuarios", async (req, res) => {
   }
 });
 
+app.post('/usuario-anonimo', async (req, res) => {
+  try {
+    // Lista de nombres para usuarios anónimos
+    const nombres = ['Fulanito', 'Pepito', 'ElKuka', 'DonPedro', 'Darin'];
+    const nombreAleatorio = nombres[Math.floor(Math.random() * nombres.length)];
+    
+    // Sufijo numérico aleatorio
+    const sufijo = Math.floor(10000 + Math.random() * 90000); // Número entre 10000 y 99999
+    
+    const nombre_usuario = `${nombreAleatorio}${sufijo}`;
+    
+    // Generar contraseña aleatoria segura
+    const contraseña = crypto.randomBytes(12).toString('hex');
+    
+    // Email provisional
+    const email = `${nombre_usuario.toLowerCase()}@anonimo.trucho`;
+    
+    // Hashear contraseña
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(contraseña, 10);
+    
+    // Insertar el usuario temporal en la base de datos
+    const [result] = await pool.query(
+      'INSERT INTO usuarios (nombre_usuario, email, contraseña, es_anonimo) VALUES (?, ?, ?, 1)',
+      [nombre_usuario, email, hashedPassword]
+    );
+    
+    const userId = result.insertId;
+    
+    // Generar token JWT
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { id: userId, nombre_usuario, es_anonimo: true },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' } // Duración de sesión
+    );
+    
+    res.json({
+      message: 'Usuario anónimo creado exitosamente',
+      accessToken: token,
+      nombre_usuario,
+      es_anonimo: true
+    });
+  } catch (err) {
+    console.error('Error al crear usuario anónimo:', err.message);
+    res.status(500).json({ error: 'Error al crear usuario anónimo' });
+  }
+});
+
 // Endpoint para obtener usuarios disponibles para agregar
 app.get('/usuarios-disponibles', async (req, res) => {
   const { nombre_usuario } = req.query;
@@ -284,7 +334,7 @@ app.get('/usuarios-disponibles', async (req, res) => {
       AND nombre_usuario NOT IN (
         SELECT u.nombre_usuario
         FROM amigos a
-        JOIN usuarios u ON (a.usuario_id = u.id OR a.amigo_id = u.id)
+        JOIN usuarios u ON (a.usuario_id = u.id OR a.amigo_id = u.id OR u.es_anonimo = 1)
         WHERE (a.usuario_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?) 
         OR a.amigo_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?))
         AND a.estado IN ('pendiente', 'aceptado')

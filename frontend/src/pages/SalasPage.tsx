@@ -26,6 +26,8 @@ const SalasPage: React.FC = () => {
   const [filtro, setFiltro] = useState<'todas' | 'publicas' | 'privadas'>('todas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+    const isAnonymous = localStorage.getItem('isAnonymous') === 'true';
   
   // Estado para nueva sala
   const [nuevaSala, setNuevaSala] = useState({
@@ -358,13 +360,15 @@ const SalasPage: React.FC = () => {
         </div>
         
         <div className="join-private-section">
-          <button 
-            className="join-private-button"
-            onClick={abrirModalUnirseConCodigo}
-          >
-            <IoLockClosed /> Unirse con código
-          </button>
-        </div>
+      {!isAnonymous && (
+        <button 
+          className="join-private-button"
+          onClick={abrirModalUnirseConCodigo}
+        >
+          <IoLockClosed /> Unirse con código
+        </button>
+      )}
+    </div>
 
         {error && (
           <div className="error-message">
@@ -429,22 +433,26 @@ const SalasPage: React.FC = () => {
 
       {/* Modal para crear sala */}
       {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>Crear Nueva Sala</h2>
-            <form onSubmit={crearSala}>
-              <div className="form-group">
-                <label htmlFor="tipo">Tipo de Sala:</label>
-                <select 
-                  id="tipo" 
-                  name="tipo" 
-                  value={nuevaSala.tipo}
-                  onChange={handleInputChange}
-                >
-                  <option value="publica">Pública</option>
-                  <option value="privada">Privada</option>
-                </select>
-              </div>
+      <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h2>Crear Nueva Sala</h2>
+          <form onSubmit={crearSala}>
+            <div className="form-group">
+              <label htmlFor="tipo">Tipo de Sala:</label>
+              <select 
+                id="tipo" 
+                name="tipo" 
+                value={nuevaSala.tipo}
+                onChange={handleInputChange}
+                disabled={isAnonymous} // Deshabilitar si es anónimo
+              >
+                <option value="publica">Pública</option>
+                <option value="privada" disabled={isAnonymous}>Privada {isAnonymous && '(solo usuarios registrados)'}</option>
+              </select>
+              {isAnonymous && (
+                <small className="text-warning">Los usuarios anónimos solo pueden crear salas públicas</small>
+              )}
+            </div>
               
               {nuevaSala.tipo === 'privada' && (
                 <div className="form-group">

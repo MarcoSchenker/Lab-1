@@ -27,12 +27,16 @@ const Header: React.FC = () => {
     derrotas: 0,
     elo: 0,
   });
+  const isAnonymous = localStorage.getItem('isAnonymous') === 'true';
 
   const toggleDropdown = useCallback(() => {
+    // No mostrar dropdown para usuarios anónimos
+    if (isAnonymous) return;
+    
     requestAnimationFrame(() => {
       setIsDropdownVisible(prev => !prev);
     });
-  }, []);
+  }, [isAnonymous]);
 
   // Efecto para manejar el clic fuera del menú desplegable
   useEffect(() => {
@@ -168,14 +172,18 @@ const Header: React.FC = () => {
       
       <div className="top-right-icons">
         <div className="profile-info">
-           <Link to="/friends" className="icon-text friends" title="Amigos">
-            <IoPersonAddSharp className="friends-icon"/>
-            <span>Friends</span> 
-          </Link>
-          <Link to="/ranking" className="icon-text ranking" title="Ranking">
-            <HiMiniTrophy className="trophy-icon" />
-            <span>Ranking</span> 
-          </Link>
+          {!isAnonymous && (
+            <>
+              <Link to="/friends" className="icon-text friends" title="Amigos">
+                <IoPersonAddSharp className="friends-icon"/>
+                <span>Friends</span>
+              </Link>
+              <Link to="/ranking" className="icon-text ranking" title="Ranking">
+                <HiMiniTrophy className="trophy-icon" />
+                <span>Ranking</span>
+              </Link>
+            </>
+          )}
           <div className="icon-text coins">
             <FaCoins className="coin-icon" title="Total coins"/> {userCoins}
           </div>
@@ -183,23 +191,20 @@ const Header: React.FC = () => {
             <FaMedal className="medal-icon" /> {userElo}
           </div>
           
-          <div
-            className="profile-icon-wrapper"
-            onClick={toggleDropdown}
-            title="Profile"
-            role="button" // Mejoras de accesibilidad
-            tabIndex={0}  // Mejoras de accesibilidad
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleDropdown(); }} // Mejoras de accesibilidad
-          >
+          <div className="profile-icon-wrapper" title={isAnonymous ? "Usuario anónimo" : "Perfil"}>
             {userImage ? (
               <div
                 className="profile-icon"
                 style={{
                   backgroundImage: `url(${userImage})`,
                 }}
+                onClick={toggleDropdown}
               />
             ) : (
-              <div className="profile-icon profile-icon-placeholder">
+              <div 
+                className="profile-icon profile-icon-placeholder"
+                onClick={toggleDropdown}
+              >
                 <FaUser />
               </div>
             )}
@@ -210,8 +215,15 @@ const Header: React.FC = () => {
         </div>
       </div>
 
+      {/* Mensaje para usuario anónimo */}
+      {isAnonymous && (
+        <div className="anonymous-badge">
+          Usuario temporal - Para guardar tu progreso, ¡regístrate!
+        </div>
+      )}
+
       <AnimatePresence>
-        {isDropdownVisible && (
+        {isDropdownVisible && !isAnonymous && (
           <motion.div
             className="dropdown-menu"
             ref={dropdownRef}
