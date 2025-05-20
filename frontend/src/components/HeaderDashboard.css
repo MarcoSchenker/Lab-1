@@ -620,12 +620,12 @@
 .anonymous-badge {
   position: absolute;
   top: 60px;
-  right: 20px;
+  right: 38%;
   background-color: rgba(255, 87, 51, 0.9);
   color: white;
   padding: 6px 12px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 1.1rem;
   z-index: 100;
   animation: fadeInOut 3s linear infinite;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
