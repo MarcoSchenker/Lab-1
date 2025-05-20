@@ -1,3 +1,4 @@
+import api from '../services/api';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
@@ -73,6 +74,29 @@ const HomePage = () => {
     }
   };
 
+  const handleAnonymousLogin = async () => {
+    try {
+      setAuthing(true);
+      setError('');
+      
+      // Usa tu servicio api en lugar de fetch directo
+      const response = await api.post('/usuario-anonimo');
+      
+      // Guardar datos en localStorage
+      localStorage.setItem('username', response.data.nombre_usuario);
+      localStorage.setItem('token', response.data.accessToken);
+      localStorage.setItem('isAnonymous', 'true');
+      
+      setSuccessMessage(`¡Bienvenido, ${response.data.nombre_usuario}! Iniciando como invitado...`);
+      setTimeout(() => navigate('/salas'), 1500);
+    } catch (err) {
+      console.error('Error al crear usuario anónimo:', err);
+      setError('No se pudo crear usuario temporal. Intente de nuevo más tarde.');
+    } finally {
+      setAuthing(false);
+    }
+  };
+
   
 
   return (
@@ -91,9 +115,13 @@ const HomePage = () => {
             <br />
             Acá los cracks juegan sin flor
           </p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg w-fit">
-            Jugá sin Registrarte
-          </button>
+          <button 
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg w-fit"
+          onClick={handleAnonymousLogin}
+          disabled={authing}
+        >
+          {authing ? 'Creando usuario...' : 'Jugá sin Registrarte'}
+        </button>
           <div className="mt-10 flex items-center gap-4">
             <img src="/videoLogo.png" alt="Video" className="w-10 h-10" />
             <a

@@ -445,6 +445,10 @@ await createIndexIfNotExists(connection, 'partidas', 'idx_partidas_estado', 'est
 await createIndexIfNotExists(connection, 'partidas', 'idx_partidas_tipo', 'tipo');
 console.log('Índice creado para búsqueda rápida por tipo de partida');
 
+await addColumnIfNotExists(connection, 'usuarios', 'es_anonimo', 'BOOLEAN DEFAULT FALSE');
+await addColumnIfNotExists(connection, 'usuarios', 'fecha_expiracion', 'TIMESTAMP NULL');
+console.log('Columnas para usuarios anónimos añadidas');
+
     console.log('Inicialización de la base de datos completada exitosamente');
   } catch (error) {
     console.error('Error al inicializar la base de datos:', error);
