@@ -98,6 +98,22 @@ const Header: React.FC = () => {
     navigate('/');
   };
 
+  const handleAnonymousSignOut = async () => {
+  if (isAnonymous && loggedInUser) {
+    try {
+      // Primero intenta eliminar el usuario anónimo
+      await api.delete(`/usuario-anonimo/${loggedInUser}`);
+      console.log('Usuario anónimo eliminado correctamente');
+    } catch (err) {
+      console.error('Error al eliminar usuario anónimo:', err);
+      // Continuamos con el signout incluso si falla la eliminación
+    }
+  }
+  // En cualquier caso, hacemos el signout normal
+  localStorage.clear();
+  navigate('/register');
+};
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -186,7 +202,7 @@ const Header: React.FC = () => {
             ) : (
               // Botón de registro para usuarios anónimos
               <button 
-                onClick={handleSignOut} 
+                onClick={handleAnonymousSignOut} 
                 className="icon-text register-btn" 
                 title="Registrarse"
               >
