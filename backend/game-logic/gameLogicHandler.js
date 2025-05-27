@@ -8,10 +8,10 @@ Manejar Callbacks: Implementar las funciones de callback que PartidaGame necesit
  */
 const PartidaGame = require('./PartidaGame');
 const pool = require('../config/db'); // Acceso a la base de datos
-// const { getIoInstance } = require('../server'); // Necesitarás una forma de acceder a la instancia de io
+const { getIoInstance } = require('../server'); 
 
-let activeGames = {}; // Objeto para almacenar las partidas activas: { codigoSala: PartidaGame_instance }
-let io; // Para almacenar la instancia de Socket.IO
+let activeGames = {};
+let io;
 
 /**
  * Inicializa el manejador de lógica del juego, principalmente para obtener la instancia de io.
@@ -54,23 +54,50 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     let partidaDBId;
     try {
         const connection = await pool.getConnection();
+        
+        // 1. Insertar en partidas_estado (ya lo tienes)
         const [result] = await connection.execute(
             `INSERT INTO partidas_estado (codigo_sala, tipo_partida, jugadores_configurados, puntaje_objetivo, estado_partida) 
              VALUES (?, ?, ?, ?, ?)`,
             [codigoSala, tipoPartida, jugadoresInfo.length, puntosVictoria, 'en_juego']
         );
         partidaDBId = result.insertId;
-        console.log(`Partida registrada en DB con ID: ${partidaDBId}`);
-
-        // Aquí también deberías crear las entradas en partidas_equipos y partidas_jugadores
-        // Esta lógica puede ser compleja y depende de cómo se asignen los equipos.
-        // Por ahora, asumimos que PartidaGame se encarga de la lógica de equipos internamente
-        // y luego podríamos tener una función para sincronizar eso con la DB.
-
+        
+        // 2. CORREGIDO: Insertar equipos usando la estructura real de tu DB
+        const equiposData = crearEquiposSegunTipo(tipoPartida, jugadoresInfo);
+        
+        for (const equipo of equiposData) {
+            const [equipoResult] = await connection.execute(
+                `INSERT INTO partidas_equipos (partida_estado_id, nombre_equipo, puntos_partida) 
+                 VALUES (?, ?, ?)`,
+                [partidaDBId, equipo.nombre, 0]
+            );
+            
+            // Guardar el ID real generado por la DB
+            equipo.dbId = equipoResult.insertId;
+        }
+        
+        // 3. CORREGIDO: Insertar jugadores usando la estructura real de tu DB
+        for (const jugador of jugadoresInfo) {
+            const equipoData = equiposData.find(e => e.jugadores.includes(jugador.id));
+            
+            await connection.execute(
+                `INSERT INTO partidas_jugadores (partida_estado_id, usuario_id, partida_equipo_id, cartas_mano, es_pie_equipo) 
+                 VALUES (?, ?, ?, ?, ?)`,
+                [partidaDBId, jugador.id, equipoData.dbId, JSON.stringify([]), false]
+            );
+        }
+        
         connection.release();
+        console.log(`Partida registrada en DB con ID: ${partidaDBId}`);
+        console.log(`Equipos creados:`, equiposData.map(e => ({ id: e.dbId, nombre: e.nombre })));
+        
     } catch (error) {
-        console.error('Error al registrar la partida en la base de datos:', error);
-        return null;
+        console.error("Error al registrar la partida en la base de datos:", error);
+        
+        // OPCIÓN: Continuar sin persistir en DB por ahora para no bloquear el juego
+        console.log("Continuando sin persistir equipos/jugadores en DB...");
+        partidaDBId = Math.floor(Math.random() * 1000000); // ID temporal para que funcione
     }
 
     // Callbacks para PartidaGame
@@ -171,6 +198,29 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     return partida;
 }
 
+// Función auxiliar para crear equipos según el tipo
+function crearEquiposSegunTipo(tipoPartida, jugadoresInfo) {
+    switch(tipoPartida) {
+        case '1v1':
+            return [
+                { id: 1, nombre: 'Equipo 1', jugadores: [jugadoresInfo[0].id] },
+                { id: 2, nombre: 'Equipo 2', jugadores: [jugadoresInfo[1].id] }
+            ];
+        case '2v2':
+            return [
+                { id: 1, nombre: 'Equipo 1', jugadores: [jugadoresInfo[0].id, jugadoresInfo[2].id] },
+                { id: 2, nombre: 'Equipo 2', jugadores: [jugadoresInfo[1].id, jugadoresInfo[3].id] }
+            ];
+        case '3v3':
+            return [
+                { id: 1, nombre: 'Equipo 1', jugadores: [jugadoresInfo[0].id, jugadoresInfo[2].id, jugadoresInfo[4].id] },
+                { id: 2, nombre: 'Equipo 2', jugadores: [jugadoresInfo[1].id, jugadoresInfo[3].id, jugadoresInfo[5].id] }
+            ];
+        default:
+            throw new Error('Tipo de partida no soportado');
+    }
+}
+
 /**
  * Maneja una acción enviada por un jugador.
  * @param {string} codigoSala 
@@ -201,13 +251,32 @@ function manejarAccionJugador(codigoSala, jugadorId, tipoAccion, datosAccion) {
  * @returns {object | null} El estado del juego para el jugador o null si no se encuentra la partida.
  */
 function obtenerEstadoJuegoParaJugador(codigoSala, jugadorId) {
-    const partida = activeGames[codigoSala];
-    if (partida) {
-        // Marcar al jugador como reconectado y obtener el estado específico para él.
-        return partida.manejarReconexionJugador(jugadorId);
+  try {
+    console.log(`Obteniendo estado para jugador ${jugadorId} en sala ${codigoSala}`);
+    
+    // Verificar si existe la partida
+    if (!activeGames[codigoSala]) {
+      console.log(`No se encontró partida activa con código ${codigoSala}`);
+      return null;
     }
-    console.warn(`Solicitud de estado para sala ${codigoSala} no encontrada o partida no activa.`);
+    
+    // Obtener estado usando el método correcto
+    const partidaGame = activeGames[codigoSala];
+    const estadoCompleto = partidaGame.obtenerEstadoGlobalParaCliente(jugadorId);
+    
+    // Verificar si el jugador pertenece a esta partida
+    const jugadorExiste = estadoCompleto.jugadores.some(j => j.id == jugadorId);
+    if (!jugadorExiste) {
+      console.log(`El jugador ${jugadorId} no pertenece a la partida ${codigoSala}`);
+      return null;
+    }
+    
+    console.log(`Retornando estado válido para jugador ${jugadorId}`);
+    return estadoCompleto;
+  } catch (error) {
+    console.error(`Error al obtener estado para jugador ${jugadorId} en sala ${codigoSala}:`, error);
     return null;
+  }
 }
 
 /**

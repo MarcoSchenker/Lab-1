@@ -20,6 +20,15 @@ function setupGameHandlers(socket, io) {
     socket.datosUsuarioSala = { codigo_sala, usuario_id: socket.currentUserId };
     
     console.log(`Socket ${socket.id} (Usuario ${socket.currentUserId}) se unió a la sala de juego ${codigo_sala}`);
+
+    const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
+    if (estadoJuego) {
+      console.log(`Enviando estado inicial a usuario ${socket.currentUserId} en sala ${codigo_sala}`);
+      socket.emit('estado_juego_actualizado', estadoJuego);
+    } else {
+      console.log(`No se encontró partida activa para sala ${codigo_sala}`);
+      socket.emit('error_juego', { message: 'No se encontró partida activa para esta sala.' });
+    }
   });
   
   socket.on('cliente_jugar_carta', async (data) => {
@@ -104,16 +113,27 @@ function setupGameHandlers(socket, io) {
   });
   
   socket.on('cliente_solicitar_estado_juego', async () => {
-    const { codigo_sala, usuario_id } = socket.datosUsuarioSala || {};
-    if (!codigo_sala || !usuario_id) {
-      return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
-    }
-    
-    const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, usuario_id);
-    if (estadoJuego) {
-      socket.emit('estado_juego_actualizado', estadoJuego);
-    } else {
-      socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego o la partida no existe.' });
+    try {
+      const { codigo_sala, usuario_id } = socket.datosUsuarioSala || {};
+      if (!codigo_sala || !usuario_id) {
+        return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
+      }
+      
+      console.log(`Usuario ${usuario_id} solicitó estado del juego en sala ${codigo_sala}`);
+      const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, usuario_id);
+      
+      if (estadoJuego) {
+        console.log(`Enviando estado del juego a usuario ${usuario_id}`);
+        socket.emit('estado_juego_actualizado', estadoJuego);
+      } else {
+        console.log(`No se encontró estado de juego para sala ${codigo_sala}`);
+        socket.emit('error_juego', { 
+          message: 'No se pudo obtener el estado del juego o la partida no existe.' 
+        });
+      }
+    } catch (error) {
+      console.error('Error al solicitar estado del juego:', error);
+      socket.emit('error_juego', { message: 'Error al solicitar estado del juego.' });
     }
   });
 }

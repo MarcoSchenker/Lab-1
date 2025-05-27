@@ -97,7 +97,7 @@ const OnlineGamePage: React.FC = () => {
   const [esperandoRespuesta, setEsperandoRespuesta] = useState(false);
   const [puntosEnvido, setPuntosEnvido] = useState<string>('');
   const socketRef = useRef<Socket | null>(null);
-  const [mensajeEstado, setMensajeEstado] = useState<string>('');
+  const [mensajeEstado, setMensajeEstado] = useState<string>('Cargando partida...');
 
   // Determinar el jugador actual basado en el token almacenado
   useEffect(() => {
@@ -123,59 +123,92 @@ const OnlineGamePage: React.FC = () => {
   useEffect(() => {
     if (!codigoSala || !jugadorId) return;
 
-    console.log("Intentando conectar al socket con:", {
-      url: process.env.REACT_APP_API_URL || '',
+    console.log("[CLIENT] Intentando conectar al socket con:", {
+      url: process.env.REACT_APP_API_URL || 'http://localhost:3001',
       codigoSala,
       jugadorId
     });
 
     // Conectar al servidor WebSocket
-    const socket = io(process.env.REACT_APP_API_URL || '');
+    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:3001');
     socketRef.current = socket;
 
-    // Agregar manejo de errores de conexión
+    // Manejar conexión exitosa
     socket.on('connect', () => {
-      console.log('Socket conectado exitosamente con ID:', socket.id);
+      console.log('[CLIENT] Socket conectado exitosamente con ID:', socket.id);
+      setMensajeEstado('Conectado al servidor, autenticando...');
     });
 
+    // Manejar errores de conexión
     socket.on('connect_error', (error) => {
-      console.error('Error de conexión al socket:', error);
+      console.error('[CLIENT] Error de conexión al socket:', error);
       setError('Error de conexión al servidor. Revisa tu conexión a internet.');
     });
 
     // Autenticar el socket
     const token = localStorage.getItem('token');
     if (token) {
+      console.log('[CLIENT] Enviando token de autenticación...');
       socket.emit('autenticar_socket', token);
     }
 
-    socket.on('autenticacion_exitosa', () => {
-      console.log('Socket autenticado correctamente');
-      // Unirse a la sala del juego
+    // Manejar autenticación exitosa
+    socket.on('autenticacion_exitosa', (data) => {
+      console.log('[CLIENT] Socket autenticado correctamente:', data);
+      setMensajeEstado('Autenticado, uniéndose a sala...');
+      
       socket.emit('unirse_sala_juego', codigoSala);
-      // Solicitar el estado actual del juego
-      socket.emit('cliente_solicitar_estado_juego');
     });
 
+    // Manejar unión exitosa a sala
+    socket.on('unido_sala_juego', (data) => {
+      console.log('[CLIENT] Unido a sala exitosamente:', data);
+      setMensajeEstado('Unido a sala, cargando partida...');
+      
+      // Solicitar estado después de unirse con un pequeño delay
+      setTimeout(() => {
+        console.log('[CLIENT] Solicitando estado inicial del juego...');
+        socket.emit('cliente_solicitar_estado_juego');
+      }, 1500);
+    });
+
+    // Manejar autenticación fallida
     socket.on('autenticacion_fallida', (error) => {
-      console.error('Error de autenticación del socket:', error);
+      console.error('[CLIENT] Error de autenticación del socket:', error);
       setError('Error de autenticación. Por favor, inicia sesión nuevamente.');
     });
 
     // Manejar recepción del estado del juego
     socket.on('estado_juego_actualizado', (estado) => {
-      console.log('Estado del juego recibido:', estado);
+      console.log('[CLIENT] Estado del juego recibido exitosamente:', estado);
       setEstadoJuego(estado);
+      setMensajeEstado('');
+    });
+
+    // Manejar estado de espera
+    socket.on('esperando_inicio_partida', (data) => {
+      console.log('[CLIENT] ⏳ Esperando inicio de partida:', data);
+      setMensajeEstado(data.mensaje || 'Esperando que inicie la partida...');
+      
+      // Reintentrar obtener estado cada 3 segundos
+      const interval = setInterval(() => {
+        console.log('[CLIENT] Reintentando obtener estado...');
+        socket.emit('cliente_solicitar_estado_juego');
+      }, 3000);
+      
+      // Limpiar interval si se recibe el estado
+      socket.once('estado_juego_actualizado', () => {
+        clearInterval(interval);
+      });
     });
 
     // Manejar errores del juego
-    socket.on('error_accion_juego', (data) => {
-      console.error('Error en acción del juego:', data);
-      setMensajeEstado(data.mensaje || 'Error en la acción del juego');
-      setTimeout(() => setMensajeEstado(''), 3000);
+    socket.on('error_juego', (data) => {
+      console.error('[CLIENT]  Error en el juego:', data);
+      setError(data.message || 'Error en el juego');
     });
 
-    // Manejar eventos específicos
+    // Manejar eventos específicos del juego
     socket.on('turno_actualizado', (data) => {
       const esMiTurno = data.jugadorTurnoActualId === jugadorId;
       setMensajeEstado(esMiTurno ? '¡Es tu turno!' : `Turno de: ${obtenerNombreJugador(data.jugadorTurnoActualId)}`);
@@ -233,11 +266,43 @@ const OnlineGamePage: React.FC = () => {
       setMensajeEstado('Se retoma el truco pendiente');
     });
 
+    // Manejar desconexión
+    socket.on('disconnect', () => {
+      console.log('[CLIENT] Desconectado del servidor');
+      setMensajeEstado('Conexión perdida. Intentando reconectar...');
+      
+      // Intentar reconectar después de un breve retraso
+      setTimeout(() => {
+        if (socketRef.current?.disconnected) {
+          console.log('[CLIENT] Intentando reconectar...');
+          socketRef.current.connect();
+        }
+      }, 2000);
+    });
+
     // Limpiar socket al desmontar el componente
     return () => {
-      socket.disconnect();
+      if (socketRef.current) {
+        console.log('[CLIENT] Desconectando socket...');
+        socketRef.current.disconnect();
+      }
     };
   }, [codigoSala, jugadorId]);
+
+  // Polling para solicitar estado si no llega
+  useEffect(() => {
+    if (!socketRef.current || !codigoSala || estadoJuego) return;
+    
+    // Solicitar actualizaciones del estado cada 10 segundos por si se perdió algún evento
+    const intervalId = setInterval(() => {
+      if (socketRef.current?.connected && !estadoJuego) {
+        console.log('[CLIENT] Solicitando estado (polling)...');
+        socketRef.current.emit('cliente_solicitar_estado_juego');
+      }
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [codigoSala, estadoJuego]);
 
   // Funciones auxiliares para obtener nombres
   const obtenerNombreJugador = useCallback((id: number | null): string => {
@@ -424,6 +489,12 @@ const OnlineGamePage: React.FC = () => {
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={() => navigate('/salas')}>Volver a las Salas</button>
+          <button onClick={() => {
+            setError(null);
+            window.location.reload();
+          }} className="reconnect-button">
+            Intentar Reconectar
+          </button>
         </div>
       </div>
     );
@@ -435,6 +506,7 @@ const OnlineGamePage: React.FC = () => {
         <Header />
         <div className="game-loading">
           <h2>Cargando partida...</h2>
+          <p>{mensajeEstado}</p>
           <div className="spinner"></div>
         </div>
       </div>
