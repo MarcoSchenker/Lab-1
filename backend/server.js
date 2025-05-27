@@ -371,6 +371,31 @@ app.post('/usuario-anonimo', async (req, res) => {
   }
 });
 
+app.delete('/usuario-anonimo/:nombre_usuario', async (req, res) => {
+  const { nombre_usuario } = req.params;
+  
+  try {
+    // Verificar que el usuario existe y es anónimo
+    const [user] = await pool.query('SELECT id, es_anonimo FROM usuarios WHERE nombre_usuario = ?', [nombre_usuario]);
+    
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    
+    if (!user[0].es_anonimo) {
+      return res.status(400).json({ error: 'Este usuario no es anónimo' });
+    }
+    
+    // Eliminar el usuario anónimo (las relaciones deberían tener ON DELETE CASCADE)
+    await pool.query('DELETE FROM usuarios WHERE id = ?', [user[0].id]);
+    
+    res.json({ message: 'Usuario anónimo eliminado correctamente' });
+  } catch (err) {
+    console.error('Error al eliminar usuario anónimo:', err.message);
+    res.status(500).json({ error: 'Error al eliminar usuario anónimo' });
+  }
+});
+
 // Endpoint para obtener usuarios disponibles para agregar
 app.get('/usuarios-disponibles', async (req, res) => {
   const { nombre_usuario } = req.query;
