@@ -371,17 +371,23 @@ app.get('/usuarios-disponibles', async (req, res) => {
   try {
     const [rows] = await pool.query(
       `
-      SELECT nombre_usuario 
-      FROM usuarios 
-      WHERE nombre_usuario != ? 
-      AND nombre_usuario NOT IN (
-        SELECT u.nombre_usuario
+      SELECT 
+        u.nombre_usuario,
+        IFNULL(
+          CONCAT('${process.env.BACKEND_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
+          '${process.env.BACKEND_URL || 'http://localhost:3001'}/foto_anonima.jpg'
+        ) AS foto_perfil
+      FROM usuarios u
+      WHERE u.nombre_usuario != ? 
+      AND u.nombre_usuario NOT IN (
+        SELECT u2.nombre_usuario
         FROM amigos a
-        JOIN usuarios u ON (a.usuario_id = u.id OR a.amigo_id = u.id OR u.es_anonimo = 1)
+        JOIN usuarios u2 ON (a.usuario_id = u2.id OR a.amigo_id = u2.id)
         WHERE (a.usuario_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?) 
         OR a.amigo_id = (SELECT id FROM usuarios WHERE nombre_usuario = ?))
         AND a.estado IN ('pendiente', 'aceptado')
       )
+      AND u.es_anonimo = 0
       `,
       [nombre_usuario, nombre_usuario, nombre_usuario]
     );
@@ -843,10 +849,16 @@ app.get('/friend-requests', async (req, res) => {
 
     const toId = toUser[0].id;
 
-    // Obtener solicitudes de amistad pendientes
+    // Obtener solicitudes de amistad pendientes con foto de perfil
     const [rows] = await pool.query(
       `
-      SELECT a.id, u.nombre_usuario AS from_user
+      SELECT 
+        a.id, 
+        u.nombre_usuario AS from_user,
+        IFNULL(
+          CONCAT('${process.env.BACKEND_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
+          '${process.env.BACKEND_URL || 'http://localhost:3001'}/foto_anonima.jpg'
+        ) AS foto_perfil
       FROM amigos a
       JOIN usuarios u ON a.usuario_id = u.id
       WHERE a.amigo_id = ? AND a.estado = 'pendiente'
