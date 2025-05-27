@@ -11,7 +11,7 @@ const DashboardPage: React.FC = () => {
       <Header />
       <div className="dashboard-content">
         <div className="dashboard-header">
-          <h1>Bienvenido al Juego</h1>
+          <h1>Bienvenido a Trucho</h1>
           <div className="dashboard-subtitle">¿Qué te gustaría hacer?</div>
         </div>
         
