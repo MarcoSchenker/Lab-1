@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUser, FaLock } from 'react-icons/fa';
 import api from '../services/api';
+import './EditProfile.css';
 
 const EditProfile: React.FC = () => {
   const [nombre_usuario, setNombreUsuario] = useState('');
@@ -81,9 +82,17 @@ const EditProfile: React.FC = () => {
     <div className="h-screen w-screen bg-[url('/Fondo.png')] bg-cover bg-center relative flex items-center justify-center">
       <div className="absolute inset-0 bg-black/10 z-0" />
       <div className="relative z-10 w-full h-full flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className='flechita' onClick={() => navigate("/dashboard")}>
-        <img src= "/flecha.png"/>
-      </div>
+        
+        <button
+          onClick={() => navigate(-1)}
+          className="volver-btn"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+          Volver
+        </button>
+        
         <div className="bg-[#1a1a1a] rounded-xl shadow-xl w-full max-w-md p-8 text-gray-200">
           {successMessage ? (
             <div className="text-center">
