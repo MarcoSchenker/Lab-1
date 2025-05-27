@@ -30,9 +30,6 @@ class PartidaGame {
         this.rondaActual = null; // Objeto RondaGame
         this.numeroRondaActual = 0;
         this.historialRondas = []; // Guardar resumen de rondas pasadas
-
-        // El jugador que es mano rota en cada ronda.
-        // El primer mano se puede decidir al azar o por el primer jugador que entró.
         this.indiceJugadorManoGlobal = 0; 
 
         this.notificarEstadoGlobal = notificarEstadoGlobalCallback;
@@ -299,7 +296,6 @@ class PartidaGame {
     
     persistirEstadoPartida() {
         if (this.persistirPartida) {
-            // Preparar el estado para la DB (puede ser diferente al que se envía al cliente)
             const estadoParaDB = {
                 codigo_sala: this.codigoSala,
                 estado_partida: this.estadoPartida,

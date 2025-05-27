@@ -79,14 +79,33 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         io.to(sala).emit(evento, estado);
     };
 
-    const persistirPartidaCallback = async (partidaIdEnMemoria, estadoParaDB) => {
-        // Aquí usarías partidaDBId para actualizar la partida correcta.
-        // El `partidaIdEnMemoria` es más un placeholder si no lo pasas directamente.
+    const persistirPartidaCallback = async (partidaId, estadoParaDB) => {
         console.log(`Persistiendo estado de partida ${partidaDBId}:`, estadoParaDB);
         try {
             const connection = await pool.getConnection();
-            // Construir la query de actualización basada en estadoParaDB
-            // Ejemplo:
+            
+            // Convertir undefined a null antes de la consulta
+            const parametros = [
+                estadoParaDB.estado_partida || null,
+                estadoParaDB.ronda_actual_numero || null,
+                estadoParaDB.jugador_turno_id || null,
+                estadoParaDB.jugador_mano_ronda_id || null,
+                estadoParaDB.mazo_estado ? JSON.stringify(estadoParaDB.mazo_estado) : null,
+                estadoParaDB.cartas_en_mesa_mano_actual ? JSON.stringify(estadoParaDB.cartas_en_mesa_mano_actual) : null,
+                estadoParaDB.estado_envido ? JSON.stringify(estadoParaDB.estado_envido) : null,
+                estadoParaDB.estado_truco ? JSON.stringify(estadoParaDB.estado_truco) : null,
+                estadoParaDB.orden_juego_ronda_actual ? JSON.stringify(estadoParaDB.orden_juego_ronda_actual) : null,
+                partidaDBId
+            ];
+            
+            // Verificar que no haya undefined antes de ejecutar
+            if (parametros.includes(undefined)) {
+                console.error('Error: Hay parámetros undefined en:', 
+                    parametros.map((p, i) => p === undefined ? i : null).filter(p => p !== null)
+                );
+                throw new Error('No se pueden pasar parámetros undefined a la base de datos');
+            }
+            
             await connection.execute(
                 `UPDATE partidas_estado SET 
                     estado_partida = ?, 
@@ -99,20 +118,9 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
                     estado_truco = ?,
                     orden_juego_ronda_actual = ?
                  WHERE id = ?`,
-                [
-                    estadoParaDB.estado_partida,
-                    estadoParaDB.ronda_actual_numero,
-                    estadoParaDB.jugador_turno_id,
-                    estadoParaDB.jugador_mano_ronda_id,
-                    JSON.stringify(estadoParaDB.mazo_estado),
-                    JSON.stringify(estadoParaDB.cartas_en_mesa_mano_actual),
-                    JSON.stringify(estadoParaDB.estado_envido),
-                    JSON.stringify(estadoParaDB.estado_truco),
-                    JSON.stringify(estadoParaDB.orden_juego_ronda_actual),
-                    partidaDBId
-                ]
+                parametros
             );
-            // También persistir puntos de equipos y manos de jugadores en sus respectivas tablas.
+            
             connection.release();
         } catch (error) {
             console.error(`Error al persistir estado de partida ${partidaDBId}:`, error);

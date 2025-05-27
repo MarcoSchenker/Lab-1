@@ -15,6 +15,10 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const { authenticateToken } = require('./middleware/authMiddleware');
 const gameLogicHandler = require('./game-logic/gameLogicHandler');
 
+// Importar los módulos de socket
+const { setupAuthHandlers } = require('./socket/socketMiddleware');
+const { setupGameHandlers } = require('./socket/handlers/gameSocketHandlers');
+
 // Inicializar Express
 const app = express();
 const server = http.createServer(app);
@@ -29,135 +33,35 @@ app.set('io', io);
 // Inicializar gameLogicHandler con io
 gameLogicHandler.initializeGameLogic(io); 
 
+// Configurar Socket.IO con los manejadores modulares
 io.on('connection', (socket) => {
-    // ... (autenticación del socket, unirse a sala) ...
-    // let currentRoom = socket.handshake.query.codigo_sala; // O como lo estés manejando
-    // let currentUserId = socket.decoded_token.id; // Después de la autenticación del socket
-
-    socket.on('cliente_jugar_carta', async (data) => {
-        // Asumir que tienes currentRoom y currentUserId en el scope del socket
-        // después de 'unirse_sala_juego' y 'autenticar_socket'
-        const { codigo_sala, usuario_id } = socket.datosUsuarioSala; // Ejemplo de cómo podrías tener estos datos
-        const { carta } = data;
-        if (codigo_sala && usuario_id) {
-            gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'JUGAR_CARTA', { idUnicoCarta: carta.idUnico });
-        }
-    });
-
-    socket.on('cliente_cantar', async (data) => {
-        const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
-        const { tipo_canto, detalle_adicional } = data;
-        if (codigo_sala && usuario_id) {
-            gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'CANTO', { tipoCanto: tipo_canto, detalleCanto: detalle_adicional });
-        }
-    });
-
-    socket.on('cliente_responder_canto', async (data) => {
-        const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
-        const { respuesta, canto_respondido_tipo, nuevo_canto_si_mas, puntos_envido } = data;
-        
-        if (codigo_sala && usuario_id) {
-            // Si es "Son Buenas" para el envido
-            if (respuesta === 'SON_BUENAS_ENVIDO') {
-                gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
-                    respuesta, 
-                    cantoRespondidoTipo: 'ENVIDO'
-                });
-            } 
-            // Si son puntos declarados para el envido
-            else if (!isNaN(parseInt(respuesta)) && respuesta > 0) {
-                gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
-                    respuesta: parseInt(respuesta), // Convertir a número
-                    cantoRespondidoTipo: 'ENVIDO',
-                    puntos: parseInt(respuesta)
-                });
-            }
-            // Si es una respuesta normal
-            else {
-                gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
-                    respuesta, 
-                    cantoRespondidoTipo: canto_respondido_tipo,
-                    nuevoCantoSiMas: nuevo_canto_si_mas 
-                });
-            }
-        }
-    });
-
-    socket.on('cliente_son_buenas_envido', async (data) => {
-        const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
-        
-        if (codigo_sala && usuario_id) {
-            gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'RESPUESTA_CANTO', { 
-                respuesta: 'SON_BUENAS_ENVIDO', 
-                cantoRespondidoTipo: 'ENVIDO'
-            });
-        }
-    });
-
-    // También necesitamos asegurarnos de manejar el evento específico para "retomar_truco_pendiente"
-    socket.on('retomar_truco_pendiente', (data) => {
-        socket.emit('retomar_truco_pendiente', data);
-    });
-
-    socket.on('cliente_irse_al_mazo', async () => {
-        const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
-        if (codigo_sala && usuario_id) {
-            gameLogicHandler.manejarAccionJugador(codigo_sala, usuario_id, 'IRSE_AL_MAZO', {});
-        }
-    });
+    console.log(`Nuevo socket conectado: ${socket.id}`);
     
-    socket.on('cliente_solicitar_estado_juego', async () => {
-        const { codigo_sala, usuario_id } = socket.datosUsuarioSala;
-        if (codigo_sala && usuario_id) {
-            const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, usuario_id);
-            if (estadoJuego) {
-                // El estado ya incluye las cartas del jugador solicitante.
-                // PartidaGame.manejarReconexionJugador ya notifica 'jugador_reconectado'
-                // y luego el estado completo se envía aquí.
-                socket.emit('estado_juego_actualizado', estadoJuego);
-            } else {
-                socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego o la partida no existe.' });
+    // Configurar autenticación
+    setupAuthHandlers(socket);
+    
+    // Configurar manejadores de juego
+    setupGameHandlers(socket, io);
+    
+    socket.on('disconnect', () => {
+        console.log(`Socket ${socket.id} (Usuario ${socket.currentUserId || 'N/A'}) se ha desconectado.`);
+        
+        if (socket.currentRoom && socket.currentUserId) {
+            // Notificar a los otros jugadores
+            io.to(socket.currentRoom).emit('jugador_desconectado_broadcast', { 
+                usuario_id: socket.currentUserId,
+                nombre_usuario: socket.nombreUsuario
+            });
+            
+            // Manejar la desconexión en la lógica del juego si existe el método
+            if (typeof gameLogicHandler.manejarDesconexionJugador === 'function') {
+                try {
+                    gameLogicHandler.manejarDesconexionJugador(socket.currentRoom, socket.currentUserId);
+                } catch (error) {
+                    console.error(`Error al manejar desconexión del jugador ${socket.currentUserId}:`, error);
+                }
             }
         }
-    });
-
-    socket.on('unirse_sala_juego', (codigo_sala) => {
-        if (!socket.currentUserId) {
-            return socket.emit('error_juego', { message: 'Socket no autenticado.' });
-        }
-        
-        console.log(`Usuario ${socket.currentUserId} uniéndose a sala ${codigo_sala}`);
-        
-        // Dejar sala actual si existe
-        if (socket.currentRoom) {
-            socket.leave(socket.currentRoom);
-        }
-        
-        // Unirse a la nueva sala
-        socket.join(codigo_sala);
-        socket.currentRoom = codigo_sala;
-        socket.datosUsuarioSala = { codigo_sala, usuario_id: socket.currentUserId };
-        
-        // Notificar al cliente que se ha unido exitosamente
-        socket.emit('unido_sala_juego', { codigo_sala });
-        
-        // Obtener estado actual del juego para este jugador
-        const estadoActual = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
-        if (estadoActual) {
-            socket.emit('estado_juego_actualizado', estadoActual);
-        } else {
-            socket.emit('error_juego', { message: 'No hay una partida activa en esta sala.' });
-        }
-    });
-
-    socket.on('disconnect', () => {
-        // Necesitas una forma de saber a qué sala y usuario estaba asociado este socket.
-        // Esto usualmente se guarda cuando el socket se une a una sala.
-        // const { codigo_sala, usuario_id } = socket.datosUsuarioSala; // Ejemplo
-        // if (codigo_sala && usuario_id) {
-        //     gameLogicHandler.manejarDesconexionJugador(codigo_sala, usuario_id);
-        // }
-        console.log(`Socket ${socket.id} desconectado.`);
     });
 });
 
@@ -1163,123 +1067,6 @@ app.get('/ranking', async (req, res) => {
     console.error('Error al obtener el ranking:', err.message);
     res.status(500).json({ error: 'Error al obtener el ranking' });
   }
-});
-
-// Deberás tener acceso a la lógica del juego aquí, o pasar el socket y los datos a módulos de lógica.
-// const gameLogicHandler = require('./game_logic/handler'); // Ejemplo
-
-io.on('connection', (socket) => {
-    console.log('Un cliente se ha conectado:', socket.id);
-    let currentRoom = null; // Para rastrear la sala actual del socket
-    let currentUserId = null; // Para rastrear el ID de usuario del socket (necesitarás autenticar el socket)
-
-   socket.on('autenticar_socket', async (token) => {
-  try {
-    // Implementar autenticación real
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    socket.currentUserId = decoded.id;
-    socket.nombreUsuario = decoded.nombre_usuario;
-    
-    console.log(`Socket ${socket.id} autenticado como usuario ${socket.currentUserId}`);
-    socket.emit('autenticacion_exitosa', { 
-      userId: socket.currentUserId,
-      username: socket.nombreUsuario 
-    });
-  } catch (err) {
-    console.error('Error de autenticación de socket:', err);
-    socket.emit('autenticacion_fallida', { message: 'Error de autenticación' });
-    socket.disconnect();
-  }
-});
-
-  socket.on('unirse_sala_juego', (codigo_sala) => {
-  if (!socket.currentUserId) {
-    return socket.emit('error_juego', { message: 'Socket no autenticado' });
-  }
-  
-  console.log(`Usuario ${socket.currentUserId} (${socket.nombreUsuario}) uniéndose a sala ${codigo_sala}`);
-  
-  // Salir de la sala actual si existe
-  if (socket.currentRoom) {
-    socket.leave(socket.currentRoom);
-  }
-  
-  socket.join(codigo_sala);
-  socket.currentRoom = codigo_sala;
-  socket.datosUsuarioSala = { codigo_sala, usuario_id: socket.currentUserId };
-  
-  // Solicitar estado del juego
-  const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
-  if (estadoJuego) {
-    socket.emit('estado_juego_actualizado', estadoJuego);
-  } else {
-    socket.emit('esperando_inicio_partida', { codigo_sala });
-  }
-});
-    
-    socket.on('cliente_solicitar_estado_juego', async () => {
-        if (!currentUserId || !currentRoom) {
-            return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
-        }
-        try {
-            // Lógica similar al endpoint GET /api/game/:codigo_sala/estado
-            // Deberías refactorizar esa lógica en una función reutilizable.
-            // const estadoJuego = await obtenerEstadoJuego(currentRoom, currentUserId, pool);
-            // socket.emit('estado_juego_actualizado', estadoJuego); // O 'partida_iniciada' si es el primer estado
-            socket.emit('estado_juego_actualizado', { message: `Estado para ${currentRoom} (placeholder)`});
-        } catch (error) {
-            console.error("Error al solicitar estado del juego:", error);
-            socket.emit('error_juego', { message: 'Error al obtener estado del juego.' });
-        }
-    });
-
-    socket.on('cliente_jugar_carta', async (data) => {
-        if (!currentUserId || !currentRoom) return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
-        const { carta } = data;
-        console.log(`Usuario ${currentUserId} en sala ${currentRoom} jugó carta:`, carta);
-        // Aquí llamarías a tu lógica de juego:
-        // gameLogicHandler.jugarCarta(currentRoom, currentUserId, carta, pool, io);
-        // Esa función se encargaría de:
-        // 1. Validar (partida, turno, carta en mano).
-        // 2. Actualizar DB.
-        // 3. Emitir 'carta_jugada_broadcast' y 'turno_actualizado' a io.to(currentRoom).
-        io.to(currentRoom).emit('carta_jugada_broadcast', { usuario_id: currentUserId, carta, message: 'Carta jugada (placeholder)' });
-    });
-
-    socket.on('cliente_cantar', async (data) => {
-        if (!currentUserId || !currentRoom) return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
-        const { tipo_canto, detalle_adicional } = data;
-        console.log(`Usuario ${currentUserId} en sala ${currentRoom} cantó: ${tipo_canto}`, detalle_adicional || '');
-        // gameLogicHandler.cantar(currentRoom, currentUserId, tipo_canto, detalle_adicional, pool, io);
-        io.to(currentRoom).emit('canto_realizado_broadcast', { usuario_id_cantor: currentUserId, tipo_canto, message: 'Canto realizado (placeholder)' });
-    });
-
-    socket.on('cliente_responder_canto', async (data) => {
-        if (!currentUserId || !currentRoom) return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
-        const { respuesta, nuevo_canto_si_canto_mas, puntos_envido_declarados } = data;
-        console.log(`Usuario ${currentUserId} en sala ${currentRoom} respondió: ${respuesta}`, data);
-        // gameLogicHandler.responderCanto(currentRoom, currentUserId, respuesta, ..., pool, io);
-        io.to(currentRoom).emit('respuesta_canto_broadcast', { usuario_id_respondedor: currentUserId, respuesta, message: 'Respuesta procesada (placeholder)' });
-    });
-
-    socket.on('cliente_irse_al_mazo', async () => {
-        if (!currentUserId || !currentRoom) return socket.emit('error_juego', { message: 'No autenticado o no en una sala.' });
-        console.log(`Usuario ${currentUserId} en sala ${currentRoom} se fue al mazo.`);
-        // gameLogicHandler.irseAlMazo(currentRoom, currentUserId, pool, io);
-        io.to(currentRoom).emit('ronda_finalizada_broadcast', { message: `${currentUserId} se fue al mazo (placeholder)` });
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`Socket ${socket.id} (Usuario ${currentUserId || 'N/A'}) se ha desconectado.`);
-        if (currentRoom && currentUserId) {
-            // Lógica para manejar desconexión de un jugador en una partida activa:
-            // 1. Actualizar estado del jugador a 'desconectado' en DB.
-            // 2. Notificar a otros jugadores en la sala de juego.
-            // gameLogicHandler.manejarDesconexion(currentRoom, currentUserId, pool, io);
-            io.to(currentRoom).emit('jugador_desconectado_broadcast', { usuario_id: currentUserId });
-        }
-    });
 });
 
 // Arrancar el servidor

@@ -1,4 +1,4 @@
-const gameLogicHandler = require('../../game_logic/gameLogicHandler');
+const gameLogicHandler = require('../../game-logic/gameLogicHandler');
 
 /**
  * Configura los manejadores de eventos relacionados con el juego
