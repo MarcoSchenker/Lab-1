@@ -14,7 +14,7 @@ body {
     background-color: #2980b9;
   }
 
-  .volver-btn {
+  .volver-bttn {
   position: absolute;
   top: 20px;
   left: 20px;
@@ -34,7 +34,7 @@ body {
   z-index: 100;
 }
 
-.volver-btn:hover {
+.volver-bttn:hover {
   background: linear-gradient(135deg, #357ABD, #2A6099);
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
