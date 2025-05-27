@@ -165,7 +165,7 @@ const SalasPage: React.FC = () => {
   
       setShowModal(false);
       // Redirigir a la sala de juego
-      navigate(`/game-page/${data.codigo_sala}`);
+      navigate(`/online-game-page/${data.codigo_sala}`);
     } catch (error: any) {
       console.error('Error al crear sala:', error);
       setError(error.message || 'Error al crear la sala');
@@ -200,7 +200,7 @@ const SalasPage: React.FC = () => {
         throw new Error(errorData.error || 'Error al unirse a la sala');
       }
 
-      navigate(`/game-page/${sala.codigo_sala}`);
+      navigate(`/online-game-page/${sala.codigo_sala}`);
     } catch (error: any) {
       console.error('Error al unirse a la sala:', error);
       setError(error.message || 'Error al unirse a la sala');
@@ -242,7 +242,7 @@ const SalasPage: React.FC = () => {
         setShowJoinPrivateModal(false);
         setCodigoPrivado('');
         setSalaSeleccionada(null);
-        navigate(`/game-page/${salaSeleccionada}`);
+        navigate(`/online-game-page/${salaSeleccionada}`);
       } else {
         // Unirse a través de código sin conocer la sala
         if (!codigoPrivado || codigoPrivado.length < 4) {
@@ -268,7 +268,7 @@ const SalasPage: React.FC = () => {
         const data = await response.json();
         setShowJoinPrivateModal(false);
         setCodigoPrivado('');
-        navigate(`/game-page/${data.codigo_sala}`);
+        navigate(`/online-game-page/${data.codigo_sala}`);
       }
     } catch (error: any) {
       console.error('Error al unirse a la sala privada:', error);

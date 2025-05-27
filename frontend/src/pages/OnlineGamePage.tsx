@@ -77,7 +77,7 @@ interface EstadoRonda {
 interface EstadoJuego {
   codigoSala: string;
   tipoPartida: string;
-  puntosObjetivo: number;
+  puntosVictoria: number;
   estadoPartida: string;
   equipos: Equipo[];
   jugadores: Jugador[];
@@ -123,9 +123,25 @@ const OnlineGamePage: React.FC = () => {
   useEffect(() => {
     if (!codigoSala || !jugadorId) return;
 
+    console.log("Intentando conectar al socket con:", {
+      url: process.env.REACT_APP_API_URL || '',
+      codigoSala,
+      jugadorId
+    });
+
     // Conectar al servidor WebSocket
     const socket = io(process.env.REACT_APP_API_URL || '');
     socketRef.current = socket;
+
+    // Agregar manejo de errores de conexión
+    socket.on('connect', () => {
+      console.log('Socket conectado exitosamente con ID:', socket.id);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Error de conexión al socket:', error);
+      setError('Error de conexión al servidor. Revisa tu conexión a internet.');
+    });
 
     // Autenticar el socket
     const token = localStorage.getItem('token');
@@ -437,7 +453,7 @@ const OnlineGamePage: React.FC = () => {
           <div className="game-info">
             <span>Tipo: {estadoJuego.tipoPartida}</span>
             <span>Ronda: {estadoJuego.numeroRondaActual}</span>
-            <span>Objetivo: {estadoJuego.puntosObjetivo} puntos</span>
+            <span>Objetivo: {estadoJuego.puntosVictoria} puntos</span>
           </div>
         </div>
         

@@ -13,13 +13,20 @@ const skinsRoutes = require('./routes/skinRoutes');
 const gameRoutes = require('./routes/gameRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const { authenticateToken } = require('./middleware/authMiddleware');
-const gameLogicHandler = require('./game_logic/gameLogicHandler');
+const gameLogicHandler = require('./game-logic/gameLogicHandler');
 
 // Inicializar Express
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" , methods: ["GET", "POST"]} });
+const io = new Server(server, { 
+  cors: { 
+    origin: "*", 
+    methods: ["GET", "POST"] 
+  } 
+});
 app.set('io', io);
+
+// Inicializar gameLogicHandler con io
 gameLogicHandler.initializeGameLogic(io); 
 
 io.on('connection', (socket) => {
@@ -111,6 +118,35 @@ io.on('connection', (socket) => {
             } else {
                 socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego o la partida no existe.' });
             }
+        }
+    });
+
+    socket.on('unirse_sala_juego', (codigo_sala) => {
+        if (!socket.currentUserId) {
+            return socket.emit('error_juego', { message: 'Socket no autenticado.' });
+        }
+        
+        console.log(`Usuario ${socket.currentUserId} uniéndose a sala ${codigo_sala}`);
+        
+        // Dejar sala actual si existe
+        if (socket.currentRoom) {
+            socket.leave(socket.currentRoom);
+        }
+        
+        // Unirse a la nueva sala
+        socket.join(codigo_sala);
+        socket.currentRoom = codigo_sala;
+        socket.datosUsuarioSala = { codigo_sala, usuario_id: socket.currentUserId };
+        
+        // Notificar al cliente que se ha unido exitosamente
+        socket.emit('unido_sala_juego', { codigo_sala });
+        
+        // Obtener estado actual del juego para este jugador
+        const estadoActual = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
+        if (estadoActual) {
+            socket.emit('estado_juego_actualizado', estadoActual);
+        } else {
+            socket.emit('error_juego', { message: 'No hay una partida activa en esta sala.' });
         }
     });
 
@@ -1112,48 +1148,50 @@ io.on('connection', (socket) => {
     let currentRoom = null; // Para rastrear la sala actual del socket
     let currentUserId = null; // Para rastrear el ID de usuario del socket (necesitarás autenticar el socket)
 
-    // --- Autenticación del Socket (MUY IMPORTANTE) ---
-    // Debes tener un mecanismo para asociar un socket conectado con un usuario autenticado.
-    // Esto a menudo se hace enviando el token JWT al conectar el socket y validándolo.
-    socket.on('autenticar_socket', async (token) => {
-        try {
-            // Aquí tu lógica para validar el token (similar a authenticateToken middleware)
-            // const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            // currentUserId = decoded.id;
-            // console.log(`Socket ${socket.id} autenticado como usuario ${currentUserId}`);
-            // socket.emit('autenticacion_exitosa', { userId: currentUserId });
-
-            // Placeholder:
-            if (token === "token_valido_simulado") { // Reemplazar con validación real
-                currentUserId = "usuario_id_simulado"; // Reemplazar con ID real del token
-                console.log(`Socket ${socket.id} autenticado como usuario ${currentUserId}`);
-                socket.emit('autenticacion_exitosa', { userId: currentUserId });
-            } else {
-                socket.emit('autenticacion_fallida', { message: 'Token inválido' });
-                socket.disconnect();
-            }
-        } catch (err) {
-            console.error('Error de autenticación de socket:', err);
-            socket.emit('autenticacion_fallida', { message: 'Error de autenticación' });
-            socket.disconnect(); // Desconectar si la autenticación falla
-        }
+   socket.on('autenticar_socket', async (token) => {
+  try {
+    // Implementar autenticación real
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.currentUserId = decoded.id;
+    socket.nombreUsuario = decoded.nombre_usuario;
+    
+    console.log(`Socket ${socket.id} autenticado como usuario ${socket.currentUserId}`);
+    socket.emit('autenticacion_exitosa', { 
+      userId: socket.currentUserId,
+      username: socket.nombreUsuario 
     });
+  } catch (err) {
+    console.error('Error de autenticación de socket:', err);
+    socket.emit('autenticacion_fallida', { message: 'Error de autenticación' });
+    socket.disconnect();
+  }
+});
 
-    socket.on('unirse_sala_juego', (codigo_sala) => {
-        if (!currentUserId) {
-            return socket.emit('error_juego', { message: 'Socket no autenticado.' });
-        }
-        if (currentRoom) {
-            socket.leave(currentRoom);
-        }
-        socket.join(codigo_sala);
-        currentRoom = codigo_sala;
-        console.log(`Socket ${socket.id} (Usuario ${currentUserId}) se unió a la sala de juego ${currentRoom}`);
-        
-        // Opcional: solicitar estado si se está reconectando
-        // Esto podría hacerse automáticamente si el servidor detecta una reconexión a una partida en curso.
-        // O el cliente puede emitir 'cliente_solicitar_estado_juego'
-    });
+  socket.on('unirse_sala_juego', (codigo_sala) => {
+  if (!socket.currentUserId) {
+    return socket.emit('error_juego', { message: 'Socket no autenticado' });
+  }
+  
+  console.log(`Usuario ${socket.currentUserId} (${socket.nombreUsuario}) uniéndose a sala ${codigo_sala}`);
+  
+  // Salir de la sala actual si existe
+  if (socket.currentRoom) {
+    socket.leave(socket.currentRoom);
+  }
+  
+  socket.join(codigo_sala);
+  socket.currentRoom = codigo_sala;
+  socket.datosUsuarioSala = { codigo_sala, usuario_id: socket.currentUserId };
+  
+  // Solicitar estado del juego
+  const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
+  if (estadoJuego) {
+    socket.emit('estado_juego_actualizado', estadoJuego);
+  } else {
+    socket.emit('esperando_inicio_partida', { codigo_sala });
+  }
+});
     
     socket.on('cliente_solicitar_estado_juego', async () => {
         if (!currentUserId || !currentRoom) {
@@ -1217,17 +1255,6 @@ io.on('connection', (socket) => {
             io.to(currentRoom).emit('jugador_desconectado_broadcast', { usuario_id: currentUserId });
         }
     });
-});
-
-
-
-// WebSocket básico
-io.on('connection', (socket) => {
-  console.log('Nuevo jugador conectado');
-
-  socket.on('disconnect', () => {
-    console.log('Jugador desconectado');
-  });
 });
 
 // Arrancar el servidor

@@ -68,7 +68,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS partidas_estado (
         id INT AUTO_INCREMENT PRIMARY KEY,
         codigo_sala VARCHAR(255) NOT NULL UNIQUE,
-        estado_partida ENUM('esperando_configuracion', 'en_curso', 'pausada', 'finalizada') DEFAULT 'esperando_configuracion',
+        estado_partida ENUM('esperando_configuracion', 'en_juego', 'pausada', 'finalizada') DEFAULT 'esperando_configuracion',
         tipo_partida ENUM('1v1', '2v2', '3v3') NOT NULL,
         jugadores_configurados INT NOT NULL,
         puntaje_objetivo INT DEFAULT 15,

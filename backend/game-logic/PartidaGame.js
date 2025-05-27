@@ -11,17 +11,17 @@ class PartidaGame {
      * @param {string} codigoSala El código de la sala donde se juega la partida.
      * @param {Array<object>} jugadoresInfo Array de objetos con info de los jugadores (id, nombre_usuario).
      * @param {string} tipoPartida '1v1', '2v2', '3v3'.
-     * @param {number} puntosObjetivo Puntos para ganar la partida (e.g., 15 o 30).
+     * @param {number} puntosVictoria Puntos para ganar la partida (e.g., 15 o 30).
      * @param {function} notificarEstadoGlobalCallback Callback para notificar el estado global de la partida.
      * @param {function} persistirPartidaCallback Callback para persistir el estado de la partida en DB.
      * @param {function} persistirAccionCallback Callback para persistir acciones individuales en DB.
      * @param {function} finalizarPartidaCallback Callback para acciones cuando la partida termina (e.g., actualizar sala).
      */
-    constructor(codigoSala, jugadoresInfo, tipoPartida, puntosObjetivo, notificarEstadoGlobalCallback, persistirPartidaCallback, persistirAccionCallback, finalizarPartidaCallback) {
+    constructor(codigoSala, jugadoresInfo, tipoPartida, puntosVictoria, notificarEstadoGlobalCallback, persistirPartidaCallback, persistirAccionCallback, finalizarPartidaCallback) {
         this.codigoSala = codigoSala;
         this.tipoPartida = tipoPartida;
-        this.puntosObjetivo = puntosObjetivo;
-        this.estadoPartida = 'configurando'; // 'configurando', 'en_curso', 'finalizada', 'pausada'
+        this.puntosVictoria = puntosVictoria;
+        this.estadoPartida = 'configurando'; // 'configurando', 'en_juego', 'finalizada', 'pausada'
         
         this.equipos = []; // Array de EquipoGame
         this.jugadores = []; // Array de JugadorGame, ordenados globalmente para la partida
@@ -44,7 +44,7 @@ class PartidaGame {
     }
 
     _configurarPartida(jugadoresInfo) {
-        console.log(`Configurando partida ${this.codigoSala} para ${this.tipoPartida} a ${this.puntosObjetivo} puntos.`);
+        console.log(`Configurando partida ${this.codigoSala} para ${this.tipoPartida} a ${this.puntosVictoria} puntos.`);
         // 1. Crear Jugadores
         jugadoresInfo.forEach(info => {
             this.jugadores.push(new JugadorGame(info.id, info.nombre_usuario, null)); // equipoId se asigna después
@@ -56,7 +56,7 @@ class PartidaGame {
         // 3. Determinar el primer mano de la partida (puede ser el primer jugador o aleatorio)
         this.indiceJugadorManoGlobal = 0; // Por simplicidad, el primer jugador en la lista global
 
-        this.estadoPartida = 'en_curso';
+        this.estadoPartida = 'en_juego';
         this.iniciarNuevaRonda();
     }
 
@@ -109,7 +109,7 @@ class PartidaGame {
     }
 
     iniciarNuevaRonda() {
-        if (this.estadoPartida !== 'en_curso') return;
+        if (this.estadoPartida !== 'en_juego') return;
 
         this.numeroRondaActual++;
         const jugadorManoDeEstaRonda = this.jugadores[this.indiceJugadorManoGlobal];
@@ -191,7 +191,7 @@ class PartidaGame {
         });
 
         // 2. Verificar si hay un ganador de la partida
-        const ganadorPartida = this.equipos.find(e => e.puntosPartida >= this.puntosObjetivo);
+        const ganadorPartida = this.equipos.find(e => e.puntosPartida >= this.puntosVictoria);
         if (ganadorPartida) {
             this.estadoPartida = 'finalizada';
             console.log(`Partida ${this.codigoSala} finalizada. Ganador: Equipo ${ganadorPartida.nombre}`);
@@ -208,8 +208,8 @@ class PartidaGame {
 
     // --- Métodos para que el gameLogicHandler llame ---
     manejarAccionJugador(jugadorId, tipoAccion, datosAccion) {
-        if (this.estadoPartida !== 'en_curso' || !this.rondaActual) {
-            console.warn("Acción de jugador recibida pero la partida no está en curso o no hay ronda activa.");
+        if (this.estadoPartida !== 'en_juego' || !this.rondaActual) {
+            console.warn("Acción de jugador recibida pero la partida no está en juego o no hay ronda activa.");
             return; // O enviar error
         }
 
@@ -258,7 +258,7 @@ class PartidaGame {
         let estadoGlobal = {
             codigoSala: this.codigoSala,
             tipoPartida: this.tipoPartida,
-            puntosObjetivo: this.puntosObjetivo,
+            puntosVictoria: this.puntosVictoria,
             estadoPartida: this.estadoPartida,
             equipos: this.equipos.map(e => ({
                 id: e.id,
@@ -304,7 +304,7 @@ class PartidaGame {
                 codigo_sala: this.codigoSala,
                 estado_partida: this.estadoPartida,
                 tipo_partida: this.tipoPartida,
-                puntos_objetivo: this.puntosObjetivo,
+                puntos_objetivo: this.puntosVictoria,
                 ronda_actual_numero: this.numeroRondaActual,
                 jugador_mano_ronda_id: this.rondaActual ? this.rondaActual.jugadorManoRonda.id : null,
                 jugador_turno_id: this.rondaActual && this.rondaActual.turnoHandler.jugadorTurnoActual ? 

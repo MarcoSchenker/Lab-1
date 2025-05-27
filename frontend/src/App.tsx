@@ -39,7 +39,7 @@ function App() {
         <Route path="/modificar-perfil" element={<AuthRoute><EditProfile /></AuthRoute>} />
         <Route path="/eliminar-perfil" element={<AuthRoute><DeleteProfile /></AuthRoute>} />
         <Route path="/salas" element={<AuthRoute><SalasPage /></AuthRoute>} />
-        <Route path="/online-game-page" element={<AuthRoute><OnlineGamePage /></AuthRoute>} />
+        <Route path="/online-game-page/:codigo_sala" element={<AuthRoute><OnlineGamePage /></AuthRoute>} />
         <Route path="/skins" element={<AuthRoute><SkinPage /></AuthRoute>} />
         <Route path="/store-mp" element={<AuthRoute><StorePageMp /></AuthRoute>} />
         <Route path="/store" element={<AuthRoute><StorePage /></AuthRoute>} />

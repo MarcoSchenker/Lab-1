@@ -11,7 +11,7 @@ const pool = require('../config/db'); // Acceso a la base de datos
 // const { getIoInstance } = require('../server'); // Necesitarás una forma de acceder a la instancia de io
 
 let activeGames = {}; // Objeto para almacenar las partidas activas: { codigoSala: PartidaGame_instance }
-let io = null; // Para almacenar la instancia de Socket.IO
+let io; // Para almacenar la instancia de Socket.IO
 
 /**
  * Inicializa el manejador de lógica del juego, principalmente para obtener la instancia de io.
@@ -28,10 +28,16 @@ function initializeGameLogic(ioInstance) {
  * @param {string} codigoSala 
  * @param {Array<object>} jugadoresInfo [{id, nombre_usuario}, ...]
  * @param {string} tipoPartida '1v1', '2v2', '3v3'
- * @param {number} puntosObjetivo 
+ * @param {number} puntosVictoria 
  * @returns {PartidaGame | null} La instancia de la partida creada o null si falla.
  */
-async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosObjetivo) {
+async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosVictoria) {
+    console.log('Creando nueva partida:', {
+    codigoSala,
+    jugadoresInfo,
+    tipoPartida,
+    puntosVictoria
+  });
     if (!io) {
         console.error("Error: Socket.IO no ha sido inicializado en gameLogicHandler.");
         return null;
@@ -51,7 +57,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosO
         const [result] = await connection.execute(
             `INSERT INTO partidas_estado (codigo_sala, tipo_partida, jugadores_configurados, puntaje_objetivo, estado_partida) 
              VALUES (?, ?, ?, ?, ?)`,
-            [codigoSala, tipoPartida, jugadoresInfo.length, puntosObjetivo, 'en_curso'] // estado inicial
+            [codigoSala, tipoPartida, jugadoresInfo.length, puntosVictoria, 'en_juego']
         );
         partidaDBId = result.insertId;
         console.log(`Partida registrada en DB con ID: ${partidaDBId}`);
@@ -141,7 +147,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosO
         codigoSala,
         jugadoresInfo,
         tipoPartida,
-        puntosObjetivo,
+        puntosVictoria,
         notificarEstadoGlobalCallback,
         persistirPartidaCallback,
         persistirAccionCallback,

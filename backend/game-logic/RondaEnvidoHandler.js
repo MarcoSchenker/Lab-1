@@ -147,7 +147,7 @@ class RondaEnvidoHandler {
     }
      _calcularPuntosFaltaEnvido() { 
         if (!this.ronda.partida) return 1;
-        const puntosObjetivo = this.ronda.partida.puntosObjetivo;
+        const puntosVictoria = this.ronda.partida.puntosVictoria;
         let puntosEquipoGanadorActual = 0;
         let puntosEquipoPerdedorActual = 0;
         const equipoGanadorDelEnvido = this.ronda.partida.equipos.find(e => e.id === this.ganadorEnvidoEquipoId);
@@ -155,7 +155,7 @@ class RondaEnvidoHandler {
         if (equipoGanadorDelEnvido) puntosEquipoGanadorActual = equipoGanadorDelEnvido.puntosPartida;
         if (equipoPerdedorDelEnvido) puntosEquipoPerdedorActual = equipoPerdedorDelEnvido.puntosPartida;
         const equipoConMasPuntos = Math.max(puntosEquipoGanadorActual, puntosEquipoPerdedorActual);
-        let puntosFalta = puntosObjetivo - equipoConMasPuntos;
+        let puntosFalta = puntosVictoria - equipoConMasPuntos;
         return Math.max(1, puntosFalta);
     }
 

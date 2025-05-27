@@ -152,7 +152,7 @@ class RondaGame {
                 const equipoGanador = this.equipos.find(e => e.id === this.envidoHandler.ganadorEnvidoEquipoId);
                 const equipoPerdedor = this.equipos.find(e => e.id !== this.envidoHandler.ganadorEnvidoEquipoId);
                 if (equipoGanador && equipoPerdedor) {
-                    puntosFinalesEnvido = this.ronda.partida.puntosObjetivo - equipoPerdedor.puntosPartida;
+                    puntosFinalesEnvido = this.ronda.partida.puntosVictoria - equipoPerdedor.puntosPartida;
                     if (puntosFinalesEnvido <= 0) puntosFinalesEnvido = 1; // Mínimo 1 punto
                 }
             } else {
