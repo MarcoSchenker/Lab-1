@@ -33,18 +33,19 @@ function initializeGameLogic(ioInstance) {
  */
 async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosVictoria) {
     console.log('Creando nueva partida:', {
-    codigoSala,
-    jugadoresInfo,
-    tipoPartida,
-    puntosVictoria
-  });
+        codigoSala,
+        jugadoresInfo,
+        tipoPartida,
+        puntosVictoria
+    });
+
     if (!io) {
         console.error("Error: Socket.IO no ha sido inicializado en gameLogicHandler.");
         return null;
     }
+
     if (activeGames[codigoSala]) {
         console.warn(`Ya existe una partida activa para la sala ${codigoSala}.`);
-        // Podrías devolver la partida existente o manejarlo como un error.
         return activeGames[codigoSala];
     }
 
@@ -55,7 +56,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     try {
         const connection = await pool.getConnection();
         
-        // 1. Insertar en partidas_estado (ya lo tienes)
+        // 1. Insertar en partidas_estado
         const [result] = await connection.execute(
             `INSERT INTO partidas_estado (codigo_sala, tipo_partida, jugadores_configurados, puntaje_objetivo, estado_partida) 
              VALUES (?, ?, ?, ?, ?)`,
@@ -63,7 +64,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         );
         partidaDBId = result.insertId;
         
-        // 2. CORREGIDO: Insertar equipos usando la estructura real de tu DB
+        // 2. Insertar equipos usando la estructura real de la DB
         const equiposData = crearEquiposSegunTipo(tipoPartida, jugadoresInfo);
         
         for (const equipo of equiposData) {
@@ -77,7 +78,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
             equipo.dbId = equipoResult.insertId;
         }
         
-        // 3. CORREGIDO: Insertar jugadores usando la estructura real de tu DB
+        // 3. Insertar jugadores usando la estructura real de la DB
         for (const jugador of jugadoresInfo) {
             const equipoData = equiposData.find(e => e.jugadores.includes(jugador.id));
             
@@ -94,7 +95,6 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         
     } catch (error) {
         console.error("Error al registrar la partida en la base de datos:", error);
-        
         // OPCIÓN: Continuar sin persistir en DB por ahora para no bloquear el juego
         console.log("Continuando sin persistir equipos/jugadores en DB...");
         partidaDBId = Math.floor(Math.random() * 1000000); // ID temporal para que funcione
@@ -192,8 +192,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
 
     activeGames[codigoSala] = partida;
     
-    // Notificar a los jugadores que la partida ha comenzado (PartidaGame lo hace internamente al final de _configurarPartida)
-    // El estado inicial se envía a través de notificarEstadoGlobalCallback -> 'nueva_ronda_iniciada' o similar.
+    // Notificar a los jugadores que la partida ha comenzado
     console.log(`Partida ${codigoSala} creada e iniciada. Jugadores notificados.`);
     return partida;
 }
@@ -262,10 +261,31 @@ function obtenerEstadoJuegoParaJugador(codigoSala, jugadorId) {
     
     // Obtener estado usando el método correcto
     const partidaGame = activeGames[codigoSala];
+    if (!partidaGame) {
+      console.log(`No se pudo obtener la instancia de la partida para la sala ${codigoSala}`);
+      return null;
+    }
+
+    // Verificar que el método existe
+    if (typeof partidaGame.obtenerEstadoGlobalParaCliente !== 'function') {
+      console.error(`El método obtenerEstadoGlobalParaCliente no está definido en la partida ${codigoSala}`);
+      return null;
+    }
+
     const estadoCompleto = partidaGame.obtenerEstadoGlobalParaCliente(jugadorId);
+    if (!estadoCompleto) {
+      console.log(`No se pudo obtener el estado completo para el jugador ${jugadorId}`);
+      return null;
+    }
+
+    // Verificar que el estado tenga la estructura esperada
+    if (!estadoCompleto.jugadores || !Array.isArray(estadoCompleto.jugadores)) {
+      console.error(`Estado inválido: no contiene array de jugadores`);
+      return null;
+    }
     
     // Verificar si el jugador pertenece a esta partida
-    const jugadorExiste = estadoCompleto.jugadores.some(j => j.id == jugadorId);
+    const jugadorExiste = estadoCompleto.jugadores.some(j => j.id === jugadorId);
     if (!jugadorExiste) {
       console.log(`El jugador ${jugadorId} no pertenece a la partida ${codigoSala}`);
       return null;
@@ -275,6 +295,16 @@ function obtenerEstadoJuegoParaJugador(codigoSala, jugadorId) {
     return estadoCompleto;
   } catch (error) {
     console.error(`Error al obtener estado para jugador ${jugadorId} en sala ${codigoSala}:`, error);
+    // Intentar recuperar un estado básico si es posible
+    try {
+      const partidaGame = activeGames[codigoSala];
+      if (partidaGame && typeof partidaGame.obtenerEstadoBasico === 'function') {
+        console.log('Intentando obtener estado básico como fallback...');
+        return partidaGame.obtenerEstadoBasico(jugadorId);
+      }
+    } catch (fallbackError) {
+      console.error('Error al intentar obtener estado básico:', fallbackError);
+    }
     return null;
   }
 }
