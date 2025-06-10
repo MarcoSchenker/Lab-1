@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truco Game Debug Console - Conexión Avanzada</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e2e;
+            color: #e2e2e2;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            position: relative;
+        }
+        .connection-status {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .connection-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background-color: #666;
+        }
+        .connected {
+            background-color: #4CAF50;
+        }
+        .disconnected {
+            background-color: #F44336;
+        }
+        .connecting {
+            background-color: #FFC107;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        .panels {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .panel {
+            flex: 1;
+            min-width: 350px;
+            background-color: #282a36;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .actions {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4a4e69;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #6c5ce7;
+        }
+        #connection-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #c0392b;
+        }
+        #log-container {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #1a1a2e;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .log-item {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 2px;
+        }
+        .log-info {
+            background-color: #2c3e5080;
+        }
+        .log-sent {
+            background-color: #27ae6080;
+        }
+        .log-received {
+            background-color: #8e44ad80;
+        }
+        .log-error {
+            background-color: #c0392b80;
+            color: #ffcccc;
+        }
+        #game-state-display {
+            height: 500px;
+            overflow-y: auto;
+            background-color: #1a1a2e;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #2d2d3a;
+            color: #e2e2e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Truco Game Debug Console</h1>
+            <div id="connection-status" class="disconnected">Disconnected</div>
+        </div>
+
+        <div class="panels">
+            <div class="panel">
+                <h2>Connection</h2>
+                <div class="input-group">
+                    <label for="server-url">Server URL:</label>
+                    <input type="text" id="server-url" value="http://localhost:3001">
+                </div>
+                <div class="input-group">
+                    <label for="room-code">Room Code:</label>
+                    <input type="text" id="room-code" placeholder="Enter room code">
+                </div>
+                <div class="input-group">
+                    <label for="player-id">Player ID:</label>
+                    <input type="number" id="player-id" placeholder="Enter player ID">
+                </div>
+                <div class="input-group">
+                    <label for="token">JWT Token:</label>
+                    <input type="text" id="token" placeholder="Enter JWT token">
+                </div>
+                <div class="actions">
+                    <button id="connect-btn">Connect</button>
+                    <button id="disconnect-btn">Disconnect</button>
+                </div>
+
+                <h2>Game Actions</h2>
+                <div class="actions">
+                    <button id="join-room-btn">Join Room</button>
+                    <button id="request-state-btn">Request State</button>
+                </div>
+
+                <h2>Event Log</h2>
+                <div id="log-container"></div>
+            </div>
+
+            <div class="panel">
+                <h2>Game State</h2>
+                <div id="game-state-display">No game state received yet.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let isConnected = false;
+        let currentRoomCode = '';
+        let gameState = null;
+
+        // DOM Elements
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+        const requestStateBtn = document.getElementById('request-state-btn');
+        const urlInput = document.getElementById('server-url');
+        const roomCodeInput = document.getElementById('room-code');
+        const playerIdInput = document.getElementById('player-id');
+        const tokenInput = document.getElementById('token');
+        const connectionStatus = document.getElementById('connection-status');
+        const logContainer = document.getElementById('log-container');
+        const gameStateDisplay = document.getElementById('game-state-display');
+
+        // Functions
+        function updateConnectionStatus(connected, message = '') {
+            isConnected = connected;
+            connectionStatus.className = connected ? 'connected' : 'disconnected';
+            connectionStatus.textContent = connected ? 'Connected' : 'Disconnected';
+            if (message) {
+                connectionStatus.textContent += ': ' + message;
+            }
+        }
+
+        function log(message, type = 'info') {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logItem);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateGameState(state) {
+            gameState = state;
+            gameStateDisplay.textContent = JSON.stringify(state, null, 2);
+        }
+
+        // Event Listeners
+        connectBtn.addEventListener('click', () => {
+            if (isConnected) {
+                log('Already connected', 'error');
+                return;
+            }
+
+            const url = urlInput.value;
+            try {
+                socket = io(url);
+                
+                socket.on('connect', () => {
+                    updateConnectionStatus(true, `Socket ID: ${socket.id}`);
+                    log(`Connected to server at ${url}`, 'info');
+                });
+
+                socket.on('disconnect', () => {
+                    updateConnectionStatus(false, 'Connection lost');
+                    log('Disconnected from server', 'error');
+                });
+
+                socket.on('connect_error', (error) => {
+                    updateConnectionStatus(false, 'Connection error');
+                    log(`Connection error: ${error.message}`, 'error');
+                });
+
+                // Game-specific events
+                socket.on('estado_juego_actualizado', (data) => {
+                    log('Received game state update', 'received');
+                    updateGameState(data);
+                });
+
+                socket.on('esperando_inicio_partida', (data) => {
+                    log(`Waiting for game to start: ${data.mensaje}`, 'info');
+                });
+
+                socket.on('unido_sala_juego', (data) => {
+                    log(`Joined game room: ${data.codigo_sala}`, 'info');
+                });
+
+                socket.on('error_juego', (data) => {
+                    log(`Game error: ${data.message}`, 'error');
+                });
+
+                socket.on('autenticacion_exitosa', (data) => {
+                    log(`Authentication successful: ${JSON.stringify(data)}`, 'info');
+                });
+
+                socket.on('autenticacion_fallida', (error) => {
+                    log(`Authentication failed: ${error}`, 'error');
+                });
+
+                socket.on('partida_iniciada', (data) => {
+                    log(`Game started in room: ${data.codigo_sala}`, 'info');
+                });
+
+                // Listen for all events (for debugging)
+                const originalOnevent = socket.onevent;
+                socket.onevent = function (packet) {
+                    const eventName = packet.data[0];
+                    if (!['estado_juego_actualizado'].includes(eventName)) { // Filter out verbose events
+                        log(`Received event: ${eventName}`, 'received');
+                    }
+                    originalOnevent.call(this, packet);
+                };
+            } catch (error) {
+                log(`Error connecting to server: ${error.message}`, 'error');
+            }
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            if (!isConnected) {
+                log('Not connected', 'error');
+                return;
+            }
+            
+            socket.disconnect();
+            updateConnectionStatus(false);
+            log('Manually disconnected from server', 'info');
+        });
+
+        joinRoomBtn.addEventListener('click', () => {
+            if (!isConnected) {
+                log('Not connected to server', 'error');
+                return;
+            }
+
+            const roomCode = roomCodeInput.value;
+            const token = tokenInput.value;
+            
+            if (!roomCode) {
+                log('Room code is required', 'error');
+                return;
+            }
+
+            if (token) {
+                socket.emit('autenticar_socket', token);
+                log('Sent authentication request', 'sent');
+            }
+
+            setTimeout(() => {
+                socket.emit('unirse_sala_juego', roomCode);
+                log(`Sent request to join room: ${roomCode}`, 'sent');
+                currentRoomCode = roomCode;
+            }, 500);
+        });
+
+        requestStateBtn.addEventListener('click', () => {
+            if (!isConnected) {
+                log('Not connected to server', 'error');
+                return;
+            }
+            
+            socket.emit('cliente_solicitar_estado_juego');
+            log('Requested current game state', 'sent');
+        });
+    </script>
+</body>
+</html>

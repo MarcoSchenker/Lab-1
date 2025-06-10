@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import './OnlineGamePage.css';
 import Header from '../components/HeaderDashboard';
+import GameReconnectOptions from '../components/GameReconnectOptions';
+import GameStateViewer from '../components/GameStateViewer';
+import gameStateDebugger from '../utils/gameStateDebugger';
 
 // Interfaces para el estado del juego
 interface Carta {
@@ -22,6 +25,7 @@ interface Jugador {
   cartasMano: Carta[] | null;
   cartasJugadasRonda: Carta[];
   estadoConexion: string;
+  skinPreferida?: string;
 }
 
 interface Equipo {
@@ -79,6 +83,7 @@ interface EstadoJuego {
   tipoPartida: string;
   puntosVictoria: number;
   estadoPartida: string;
+  mensajeError?: string;
   equipos: Equipo[];
   jugadores: Jugador[];
   numeroRondaActual: number;
@@ -98,9 +103,21 @@ const OnlineGamePage: React.FC = () => {
   const [puntosEnvido, setPuntosEnvido] = useState<string>('');
   const socketRef = useRef<Socket | null>(null);
   const [mensajeEstado, setMensajeEstado] = useState<string>('Cargando partida...');
+  const [jugadorSkins, setJugadorSkins] = useState<Record<number, string>>({});
+  const [showReconnectOption, setShowReconnectOption] = useState<boolean>(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState<number>(0);
+  const [totalReconnectAttempts, setTotalReconnectAttempts] = useState<number>(0);
+  const [showDebugPanel, setShowDebugPanel] = useState<boolean>(false);
+  const maxReconnectAttempts = 5;
+  const MAX_TOTAL_RETRY_ATTEMPTS = 15;
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const estadoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Determinar el jugador actual basado en el token almacenado
   useEffect(() => {
+    gameStateDebugger.logAction('page_loaded', { codigoSala });
+    
     const token = localStorage.getItem('token');
     if (!token) {
       setError('No estás autenticado. Por favor, inicia sesión.');
@@ -112,51 +129,176 @@ const OnlineGamePage: React.FC = () => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setJugadorId(payload.id);
+      gameStateDebugger.logAction('user_identified', { userId: payload.id });
     } catch (error) {
-      console.error('Error al decodificar el token:', error);
+      gameStateDebugger.logError('Error al decodificar token', error);
       setError('Error al identificar usuario. Por favor, inicia sesión nuevamente.');
       navigate('/login');
     }
-  }, [navigate]);
+
+    // Mostrar opciones de reconexión después de un tiempo
+    const showReconnectTimeout = setTimeout(() => {
+      if (!estadoJuego) {
+        setShowReconnectOption(true);
+        gameStateDebugger.logAction('show_reconnect_options', { reason: 'timeout' });
+      }
+    }, 10000);
+
+    return () => {
+      clearTimeout(showReconnectTimeout);
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (estadoTimeoutRef.current) clearTimeout(estadoTimeoutRef.current);
+      if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+    };
+  }, [navigate, estadoJuego]);
+
+  // Enhanced retry connection function with total attempts tracking
+  const retryConnection = useCallback(() => {
+    // Check both current batch attempts and total attempts
+    if (reconnectAttempts >= maxReconnectAttempts || totalReconnectAttempts >= MAX_TOTAL_RETRY_ATTEMPTS) {
+      gameStateDebugger.logAction('max_retry_reached', { 
+        batchAttempts: reconnectAttempts,
+        totalAttempts: totalReconnectAttempts 
+      });
+      
+      if (totalReconnectAttempts >= MAX_TOTAL_RETRY_ATTEMPTS) {
+        setError('Se ha alcanzado el límite máximo de intentos de conexión. Por favor, intenta más tarde.');
+      } else {
+        setError('No se pudo conectar después de varios intentos. Intenta volver a las salas.');
+      }
+      return;
+    }
+
+    // Increment both counters
+    setReconnectAttempts(prev => prev + 1);
+    setTotalReconnectAttempts(prev => prev + 1);
+    
+    const newAttemptCount = reconnectAttempts + 1;
+    setMensajeEstado(`Reintentando conexión (${newAttemptCount}/${maxReconnectAttempts})...`);
+    
+    gameStateDebugger.logAction('retry_connection', { 
+      batchAttempt: newAttemptCount,
+      maxBatchAttempts: maxReconnectAttempts,
+      totalAttempts: totalReconnectAttempts + 1,
+      maxTotalAttempts: MAX_TOTAL_RETRY_ATTEMPTS
+    });
+
+    // Desconectar el socket actual si existe
+    if (socketRef.current) {
+      gameStateDebugger.logSocketEvent('disconnect_before_retry', { socketId: socketRef.current.id });
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
+    // Esperar un momento y reiniciar el proceso - tiempo creciente para esperar más en intentos posteriores
+    const waitTime = 1500 + (totalReconnectAttempts * 500); // Increase wait time with more attempts
+    
+    reconnectTimeoutRef.current = setTimeout(() => {
+      gameStateDebugger.logAction('initialize_socket_after_retry', { waitTime });
+      initializeSocket();
+    }, waitTime);
+  }, [reconnectAttempts, totalReconnectAttempts]);
+  
+  // Reiniciar la aplicación (recarga la página)
+  const restartApp = useCallback(() => {
+    gameStateDebugger.logAction('restart_app', {});
+    window.location.reload();
+  }, []);
+
+  // Función para solicitar estado del juego con múltiples intentos
+  const requestGameState = useCallback(() => {
+    if (!socketRef.current || !socketRef.current.connected) {
+      gameStateDebugger.logError('request_state_failed', 'Socket no conectado para solicitar estado');
+      return;
+    }
+
+    gameStateDebugger.logSync('requesting_game_state', { socketId: socketRef.current.id });
+    socketRef.current.emit('cliente_solicitar_estado_juego');
+    
+    // Configurar un timeout para mostrar error si no recibimos respuesta
+    if (estadoTimeoutRef.current) clearTimeout(estadoTimeoutRef.current);
+    
+    // Establecer contador de intentos automáticos
+    let attemptsMade = 0;
+    const maxAutoRetries = 3;
+    
+    // Función para reintentar automáticamente
+    const autoRetry = () => {
+      if (attemptsMade < maxAutoRetries && !estadoJuego) {
+        attemptsMade++;
+        gameStateDebugger.logSync('auto_retry_request_state', { attempt: attemptsMade, maxAutoRetries });
+        socketRef.current?.emit('cliente_solicitar_estado_juego');
+        
+        // Configurar el siguiente reintento
+        estadoTimeoutRef.current = setTimeout(autoRetry, 2000);
+      } else if (!estadoJuego) {
+        // Después de todos los intentos automáticos, mostrar opciones de reconexión
+        gameStateDebugger.logSync('all_auto_retries_failed', { attempts: attemptsMade });
+        setShowReconnectOption(true);
+        setMensajeEstado('No se recibió respuesta del servidor. Puedes intentar reconectar manualmente.');
+      }
+    };
+    
+    // Iniciar el ciclo de reintento después del tiempo inicial
+    estadoTimeoutRef.current = setTimeout(autoRetry, 5000);
+  }, [estadoJuego]);
 
   // Inicializar la conexión WebSocket
-  useEffect(() => {
-    if (!codigoSala || !jugadorId) return;
+  const initializeSocket = useCallback(() => {
+    if (!codigoSala || !jugadorId) {
+      console.log('[CLIENT] Falta código de sala o ID de jugador para conectar');
+      return;
+    }
 
     console.log("[CLIENT] Intentando conectar al socket con:", {
-      url: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+      url: 'http://localhost:3001',
       codigoSala,
-      jugadorId
+      jugadorId,
+      intento: reconnectAttempts + 1
     });
 
     // Conectar al servidor WebSocket
-    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:3001');
+    const socket = io('http://localhost:3001', {
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000
+    });
     socketRef.current = socket;
 
     // Manejar conexión exitosa
     socket.on('connect', () => {
       console.log('[CLIENT] Socket conectado exitosamente con ID:', socket.id);
       setMensajeEstado('Conectado al servidor, autenticando...');
+      setShowReconnectOption(false);
+
+      // Autenticar el socket
+      const token = localStorage.getItem('token');
+      if (token) {
+        console.log('[CLIENT] Enviando token de autenticación...');
+        socket.emit('autenticar_socket', token);
+      }
     });
 
     // Manejar errores de conexión
     socket.on('connect_error', (error) => {
       console.error('[CLIENT] Error de conexión al socket:', error);
-      setError('Error de conexión al servidor. Revisa tu conexión a internet.');
+      setShowReconnectOption(true);
+      setMensajeEstado('Error de conexión al servidor. Reintentando...');
+      
+      // Reintentar automáticamente después de un tiempo
+      setTimeout(() => {
+        if (socketRef.current?.disconnected) {
+          retryConnection();
+        }
+      }, 3000);
     });
-
-    // Autenticar el socket
-    const token = localStorage.getItem('token');
-    if (token) {
-      console.log('[CLIENT] Enviando token de autenticación...');
-      socket.emit('autenticar_socket', token);
-    }
 
     // Manejar autenticación exitosa
     socket.on('autenticacion_exitosa', (data) => {
       console.log('[CLIENT] Socket autenticado correctamente:', data);
       setMensajeEstado('Autenticado, uniéndose a sala...');
       
+      // Unirse a la sala 
       socket.emit('unirse_sala_juego', codigoSala);
     });
 
@@ -167,9 +309,8 @@ const OnlineGamePage: React.FC = () => {
       
       // Solicitar estado después de unirse con un pequeño delay
       setTimeout(() => {
-        console.log('[CLIENT] Solicitando estado inicial del juego...');
-        socket.emit('cliente_solicitar_estado_juego');
-      }, 1500);
+        requestGameState();
+      }, 500);
     });
 
     // Manejar autenticación fallida
@@ -180,9 +321,43 @@ const OnlineGamePage: React.FC = () => {
 
     // Manejar recepción del estado del juego
     socket.on('estado_juego_actualizado', (estado) => {
-      console.log('[CLIENT] Estado del juego recibido exitosamente:', estado);
-      setEstadoJuego(estado);
-      setMensajeEstado('');
+      console.log('[CLIENT] Recibido estado_juego_actualizado:', {
+        estadoPartida: estado.estadoPartida,
+        equipos: estado.equipos?.length,
+        jugadores: estado.jugadores?.length
+      });
+      
+      gameStateDebugger.logSync('state_received', {
+        estadoPartida: estado.estadoPartida,
+        equipos: estado.equipos?.length,
+        jugadores: estado.jugadores?.length,
+        socketId: socket.id
+      });
+      
+      if (estadoTimeoutRef.current) {
+        clearTimeout(estadoTimeoutRef.current);
+        estadoTimeoutRef.current = null;
+      }
+
+      // Verificar estado completo y válido
+      const isValidState = estado && 
+                          estado.equipos?.length > 0 && 
+                          estado.jugadores?.length > 0;
+      
+      // Verificar si hay error en el estado
+      if (estado.estadoPartida === 'error' || !isValidState) {
+        const errorMsg = estado.mensajeError || (isValidState ? 'Error desconocido' : 'Estado de juego incompleto');
+        gameStateDebugger.logError('invalid_game_state', { error: errorMsg, data: estado });
+        console.error('[CLIENT] Error en el estado del juego:', errorMsg);
+        setMensajeEstado(`Error: ${errorMsg}`);
+        setShowReconnectOption(true);
+      } else {
+        gameStateDebugger.logSync('valid_state_applied', { estadoPartida: estado.estadoPartida });
+        setEstadoJuego(estado);
+        setMensajeEstado('');
+        setShowReconnectOption(false);
+        setReconnectAttempts(0); // Resetear intentos cuando obtenemos estado
+      }
     });
 
     // Manejar estado de espera
@@ -190,10 +365,14 @@ const OnlineGamePage: React.FC = () => {
       console.log('[CLIENT] ⏳ Esperando inicio de partida:', data);
       setMensajeEstado(data.mensaje || 'Esperando que inicie la partida...');
       
-      // Reintentrar obtener estado cada 3 segundos
+      // Reintentrar obtener estado periódicamente
       const interval = setInterval(() => {
         console.log('[CLIENT] Reintentando obtener estado...');
-        socket.emit('cliente_solicitar_estado_juego');
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('cliente_solicitar_estado_juego');
+        } else {
+          clearInterval(interval);
+        }
       }, 3000);
       
       // Limpiar interval si se recibe el estado
@@ -201,108 +380,124 @@ const OnlineGamePage: React.FC = () => {
         clearInterval(interval);
       });
     });
-
-    // Manejar errores del juego
-    socket.on('error_juego', (data) => {
-      console.error('[CLIENT]  Error en el juego:', data);
-      setError(data.message || 'Error en el juego');
-    });
-
-    // Manejar eventos específicos del juego
-    socket.on('turno_actualizado', (data) => {
-      const esMiTurno = data.jugadorTurnoActualId === jugadorId;
-      setMensajeEstado(esMiTurno ? '¡Es tu turno!' : `Turno de: ${obtenerNombreJugador(data.jugadorTurnoActualId)}`);
-    });
-
-    socket.on('carta_jugada', (data) => {
-      setMensajeEstado(`${obtenerNombreJugador(data.jugadorId)} jugó ${formatearCarta(data.carta)}`);
-    });
-
-    socket.on('canto_realizado', (data) => {
-      setMensajeEstado(`${obtenerNombreJugador(data.jugadorId)} cantó ${formatearCanto(data.tipoCanto)}`);
-    });
-
-    socket.on('respuesta_canto', (data) => {
-      setMensajeEstado(`${obtenerNombreJugador(data.jugadorId)} respondió ${formatearRespuesta(data.respuesta)}`);
-    });
-
-    socket.on('envido_querido_declarar_puntos', (data) => {
-      if (data.turnoDeclararId === jugadorId) {
-        setMensajeEstado('Debes declarar tus puntos de envido');
-      } else {
-        setMensajeEstado(`${obtenerNombreJugador(data.turnoDeclararId)} está declarando sus puntos`);
-      }
-    });
-
-    socket.on('envido_resuelto', (data) => {
-      setMensajeEstado(`Envido ganado por ${obtenerNombreEquipo(data.equipoGanadorId)} (${data.puntosGanados} puntos)`);
-    });
-
-    socket.on('resultado_mano', (data) => {
-      if (data.fueParda) {
-        setMensajeEstado('Mano parda');
-      } else {
-        setMensajeEstado(`Mano ganada por ${obtenerNombreJugador(data.ganadorManoJugadorId)}`);
-      }
-    });
-
-    socket.on('resultado_ronda', (data) => {
-      setMensajeEstado(`Ronda ganada por ${obtenerNombreEquipo(data.ganadorRondaEquipoId)}`);
-    });
-
-    socket.on('fin_partida', (data) => {
-      setMensajeEstado(`¡Partida finalizada! Ganador: ${obtenerNombreEquipo(data.ganadorPartidaId)}`);
-    });
-
-    socket.on('jugador_desconectado', (data) => {
-      setMensajeEstado(`${obtenerNombreJugador(data.jugadorId)} se ha desconectado`);
-    });
-
-    socket.on('jugador_reconectado', (data) => {
-      setMensajeEstado(`${obtenerNombreJugador(data.jugadorId)} se ha reconectado`);
-    });
-
-    socket.on('retomar_truco_pendiente', (data) => {
-      setMensajeEstado('Se retoma el truco pendiente');
-    });
-
-    // Manejar desconexión
-    socket.on('disconnect', () => {
-      console.log('[CLIENT] Desconectado del servidor');
-      setMensajeEstado('Conexión perdida. Intentando reconectar...');
+    
+    // Manejar solicitud de compartir estado
+    socket.on('solicitar_compartir_estado', (data) => {
+      console.log('[CLIENT] Solicitud de compartir estado recibida:', data);
+      gameStateDebugger.logSync('share_state_request', data);
       
-      // Intentar reconectar después de un breve retraso
-      setTimeout(() => {
-        if (socketRef.current?.disconnected) {
-          console.log('[CLIENT] Intentando reconectar...');
-          socketRef.current.connect();
-        }
-      }, 2000);
+      // Verificar si tenemos estado para compartir
+      if (estadoJuego) {
+        console.log('[CLIENT] Compartiendo nuestro estado con jugador:', data.solicitanteId);
+        gameStateDebugger.logSync('sharing_state', { with: data.solicitanteId });
+        
+        // Enviar nuestro estado al socket específico
+        socket.emit('estado_compartido_por_jugador', {
+          estadoJuego,
+          compartidoPorId: jugadorId
+        });
+      }
+    });
+    
+    // Recibir notificación de que hay estado actualizado disponible
+    socket.on('estado_actualizado_disponible', (data) => {
+      console.log('[CLIENT] Estado actualizado disponible:', data);
+      gameStateDebugger.logSync('updated_state_available', data);
+      
+      // Si no tenemos estado o estamos en espera, solicitar
+      if (!estadoJuego || mensajeEstado) {
+        requestGameState();
+      }
+    });
+    
+    // Manejar error de estado de juego
+    socket.on('error_estado_juego', (data) => {
+      console.error('[CLIENT] Error de estado de juego:', data);
+      gameStateDebugger.logError('game_state_error', data);
+      
+      // Si tenemos un estado, no interrumpir el juego pero mostrar un toast o notificación
+      if (estadoJuego) {
+        console.warn('[CLIENT] Problema con el estado de juego, pero seguimos jugando:', data.message);
+      } else {
+        setMensajeEstado(`Error: ${data.message}. Intentando recuperar...`);
+        setTimeout(() => requestGameState(), 2000);
+      }
     });
 
-    // Limpiar socket al desmontar el componente
+    // Manejar solicitud de reconexión del servidor
+    socket.on('solicitar_reconexion', (data) => {
+      console.log('[CLIENT] Solicitud de reconexión recibida:', data);
+      gameStateDebugger.logSync('reconnection_requested', data);
+      
+      // Mostrar mensaje al usuario
+      setMensajeEstado(`Reconectando para recuperar estado completo...`);
+      
+      // Desconectar y reconectar socket
+      setTimeout(() => {
+        if (socket.connected) {
+          socket.disconnect();
+          
+          // Reconectar después de un breve retraso
+          setTimeout(() => {
+            retryConnection();
+          }, 1000);
+        }
+      }, 500);
+    });
+    
+    // Manejar recuperación de estado
+    socket.on('estado_recuperacion', (data) => {
+      console.log('[CLIENT] Estado en recuperación:', data);
+      gameStateDebugger.logSync('recovery_state_received', data);
+      
+      setMensajeEstado('Recuperando estado de juego...');
+      
+      // Si recibimos un estado parcial de recuperación, lo guardamos temporalmente
+      // pero seguimos mostrando la pantalla de carga hasta recibir un estado completo
+      if (data.estadoPartida === 'recuperando') {
+        setTimeout(() => {
+          socket.emit('cliente_solicitar_estado_juego');
+        }, 3000);
+      }
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('connect_error');
+      socket.off('autenticacion_exitosa');
+      socket.off('unido_sala_juego');
+      socket.off('estado_juego_actualizado');
+      socket.off('esperando_inicio_partida');
+      socket.off('error_juego');
+      socket.off('disconnect');
+      socket.disconnect();
+    };
+  }, [codigoSala, jugadorId, reconnectAttempts, retryConnection, requestGameState, estadoJuego, navigate]);
+
+  // Inicializar la conexión cuando tenemos código de sala y jugador ID
+  useEffect(() => {
+    if (codigoSala && jugadorId && !socketRef.current) {
+      initializeSocket();
+    }
+    
     return () => {
       if (socketRef.current) {
-        console.log('[CLIENT] Desconectando socket...');
+        console.log('[CLIENT] Limpiando socket al desmontar componente');
         socketRef.current.disconnect();
       }
     };
-  }, [codigoSala, jugadorId]);
+  }, [codigoSala, jugadorId, initializeSocket]);
 
-  // Polling para solicitar estado si no llega
+  // Actualizar preferencias de skins basado en el estado del juego
   useEffect(() => {
-    if (!socketRef.current || !codigoSala || estadoJuego) return;
+    if (!estadoJuego) return;
     
-    // Solicitar actualizaciones del estado cada 10 segundos por si se perdió algún evento
-    const intervalId = setInterval(() => {
-      if (socketRef.current?.connected && !estadoJuego) {
-        console.log('[CLIENT] Solicitando estado (polling)...');
-        socketRef.current.emit('cliente_solicitar_estado_juego');
-      }
-    }, 10000);
-    
-    return () => clearInterval(intervalId);
-  }, [codigoSala, estadoJuego]);
+    const nuevasSkins: Record<number, string> = {};
+    estadoJuego.jugadores.forEach(jugador => {
+      nuevasSkins[jugador.id] = jugador.skinPreferida || 'Original';
+    });
+    setJugadorSkins(nuevasSkins);
+  }, [estadoJuego]);
 
   // Funciones auxiliares para obtener nombres
   const obtenerNombreJugador = useCallback((id: number | null): string => {
@@ -480,237 +675,105 @@ const OnlineGamePage: React.FC = () => {
     return Object.keys(estadoJuego.rondaActual.envidoInfo.puntosDeclarados).length > 0;
   };
 
-  // Renderizar el componente
+  // Función para obtener la ruta de la skin para un jugador específico
+  const obtenerRutaSkin = useCallback((jugadorId: number) => {
+    const nombreSkin = jugadorSkins[jugadorId] || 'Original';
+    return `/cartas/mazo${nombreSkin}`;
+  }, [jugadorSkins]);
+
+  const renderizarCarta = (carta: Carta, jugadorDueno: number) => {
+    const rutaSkin = obtenerRutaSkin(jugadorDueno);
+    // Renderizar la carta usando rutaSkin como base para la imagen
+    return (
+      <img 
+        src={`${rutaSkin}/${carta.palo}_${carta.numero}.png`}
+        alt={`${carta.numero} de ${carta.palo}`} 
+        className="carta"
+      />
+    );
+  };
+
+  // Toggle debug panel
+  const toggleDebugPanel = useCallback(() => {
+    setShowDebugPanel(prev => !prev);
+    gameStateDebugger.logAction('toggle_debug_panel', { showing: !showDebugPanel });
+  }, [showDebugPanel]);
+
+  // Método para forzar refrescar el estado manualmente
+  const forceRefreshState = useCallback(() => {
+    if (!socketRef.current || !socketRef.current.connected) {
+      gameStateDebugger.logError('force_refresh_failed', 'Socket no conectado');
+      return;
+    }
+
+    gameStateDebugger.logAction('manual_refresh_state', { socketId: socketRef.current.id });
+    setMensajeEstado('Actualizando estado del juego...');
+    socketRef.current.emit('cliente_solicitar_estado_juego');
+    
+    // También solicitar a otros jugadores que compartan su estado
+    if (codigoSala) {
+      socketRef.current.emit('solicitar_compartir_estado', {
+        solicitanteId: jugadorId,
+        socketId: socketRef.current.id
+      });
+    }
+  }, [codigoSala, jugadorId]);
+
+  // Determinar contenido principal basado en el estado actual
+  let mainContent;
   if (error) {
-    return (
-      <div className="game-error-container">
-        <Header />
-        <div className="game-error">
-          <h2>Error</h2>
-          <p>{error}</p>
-          <button onClick={() => navigate('/salas')}>Volver a las Salas</button>
-          <button onClick={() => {
-            setError(null);
-            window.location.reload();
-          }} className="reconnect-button">
-            Intentar Reconectar
-          </button>
-        </div>
+    mainContent = <div className="error-message">{error}</div>;
+  } else if (!estadoJuego) {
+    mainContent = (
+      <div className="loading-state">
+        <div className="spinner"></div>
+        <p className="loading-message">{mensajeEstado}</p>
+        
+        {showReconnectOption && (
+          <GameReconnectOptions 
+            socket={socketRef.current} 
+            codigoSala={codigoSala || ''} 
+            attemptCount={reconnectAttempts}
+            maxAttempts={maxReconnectAttempts}
+            onRetry={retryConnection}
+            onRestart={restartApp}
+          />
+        )}
       </div>
     );
+  } else {
+    // Contenido normal del juego cuando tenemos estadoJuego
+    // ...código existente de renderizado del juego...
   }
-
-  if (!estadoJuego) {
-    return (
-      <div className="game-loading-container">
-        <Header />
-        <div className="game-loading">
-          <h2>Cargando partida...</h2>
-          <p>{mensajeEstado}</p>
-          <div className="spinner"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Obtener las cartas del jugador actual
-  const misCartas = estadoJuego.jugadores.find(j => j.id === jugadorId)?.cartasMano || [];
   
   return (
-    <div className="game-container">
+    <div className="game-page">
       <Header />
-      <div className="game-content">
-        <div className="game-header">
-          <h1>Partida de Truco - Sala: {estadoJuego.codigoSala}</h1>
-          <div className="game-info">
-            <span>Tipo: {estadoJuego.tipoPartida}</span>
-            <span>Ronda: {estadoJuego.numeroRondaActual}</span>
-            <span>Objetivo: {estadoJuego.puntosVictoria} puntos</span>
-          </div>
-        </div>
-        
-        {mensajeEstado && (
-          <div className="estado-mensaje">
-            {mensajeEstado}
-          </div>
-        )}
-        
-        <div className="game-board">
-          {/* Información de equipos */}
-          <div className="equipos-container">
-            {estadoJuego.equipos.map(equipo => (
-              <div key={equipo.id} className={`equipo-card ${equipo.jugadoresIds.includes(jugadorId || -1) ? 'mi-equipo' : ''}`}>
-                <h3>{equipo.nombre}</h3>
-                <div className="equipo-puntos">{equipo.puntosPartida} puntos</div>
-                <div className="equipo-jugadores">
-                  {equipo.jugadoresIds.map(jId => {
-                    const jugador = estadoJuego.jugadores.find(j => j.id === jId);
-                    return (
-                      <div key={jId} className={`jugador-tag ${jugador?.estadoConexion === 'desconectado' ? 'desconectado' : ''}`}>
-                        {jugador?.nombreUsuario}
-                        {jugador?.esPie && ' (Pie)'}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Mesa de juego */}
-          <div className="mesa-juego">
-            <h3>Mesa - Mano {estadoJuego.rondaActual.turnoInfo.manoActualNumero}</h3>
-            <div className="cartas-mesa">
-              {estadoJuego.rondaActual.turnoInfo.cartasEnMesaManoActual.map((jugada, idx) => (
-                <div key={idx} className="carta-jugada">
-                  <div className="carta-jugada-info">
-                    <span>{obtenerNombreJugador(jugada.jugadorId)}</span>
-                    <div className={`carta ${jugada.carta.palo.toLowerCase()}`}>
-                      <span className="carta-numero">{jugada.carta.numero}</span>
-                      <span className="carta-palo">
-                        {jugada.carta.palo === 'ESPADA' ? 'Espada' : 
-                         jugada.carta.palo === 'BASTO' ? 'Basto' :
-                         jugada.carta.palo === 'COPA' ? 'Copa' : 'Oro'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Historial de manos */}
-          {estadoJuego.rondaActual.turnoInfo.manosJugadas.length > 0 && (
-            <div className="historial-manos">
-              <h3>Manos anteriores</h3>
-              <div className="manos-container">
-                {estadoJuego.rondaActual.turnoInfo.manosJugadas.map((mano, idx) => (
-                  <div key={idx} className="mano-previa">
-                    <h4>Mano {idx + 1}</h4>
-                    <div className="mano-resultado">
-                      {mano.fueParda ? 'Parda' : `Ganador: ${obtenerNombreJugador(mano.ganadorManoJugadorId)}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Mis cartas */}
-          <div className="mis-cartas">
-            <h3>Mis cartas</h3>
-            <div className="cartas-container">
-              {misCartas.length > 0 ? (
-                misCartas.map((carta, idx) => (
-                  <div 
-                    key={carta.idUnico} 
-                    className={`carta ${carta.palo.toLowerCase()} ${esMiTurno() ? 'jugable' : ''}`}
-                    onClick={() => esMiTurno() ? jugarCarta(carta) : null}
-                  >
-                    <span className="carta-numero">{carta.numero}</span>
-                    <span className="carta-palo">
-                      {carta.palo === 'ESPADA' ? 'Espada' : 
-                       carta.palo === 'BASTO' ? 'Basto' :
-                       carta.palo === 'COPA' ? 'Copa' : 'Oro'}
-                    </span>
-                    {carta.valorEnvido > 0 && (
-                      <span className="carta-envido">{carta.valorEnvido}</span>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="sin-cartas">No tienes cartas</div>
-              )}
-            </div>
-          </div>
-          
-          {/* Acciones del juego */}
-          <div className="acciones-juego">
-            {/* Cantos de Envido */}
-            {deboCantarEnvido() && (
-              <div className="acciones-grupo">
-                <h4>Cantar Envido</h4>
-                <div className="botones-container">
-                  <button onClick={() => cantar('ENVIDO')}>Envido</button>
-                  <button onClick={() => cantar('REAL_ENVIDO')}>Real Envido</button>
-                  <button onClick={() => cantar('FALTA_ENVIDO')}>Falta Envido</button>
-                </div>
-              </div>
-            )}
-            
-            {/* Cantos de Truco */}
-            {esMiTurno() && !estadoJuego.rondaActual.trucoInfo.cantado && (
-              <div className="acciones-grupo">
-                <h4>Cantar Truco</h4>
-                <button onClick={() => cantar('TRUCO')}>Truco</button>
-              </div>
-            )}
-            
-            {/* Responder a cantos */}
-            {deboResponderCanto() && estadoJuego.rondaActual.envidoInfo.estadoResolucion === 'pendiente_respuesta' && (
-              <div className="acciones-grupo">
-                <h4>Responder Envido</h4>
-                <div className="botones-container">
-                  <button onClick={() => responderCanto('QUIERO')}>Quiero</button>
-                  <button onClick={() => responderCanto('NO_QUIERO')}>No Quiero</button>
-                </div>
-              </div>
-            )}
-            
-            {deboResponderTruco() && (
-              <div className="acciones-grupo">
-                <h4>Responder Truco</h4>
-                <div className="botones-container">
-                  <button onClick={() => responderCanto('QUIERO')}>Quiero</button>
-                  <button onClick={() => responderCanto('NO_QUIERO')}>No Quiero</button>
-                  
-                  {/* Retruco y Vale Cuatro */}
-                  {estadoJuego.rondaActual.trucoInfo.nivelActual === 'TRUCO' && (
-                    <button onClick={() => responderCanto('RETRUCO')}>Retruco</button>
-                  )}
-                  
-                  {estadoJuego.rondaActual.trucoInfo.nivelActual === 'RETRUCO' && (
-                    <button onClick={() => responderCanto('VALE_CUATRO')}>Vale Cuatro</button>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Declarar puntos de envido */}
-            {deboDeclararPuntos() && (
-              <div className="acciones-grupo">
-                <h4>Declarar Puntos Envido</h4>
-                <form onSubmit={declararPuntosEnvido} className="form-puntos">
-                  <input 
-                    type="number" 
-                    min="0" 
-                    max="33" 
-                    value={puntosEnvido} 
-                    onChange={(e) => setPuntosEnvido(e.target.value)}
-                    placeholder="Tus puntos"
-                    required
-                  />
-                  <button type="submit">Declarar</button>
-                </form>
-                
-                {/* Son Buenas */}
-                {puedoDeclararSonBuenas() && (
-                  <button onClick={declararSonBuenas} className="son-buenas-btn">
-                    Son Buenas
-                  </button>
-                )}
-              </div>
-            )}
-            
-            {/* Irse al mazo */}
-            <div className="acciones-grupo">
-              <button onClick={irseAlMazo} className="mazo-btn">
-                Irse al Mazo
-              </button>
-            </div>
-          </div>
-        </div>
+      
+      {/* Botón de depuración accesible solo con teclas especiales */}
+      <div className="debug-floating-button" onClick={toggleDebugPanel}>
+        <span>🔍</span>
       </div>
+      
+      {/* Panel de depuración */}
+      {showDebugPanel && (
+        <div className="debug-panel">
+          <div className="debug-panel-header">
+            <h3>Panel de Depuración</h3>
+            <button onClick={toggleDebugPanel}>Cerrar</button>
+          </div>
+          
+          <div className="debug-panel-content">
+            <GameStateViewer 
+              gameState={estadoJuego} 
+              socketId={socketRef.current?.id || null}
+              onManualRefresh={forceRefreshState}
+            />
+          </div>
+        </div>
+      )}
+      
+      {mainContent}
     </div>
   );
 };

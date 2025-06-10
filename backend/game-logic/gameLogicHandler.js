@@ -2,7 +2,27 @@
  * Este módulo será el nexo entre tu server.js  y las instancias de PartidaGame.
  *  Se encargará de:
 Gestionar Partidas Activas: Mantener un registro de todas las partidas en curso.
-Crear Nuevas Partidas: Cuando una sala esté lista, instanciar PartidaGame.
+Crear Nuevas P    const partida = new PartidaGame(
+        codigoSala,
+        jugadoresInfo,
+        tipoPartida,
+        puntosVictoria,
+        notificarEstadoGlobalCallback,
+        persistirPartidaCallback,
+        persistirAccionCallback,
+        finalizarPartidaCallback
+    );
+    partida.idEnDB = partidaDBId; // Guardar el ID de la DB en la instancia de la partida
+
+    console.log(`Guardando partida en activeGames con código ${codigoSala}`);
+    activeGames[codigoSala] = partida;
+    
+    console.log(`=== PARTIDA CREADA EXITOSAMENTE ===`);
+    debugActiveGames(); // Estado después de crear
+    
+    // Notificar a los jugadores que la partida ha comenzado
+    console.log(`Partida ${codigoSala} creada e iniciada. Jugadores notificados.`);
+    return partida;na sala esté lista, instanciar PartidaGame.
 Enrutar Acciones: Recibir acciones de los jugadores (desde server.js) y dirigirlas a la instancia correcta de PartidaGame.
 Manejar Callbacks: Implementar las funciones de callback que PartidaGame necesita para notificar y persistir.
  */
@@ -13,6 +33,36 @@ const { getIoInstance } = require('../server');
 let activeGames = {};
 let io;
 
+const { debugLog } = require('../utils/debugUtils');
+
+// Función para debuggear el estado de activeGames
+function debugActiveGames() {
+    debugLog('gameLogicHandler', 'Estado de activeGames', {
+        numPartidas: Object.keys(activeGames).length,
+        salasCodigos: Object.keys(activeGames),
+        detalles: Object.entries(activeGames).map(([codigo, partida]) => ({
+            sala: codigo,
+            tipoPartida: partida?.tipoPartida,
+            estadoPartida: partida?.estadoPartida,
+            numeroJugadores: partida?.jugadores?.length || 0,
+            idEnDB: partida?.idEnDB
+        }))
+    });
+    
+    console.log('=== DEBUG: Estado de activeGames ===');
+    console.log('Número de partidas activas:', Object.keys(activeGames).length);
+    console.log('Códigos de salas activas:', Object.keys(activeGames));
+    for (const [codigo, partida] of Object.entries(activeGames)) {
+        console.log(`Sala ${codigo}:`, {
+            tipoPartida: partida?.tipoPartida,
+            estadoPartida: partida?.estadoPartida,
+            numeroJugadores: partida?.jugadores?.length || 0,
+            idEnDB: partida?.idEnDB
+        });
+    }
+    console.log('=====================================');
+}
+
 /**
  * Inicializa el manejador de lógica del juego, principalmente para obtener la instancia de io.
  * @param {SocketIO.Server} ioInstance La instancia del servidor de Socket.IO.
@@ -20,6 +70,7 @@ let io;
 function initializeGameLogic(ioInstance) {
     io = ioInstance;
     console.log("GameLogicHandler inicializado con instancia de Socket.IO.");
+    debugActiveGames(); // Debug inicial
 }
 
 /**
@@ -32,12 +83,15 @@ function initializeGameLogic(ioInstance) {
  * @returns {PartidaGame | null} La instancia de la partida creada o null si falla.
  */
 async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosVictoria) {
-    console.log('Creando nueva partida:', {
+    console.log('=== INICIANDO CREACIÓN DE NUEVA PARTIDA ===');
+    console.log('Datos recibidos:', {
         codigoSala,
         jugadoresInfo,
         tipoPartida,
         puntosVictoria
     });
+    
+    debugActiveGames(); // Estado antes de crear
 
     if (!io) {
         console.error("Error: Socket.IO no ha sido inicializado en gameLogicHandler.");
@@ -46,6 +100,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
 
     if (activeGames[codigoSala]) {
         console.warn(`Ya existe una partida activa para la sala ${codigoSala}.`);
+        debugActiveGames();
         return activeGames[codigoSala];
     }
 
@@ -56,7 +111,26 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     try {
         const connection = await pool.getConnection();
         
-        // 1. Insertar en partidas_estado
+        // PRIMERO: Verificar que existe el registro en partidas (para la FK constraint)
+        const [partidasRows] = await connection.execute(
+            `SELECT codigo_sala FROM partidas WHERE codigo_sala = ?`,
+            [codigoSala]
+        );
+        
+        if (partidasRows.length === 0) {
+            console.warn(`⚠️ No existe registro en 'partidas' para ${codigoSala}. Creando registro...`);
+            // Crear registro básico en partidas
+            await connection.execute(
+                `INSERT INTO partidas (codigo_sala, estado, fecha_inicio, puntos_victoria, max_jugadores, creador) 
+                 VALUES (?, 'en_juego', NOW(), ?, ?, 'gameLogicHandler')`,
+                [codigoSala, puntosVictoria, jugadoresInfo.length]
+            );
+            console.log(`✅ Registro creado en 'partidas' para ${codigoSala}`);
+        } else {
+            console.log(`✅ Registro ya existe en 'partidas' para ${codigoSala}`);
+        }
+        
+        // AHORA: Insertar en partidas_estado
         const [result] = await connection.execute(
             `INSERT INTO partidas_estado (codigo_sala, tipo_partida, jugadores_configurados, puntaje_objetivo, estado_partida) 
              VALUES (?, ?, ?, ?, ?)`,
@@ -178,6 +252,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         io.to(sala).emit('partida_terminada_en_servidor', { codigoSala: sala, ganadorEquipoId });
     };
 
+    console.log(`Creando instancia PartidaGame para sala ${codigoSala} con ${jugadoresInfo.length} jugadores...`);
     const partida = new PartidaGame(
         codigoSala,
         jugadoresInfo,
@@ -190,10 +265,42 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     );
     partida.idEnDB = partidaDBId; // Guardar el ID de la DB en la instancia de la partida
 
+    console.log(`Guardando partida en activeGames con código ${codigoSala}`);
     activeGames[codigoSala] = partida;
     
     // Notificar a los jugadores que la partida ha comenzado
-    console.log(`Partida ${codigoSala} creada e iniciada. Jugadores notificados.`);
+    console.log(`Partida ${codigoSala} creada e iniciada.`);
+    debugActiveGames(); // Debug después de crear partida
+    
+    // Enviar explícitamente el estado inicial a todos los jugadores
+    try {
+        debugLog('gameLogicHandler', `Enviando estado inicial a todos los jugadores de la sala ${codigoSala}`);
+        
+        // Primero, enviar a cada jugador su estado personalizado
+        for (const jugador of jugadoresInfo) {
+            const estadoJuego = partida.obtenerEstadoGlobalParaCliente(jugador.id);
+            // Usar socket.to() asegura que sólo ese jugador reciba su estado específico
+            const jugadorSocketId = await getSocketIdByUserId(io, jugador.id);
+            if (jugadorSocketId) {
+                io.to(jugadorSocketId).emit('estado_juego_actualizado', estadoJuego);
+                debugLog('gameLogicHandler', `Estado enviado a socket ${jugadorSocketId} (jugador ${jugador.nombre_usuario})`);
+            } else {
+                // Enviar a toda la sala como fallback, pero no es lo ideal
+                io.to(codigoSala).emit('estado_juego_actualizado', estadoJuego);
+                debugLog('gameLogicHandler', `Socket no encontrado para jugador ${jugador.nombre_usuario}, enviando a toda la sala`);
+            }
+        }
+        
+        // Luego enviar evento de inicio de partida a toda la sala
+        io.to(codigoSala).emit('partida_iniciada', { 
+            codigo_sala: codigoSala,
+            mensaje: 'Partida iniciada exitosamente' 
+        });
+    } catch (error) {
+        debugLog('gameLogicHandler', `Error al enviar estado inicial a jugadores: ${error}`, error);
+        console.error(`Error al enviar estado inicial a jugadores: ${error}`);
+    }
+    
     return partida;
 }
 
@@ -251,20 +358,29 @@ function manejarAccionJugador(codigoSala, jugadorId, tipoAccion, datosAccion) {
  */
 function obtenerEstadoJuegoParaJugador(codigoSala, jugadorId) {
   try {
-    console.log(`Obteniendo estado para jugador ${jugadorId} en sala ${codigoSala}`);
+    console.log(`=== SOLICITANDO ESTADO PARA JUGADOR ===`);
+    console.log(`Jugador: ${jugadorId}, Sala: ${codigoSala}`);
+    debugActiveGames(); // Mostrar estado actual
     
     // Verificar si existe la partida
     if (!activeGames[codigoSala]) {
-      console.log(`No se encontró partida activa con código ${codigoSala}`);
+      console.log(`❌ No se encontró partida activa con código ${codigoSala}`);
+      console.log('Salas disponibles:', Object.keys(activeGames));
       return null;
     }
     
     // Obtener estado usando el método correcto
     const partidaGame = activeGames[codigoSala];
     if (!partidaGame) {
-      console.log(`No se pudo obtener la instancia de la partida para la sala ${codigoSala}`);
+      console.log(`❌ No se pudo obtener la instancia de la partida para la sala ${codigoSala}`);
       return null;
     }
+
+    console.log(`✅ Partida encontrada para sala ${codigoSala}`, {
+      estadoPartida: partidaGame.estadoPartida,
+      numeroJugadores: partidaGame.jugadores?.length,
+      tipoPartida: partidaGame.tipoPartida
+    });
 
     // Verificar que el método existe
     if (typeof partidaGame.obtenerEstadoGlobalParaCliente !== 'function') {
@@ -318,14 +434,14 @@ function manejarDesconexionJugador(codigoSala, jugadorId) {
     const partida = activeGames[codigoSala];
     if (partida) {
         partida.manejarDesconexionJugador(jugadorId);
-        // Si todos los jugadores se desconectan, podrías finalizar la partida.
-        // const jugadoresConectados = partida.jugadores.filter(j => j.estadoConexion === 'conectado');
-        // if (jugadoresConectados.length === 0) {
-        //     console.log(`Todos los jugadores desconectados en ${codigoSala}. Finalizando partida.`);
-        //     // Lógica para finalizar y limpiar la partida
-        //     delete activeGames[codigoSala];
+        //Si todos los jugadores se desconectan, podrías finalizar la partida.
+        const jugadoresConectados = partida.jugadores.filter(j => j.estadoConexion === 'conectado');
+        if (jugadoresConectados.length === 0) {
+             console.log(`Todos los jugadores desconectados en ${codigoSala}. Finalizando partida.`);
+             // Lógica para finalizar y limpiar la partida
+            delete activeGames[codigoSala];
         //     // Notificar que la partida se abandonó
-        // }
+        }
     }
 }
 
@@ -372,6 +488,116 @@ async function guardarEstadoPartida(codigo_sala, estadoPartida) {
     }
 }
 
+/**
+ * Función de prueba para crear una partida test
+ */
+async function crearPartidaPrueba() {
+    console.log('=== CREANDO PARTIDA DE PRUEBA ===');
+    
+    const jugadoresPrueba = [
+        { id: 1, nombre_usuario: 'Jugador1' },
+        { id: 2, nombre_usuario: 'Jugador2' }
+    ];
+    
+    const resultado = await crearNuevaPartida('TEST123', jugadoresPrueba, '1v1', 15);
+    console.log('Resultado de partida de prueba:', resultado ? 'ÉXITO' : 'FALLO');
+    
+    return resultado;
+}
+
+/**
+ * Obtiene las partidas activas.
+ * @returns {Object} Objeto con partidas activas indexadas por código de sala
+ */
+function getActiveGames() {
+    return activeGames;
+}
+
+/**
+ * Obtiene una partida específica por su código de sala.
+ * @param {string} codigoSala - Código de la sala
+ * @returns {Object|null} - La partida encontrada o null si no existe
+ */
+function getGameById(codigoSala) {
+    return activeGames[codigoSala] || null;
+}
+
+/**
+ * Fuerza una actualización de estado para todos los jugadores en una partida.
+ * @param {string} codigoSala - Código de la sala a actualizar
+ * @returns {Object} - Resultado de la operación
+ */
+function forceRefreshGameState(codigoSala) {
+    debugLog('gameLogicHandler', `Forzando actualización de estado para sala ${codigoSala}`);
+    
+    const partida = activeGames[codigoSala];
+    if (!partida) {
+        return {
+            success: false,
+            message: `No se encontró partida activa con código ${codigoSala}`
+        };
+    }
+    
+    try {
+        // Obtener jugadores conectados
+        const jugadoresIds = partida.jugadores.map(j => j.id);
+        
+        // Enviar estado a cada jugador
+        const estadosEnviados = [];
+        for (const jugadorId of jugadoresIds) {
+            const estadoJuego = partida.obtenerEstadoGlobalParaCliente(jugadorId);
+            if (estadoJuego) {
+                io.to(codigoSala).emit('estado_juego_actualizado', estadoJuego);
+                estadosEnviados.push(jugadorId);
+                debugLog('gameLogicHandler', `Estado enviado a jugador ${jugadorId}`, 
+                    { estadoPartida: estadoJuego.estadoPartida });
+            }
+        }
+        
+        // Notificar a todos los clientes que la partida ha iniciado (por si alguno está esperando)
+        io.to(codigoSala).emit('partida_iniciada', { codigo_sala: codigoSala });
+        
+        return {
+            success: true,
+            message: `Estado actualizado para ${estadosEnviados.length} jugadores en sala ${codigoSala}`,
+            jugadoresNotificados: estadosEnviados,
+            totalJugadores: jugadoresIds.length
+        };
+    } catch (error) {
+        debugLog('gameLogicHandler', `Error al forzar actualización para sala ${codigoSala}`, error);
+        return {
+            success: false,
+            message: `Error al actualizar estado: ${error.message}`,
+            error: error.toString()
+        };
+    }
+}
+
+/**
+ * Busca el socket ID de un usuario por su ID de usuario
+ * @param {SocketIO.Server} io - Instancia de Socket.IO
+ * @param {number} userId - ID del usuario
+ * @returns {string|null} - Socket ID o null si no se encuentra
+ */
+async function getSocketIdByUserId(io, userId) {
+    if (!io) return null;
+    
+    try {
+        const sockets = await io.fetchSockets();
+        
+        for (const socket of sockets) {
+            if (socket.currentUserId === userId) {
+                return socket.id;
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error(`Error al buscar socket para usuario ${userId}:`, error);
+        return null;
+    }
+}
+
 module.exports = {
     initializeGameLogic,
     crearNuevaPartida,
@@ -380,4 +606,10 @@ module.exports = {
     manejarDesconexionJugador,
     getActiveGame,
     guardarEstadoPartida,
+    debugActiveGames, // Agregamos función de debug
+    crearPartidaPrueba, // Función de prueba
+    getActiveGames,
+    getGameById,
+    forceRefreshGameState,
+    getSocketIdByUserId // Exportar la nueva función
 };

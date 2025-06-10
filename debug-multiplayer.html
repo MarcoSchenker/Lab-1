@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Multijugador Truco</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .setup-panels {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .player-panel {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .player-panel h2 {
+            margin-top: 0;
+            color: #3498db;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .connecting { background: #fff3cd; }
+        .connected { background: #d4edda; }
+        .error { background: #f8d7da; }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-primary { background: #3498db; }
+        .btn-success { background: #2ecc71; }
+        .btn-danger { background: #e74c3c; }
+        .btn-warning { background: #f39c12; }
+        
+        .log-panel {
+            margin-top: 30px;
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 20px;
+            color: #ecf0f1;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .log-header h3 {
+            margin: 0;
+            color: #3498db;
+        }
+        
+        .log-container {
+            height: 500px;
+            overflow-y: auto;
+            background: #34495e;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #41526a;
+        }
+        
+        .log-time {
+            color: #95a5a6;
+            font-size: 0.8em;
+        }
+        
+        .log-player1 { color: #3498db; }
+        .log-player2 { color: #e74c3c; }
+        .log-system { color: #2ecc71; }
+        .log-error { color: #f39c12; }
+        
+        .game-state {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card {
+            display: inline-block;
+            width: 80px;
+            height: 120px;
+            background: white;
+            border-radius: 8px;
+            margin: 5px;
+            text-align: center;
+            line-height: 120px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .debug-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .debug-controls h3 {
+            margin-top: 0;
+            color: #6c757d;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .tab-container {
+            margin-top: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            background: #f5f5f5;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .tab.active {
+            background: white;
+            border: 1px solid #ddd;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Multiplayer - Truco Game</h1>
+        
+        <div class="setup-panels">
+            <div class="player-panel">
+                <h2>Jugador 1</h2>
+                <div id="status1" class="status">Desconectado</div>
+                
+                <div class="form-group">
+                    <label for="username1">Nombre de Usuario:</label>
+                    <input type="text" id="username1" value="TestPlayer1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email1">Email:</label>
+                    <input type="email" id="email1" value="test1@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password1">Contraseña:</label>
+                    <input type="password" id="password1" value="password123">
+                </div>
+                
+                <button class="btn btn-primary" onclick="registerUser(1)">Registrar</button>
+                <button class="btn btn-success" onclick="loginUser(1)">Login</button>
+                <button class="btn btn-danger" onclick="disconnectSocket(1)">Desconectar</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Sala de Juego:</label>
+                    <input type="text" id="roomCode1" placeholder="Código de sala">
+                </div>
+                
+                <button class="btn btn-primary" onclick="createRoom(1)">Crear Sala</button>
+                <button class="btn btn-success" onclick="joinRoom(1)">Unirse a Sala</button>
+                <button class="btn btn-danger" onclick="leaveRoom(1)">Abandonar Sala</button>
+            </div>
+            
+            <div class="player-panel">
+                <h2>Jugador 2</h2>
+                <div id="status2" class="status">Desconectado</div>
+                
+                <div class="form-group">
+                    <label for="username2">Nombre de Usuario:</label>
+                    <input type="text" id="username2" value="TestPlayer2">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email2">Email:</label>
+                    <input type="email" id="email2" value="test2@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password2">Contraseña:</label>
+                    <input type="password" id="password2" value="password123">
+                </div>
+                
+                <button class="btn btn-primary" onclick="registerUser(2)">Registrar</button>
+                <button class="btn btn-success" onclick="loginUser(2)">Login</button>
+                <button class="btn btn-danger" onclick="disconnectSocket(2)">Desconectar</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Sala de Juego:</label>
+                    <input type="text" id="roomCode2" placeholder="Código de sala">
+                </div>
+                
+                <button class="btn btn-primary" onclick="createRoom(2)">Crear Sala</button>
+                <button class="btn btn-success" onclick="joinRoom(2)">Unirse a Sala</button>
+                <button class="btn btn-danger" onclick="leaveRoom(2)">Abandonar Sala</button>
+            </div>
+        </div>
+        
+        <div class="debug-controls">
+            <h3>Debug Controls</h3>
+            <button class="btn btn-warning" onclick="checkActiveGames()">Check Active Games</button>
+            <button class="btn btn-warning" onclick="requestGameState(1)">Request Game State (P1)</button>
+            <button class="btn btn-warning" onclick="requestGameState(2)">Request Game State (P2)</button>
+            <button class="btn btn-danger" onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('game-log')">Game Log</div>
+                <div class="tab" onclick="showTab('player1-state')">Player 1 State</div>
+                <div class="tab" onclick="showTab('player2-state')">Player 2 State</div>
+            </div>
+            
+            <div id="game-log" class="tab-content active">
+                <div class="log-container" id="log">
+                    <!-- Log entries will be added here dynamically -->
+                </div>
+            </div>
+            
+            <div id="player1-state" class="tab-content">
+                <pre id="player1-state-content">No state available</pre>
+            </div>
+            
+            <div id="player2-state" class="tab-content">
+                <pre id="player2-state-content">No state available</pre>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Global state
+        const players = {
+            1: { socket: null, token: null, userId: null, gameState: null, roomCode: null },
+            2: { socket: null, token: null, userId: null, gameState: null, roomCode: null }
+        };
+        
+        const API_URL = 'http://localhost:3001';
+        
+        // Utility functions
+        function log(message, type = 'system', playerId = null) {
+            const logContainer = document.getElementById('log');
+            const now = new Date();
+            const time = now.toLocaleTimeString() + '.' + now.getMilliseconds().toString().padStart(3, '0');
+            
+            let playerClass = '';
+            if (playerId) {
+                playerClass = ` log-player${playerId}`;
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}${playerClass}`;
+            entry.innerHTML = `<span class="log-time">${time}</span> ${message}`;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('Log cleared', 'system');
+        }
+        
+        function updatePlayerStatus(playerId, status, message) {
+            const statusElement = document.getElementById(`status${playerId}`);
+            statusElement.className = `status ${status}`;
+            statusElement.textContent = message;
+        }
+        
+        function updatePlayerState(playerId, state) {
+            players[playerId].gameState = state;
+            document.getElementById(`player${playerId}-state-content`).textContent = 
+                JSON.stringify(state, null, 2);
+        }
+        
+        function showTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Set active class on clicked tab
+            Array.from(document.querySelectorAll('.tab')).find(tab => tab.innerText.toLowerCase().includes(tabId))?.classList.add('active');
+        }
+        
+        // API functions
+        async function registerUser(playerId) {
+            const username = document.getElementById(`username${playerId}`).value;
+            const email = document.getElementById(`email${playerId}`).value;
+            const password = document.getElementById(`password${playerId}`).value;
+            
+            try {
+                updatePlayerStatus(playerId, 'connecting', 'Registrando...');
+                log(`Intento de registro: ${username}`, 'system', playerId);
+                
+                const response = await fetch(`${API_URL}/api/usuarios/registro`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre_usuario: username,
+                        email: email,
+                        contraseña: password,
+                        es_anonimo: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`Usuario registrado: ${username}`, 'system', playerId);
+                    updatePlayerStatus(playerId, 'connected', 'Registrado exitosamente');
+                    loginUser(playerId);  // Auto login after registration
+                } else {
+                    log(`Error de registro: ${data.error || 'Error desconocido'}`, 'error', playerId);
+                    updatePlayerStatus(playerId, 'error', `Error: ${data.error || 'Error desconocido'}`);
+                }
+            } catch (error) {
+                log(`Error de registro: ${error.message}`, 'error', playerId);
+                updatePlayerStatus(playerId, 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        async function loginUser(playerId) {
+            const username = document.getElementById(`username${playerId}`).value;
+            const password = document.getElementById(`password${playerId}`).value;
+            
+            try {
+                updatePlayerStatus(playerId, 'connecting', 'Iniciando sesión...');
+                log(`Intento de login: ${username}`, 'system', playerId);
+                
+                const response = await fetch(`${API_URL}/api/usuarios/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre_usuario: username,
+                        contraseña: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    players[playerId].token = data.token;
+                    
+                    // Extract user ID from token
+                    const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+                    players[playerId].userId = tokenPayload.id;
+                    
+                    log(`Login exitoso: ${username} (ID: ${players[playerId].userId})`, 'system', playerId);
+                    updatePlayerStatus(playerId, 'connected', `Conectado como: ${username}`);
+                    
+                    // Connect socket after successful login
+                    connectSocket(playerId);
+                } else {
+                    log(`Error de login: ${data.error || 'Error desconocido'}`, 'error', playerId);
+                    updatePlayerStatus(playerId, 'error', `Error: ${data.error || 'Error desconocido'}`);
+                }
+            } catch (error) {
+                log(`Error de login: ${error.message}`, 'error', playerId);
+                updatePlayerStatus(playerId, 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        function connectSocket(playerId) {
+            if (!players[playerId].token) {
+                log(`No hay token para el jugador ${playerId}. Inicie sesión primero.`, 'error', playerId);
+                return;
+            }
+            
+            if (players[playerId].socket) {
+                log(`Socket ya está conectado para jugador ${playerId}`, 'system', playerId);
+                return;
+            }
+            
+            log(`Conectando socket para jugador ${playerId}...`, 'system', playerId);
+            
+            // Create socket connection
+            const socket = io(API_URL);
+            players[playerId].socket = socket;
+            
+            // Socket event handlers
+            socket.on('connect', () => {
+                log(`Socket conectado con ID: ${socket.id}`, 'system', playerId);
+                
+                // Authenticate socket
+                socket.emit('autenticar_socket', players[playerId].token);
+            });
+            
+            socket.on('connect_error', (error) => {
+                log(`Error de conexión: ${error.message}`, 'error', playerId);
+                updatePlayerStatus(playerId, 'error', `Error de conexión: ${error.message}`);
+            });
+            
+            socket.on('autenticacion_exitosa', (data) => {
+                log(`Socket autenticado: ${JSON.stringify(data)}`, 'system', playerId);
+            });
+            
+            socket.on('autenticacion_fallida', (error) => {
+                log(`Error de autenticación: ${JSON.stringify(error)}`, 'error', playerId);
+            });
+            
+            // Game event handlers
+            socket.on('estado_juego_actualizado', (estado) => {
+                log(`Recibido estado de juego actualizado`, 'system', playerId);
+                log(`Estado: estadoPartida=${estado.estadoPartida}, ronda=${estado.numeroRondaActual}`, 'system', playerId);
+                updatePlayerState(playerId, estado);
+            });
+            
+            socket.on('esperando_inicio_partida', (data) => {
+                log(`Esperando inicio de partida: ${JSON.stringify(data)}`, 'system', playerId);
+            });
+            
+            socket.on('unido_sala_juego', (data) => {
+                log(`Unido a sala de juego: ${JSON.stringify(data)}`, 'system', playerId);
+            });
+            
+            socket.on('error_juego', (error) => {
+                log(`Error de juego: ${JSON.stringify(error)}`, 'error', playerId);
+            });
+            
+            socket.on('disconnect', (reason) => {
+                log(`Socket desconectado: ${reason}`, 'system', playerId);
+                players[playerId].socket = null;
+                updatePlayerStatus(playerId, 'error', `Desconectado: ${reason}`);
+            });
+            
+            // Listen to all events for debugging
+            socket.onAny((event, ...args) => {
+                if (event !== 'estado_juego_actualizado') { // Already handled above
+                    log(`Evento recibido: ${event}`, 'system', playerId);
+                }
+            });
+        }
+        
+        function disconnectSocket(playerId) {
+            if (players[playerId].socket) {
+                players[playerId].socket.disconnect();
+                players[playerId].socket = null;
+                log(`Socket desconectado manualmente`, 'system', playerId);
+                updatePlayerStatus(playerId, 'error', 'Desconectado manualmente');
+            } else {
+                log(`No hay socket conectado para jugador ${playerId}`, 'error', playerId);
+            }
+        }
+        
+        async function createRoom(playerId) {
+            if (!players[playerId].token) {
+                log(`No hay token para el jugador ${playerId}. Inicie sesión primero.`, 'error', playerId);
+                return;
+            }
+            
+            try {
+                log(`Creando sala...`, 'system', playerId);
+                
+                const response = await fetch(`${API_URL}/api/salas/crear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${players[playerId].token}`
+                    },
+                    body: JSON.stringify({
+                        tipo_partida: '1v1',
+                        puntos_victoria: 15,
+                        es_privada: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const roomCode = data.codigo;
+                    players[playerId].roomCode = roomCode;
+                    document.getElementById(`roomCode${playerId}`).value = roomCode;
+                    document.getElementById(`roomCode${3-playerId}`).value = roomCode; // Set for other player too
+                    
+                    log(`Sala creada con código: ${roomCode}`, 'system', playerId);
+                    
+                    // Automatically join the created room
+                    joinRoom(playerId);
+                } else {
+                    log(`Error al crear sala: ${data.error || 'Error desconocido'}`, 'error', playerId);
+                }
+            } catch (error) {
+                log(`Error al crear sala: ${error.message}`, 'error', playerId);
+            }
+        }
+        
+        async function joinRoom(playerId) {
+            if (!players[playerId].token) {
+                log(`No hay token para el jugador ${playerId}. Inicie sesión primero.`, 'error', playerId);
+                return;
+            }
+            
+            if (!players[playerId].socket) {
+                log(`No hay socket conectado para jugador ${playerId}. Conectando...`, 'system', playerId);
+                connectSocket(playerId);
+                // Give socket time to connect
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            const roomCode = document.getElementById(`roomCode${playerId}`).value;
+            if (!roomCode) {
+                log(`No se especificó código de sala`, 'error', playerId);
+                return;
+            }
+            
+            try {
+                log(`Uniéndose a sala ${roomCode}...`, 'system', playerId);
+                
+                // First join via API
+                const response = await fetch(`${API_URL}/api/salas/unirse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${players[playerId].token}`
+                    },
+                    body: JSON.stringify({
+                        codigo_sala: roomCode
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    players[playerId].roomCode = roomCode;
+                    log(`Unido a sala ${roomCode} vía API`, 'system', playerId);
+                    
+                    // Now join via socket
+                    players[playerId].socket.emit('unirse_sala_juego', roomCode);
+                    log(`Solicitud de unión a sala ${roomCode} vía socket enviada`, 'system', playerId);
+                    
+                    // Request game state after joining
+                    setTimeout(() => {
+                        requestGameState(playerId);
+                    }, 1000);
+                } else {
+                    log(`Error al unirse a sala: ${data.error || 'Error desconocido'}`, 'error', playerId);
+                }
+            } catch (error) {
+                log(`Error al unirse a sala: ${error.message}`, 'error', playerId);
+            }
+        }
+        
+        function leaveRoom(playerId) {
+            if (!players[playerId].socket) {
+                log(`No hay socket conectado para jugador ${playerId}`, 'error', playerId);
+                return;
+            }
+            
+            if (!players[playerId].roomCode) {
+                log(`Jugador ${playerId} no está en una sala`, 'error', playerId);
+                return;
+            }
+            
+            log(`Saliendo de sala ${players[playerId].roomCode}...`, 'system', playerId);
+            // No specific leave_room event, we can disconnect and reconnect
+            disconnectSocket(playerId);
+            connectSocket(playerId);
+            players[playerId].roomCode = null;
+        }
+        
+        function requestGameState(playerId) {
+            if (!players[playerId].socket) {
+                log(`No hay socket conectado para jugador ${playerId}`, 'error', playerId);
+                return;
+            }
+            
+            log(`Solicitando estado del juego...`, 'system', playerId);
+            players[playerId].socket.emit('cliente_solicitar_estado_juego');
+        }
+        
+        async function checkActiveGames() {
+            // This is a custom endpoint you might want to add to your server for debugging
+            try {
+                log(`Verificando partidas activas...`, 'system');
+                
+                const response = await fetch(`${API_URL}/api/debug/active-games`, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`Partidas activas: ${JSON.stringify(data)}`, 'system');
+                } else {
+                    log(`Error al verificar partidas: ${data.error || 'Error desconocido'}`, 'error');
+                }
+            } catch (error) {
+                log(`Error al verificar partidas: ${error.message}`, 'error');
+                log(`Servidor puede no tener endpoint de depuración`, 'error');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Debug Multiplayer ready', 'system');
+        });
+    </script>
+</body>
+</html>

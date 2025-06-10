@@ -41,20 +41,72 @@ class PartidaGame {
     }
 
     _configurarPartida(jugadoresInfo) {
-        console.log(`Configurando partida ${this.codigoSala} para ${this.tipoPartida} a ${this.puntosVictoria} puntos.`);
-        // 1. Crear Jugadores
-        jugadoresInfo.forEach(info => {
-            this.jugadores.push(new JugadorGame(info.id, info.nombre_usuario, null)); // equipoId se asigna después
-        });
+        console.log(`[PARTIDA] Configurando partida ${this.codigoSala} para ${this.tipoPartida} a ${this.puntosVictoria} puntos.`);
+        console.log(`[PARTIDA] Información de jugadores recibida:`, jugadoresInfo);
+        
+        try {
+            // Verificación previa de los datos
+            if (!jugadoresInfo || !Array.isArray(jugadoresInfo) || jugadoresInfo.length < 2) {
+                throw new Error(`Datos de jugadores inválidos o insuficientes: ${JSON.stringify(jugadoresInfo)}`);
+            }
+            
+            // 1. Crear Jugadores
+            jugadoresInfo.forEach(info => {
+                if (!info.id || !info.nombre_usuario) {
+                    throw new Error(`Información de jugador incompleta: ${JSON.stringify(info)}`);
+                }
+                console.log(`[PARTIDA] Creando jugador: ${info.nombre_usuario} (ID: ${info.id})`);
+                this.jugadores.push(new JugadorGame(info.id, info.nombre_usuario, null)); // equipoId se asigna después
+            });
 
-        // 2. Crear Equipos y Asignar Jugadores
-        this._asignarJugadoresAEquipos(); // Implementar esta lógica
+            // 2. Crear Equipos y Asignar Jugadores
+            console.log(`[PARTIDA] Asignando jugadores a equipos...`);
+            this._asignarJugadoresAEquipos(); 
+            
+            // Verificación post-creación
+            if (!this.equipos || this.equipos.length === 0) {
+                throw new Error('No se pudieron crear los equipos correctamente');
+            }
+            if (!this.jugadores || this.jugadores.length === 0) {
+                throw new Error('No se pudieron crear los jugadores correctamente');
+            }
 
-        // 3. Determinar el primer mano de la partida (puede ser el primer jugador o aleatorio)
-        this.indiceJugadorManoGlobal = 0; // Por simplicidad, el primer jugador en la lista global
+            // 3. Determinar el primer mano de la partida (puede ser el primer jugador o aleatorio)
+            this.indiceJugadorManoGlobal = 0; // Por simplicidad, el primer jugador en la lista global
 
-        this.estadoPartida = 'en_juego';
-        this.iniciarNuevaRonda();
+            console.log(`[PARTIDA] Cambiando estado de 'configurando' a 'en_juego'`);
+            this.estadoPartida = 'en_juego';
+            
+            console.log(`[PARTIDA] Iniciando primera ronda...`);
+            this.iniciarNuevaRonda();
+            
+            // Notificar estado inicial para asegurar que todos los clientes reciban la actualización
+            console.log(`[PARTIDA] ✅ Notificando estado inicial...`);
+            
+            // Enviar estado a cada jugador específicamente y luego una notificación general
+            for (const jugador of this.jugadores) {
+                const estadoJuego = this.obtenerEstadoGlobalParaCliente(jugador.id);
+                console.log(`[PARTIDA] Enviando estado inicial a jugador ${jugador.id} (${jugador.nombreUsuario})`);
+                this.notificarEstadoGlobal(this.codigoSala, 'estado_juego_actualizado', estadoJuego);
+            }
+            
+            // Enviar evento adicional de partida configurada/iniciada
+            this._notificarEstadoGlobalActualizado('partida_configurada');
+            this.notificarEstadoGlobal(this.codigoSala, 'partida_iniciada', { codigo_sala: this.codigoSala });
+            
+            console.log(`[PARTIDA] ✅ Partida configurada exitosamente`);
+        } catch (error) {
+            console.error(`[PARTIDA] ❌ Error al configurar partida: ${error.message}`, error);
+            this.estadoPartida = 'error';
+            
+            // Intentar notificar el error a los clientes si es posible
+            if (this.notificarEstadoGlobal) {
+                this.notificarEstadoGlobal(this.codigoSala, 'error_juego', {
+                    message: `Error al configurar la partida: ${error.message}`,
+                    codigo_sala: this.codigoSala
+                });
+            }
+        }
     }
 
     _asignarJugadoresAEquipos() {
@@ -106,15 +158,22 @@ class PartidaGame {
     }
 
     iniciarNuevaRonda() {
-        if (this.estadoPartida !== 'en_juego') return;
+        console.log(`[PARTIDA] Verificando estado antes de iniciar ronda. Estado actual: '${this.estadoPartida}'`);
+        if (this.estadoPartida !== 'en_juego') {
+            console.log(`[PARTIDA] ❌ No se puede iniciar ronda. Estado esperado: 'en_juego', estado actual: '${this.estadoPartida}'`);
+            return;
+        }
 
         this.numeroRondaActual++;
         const jugadorManoDeEstaRonda = this.jugadores[this.indiceJugadorManoGlobal];
+        
+        console.log(`[PARTIDA] ✅ Iniciando ronda ${this.numeroRondaActual}. Mano: ${jugadorManoDeEstaRonda.nombreUsuario} (ID: ${jugadorManoDeEstaRonda.id})`);
         
         this._determinarOrdenJuegoRonda(jugadorManoDeEstaRonda);
 
         console.log(`Partida ${this.codigoSala}: Iniciando ronda ${this.numeroRondaActual}. Mano global: ${jugadorManoDeEstaRonda.nombreUsuario}`);
 
+        console.log(`[PARTIDA] Creando RondaGame con ${this.ordenJugadoresRonda.length} jugadores en orden`);
         this.rondaActual = new RondaGame(
             this.numeroRondaActual,
             this.ordenJugadoresRonda, // Jugadores en orden de juego para la ronda
@@ -127,7 +186,9 @@ class PartidaGame {
         // Rotar el mano para la siguiente ronda
         this.indiceJugadorManoGlobal = (this.indiceJugadorManoGlobal + 1) % this.jugadores.length;
         
+        console.log(`[PARTIDA] Notificando nueva ronda iniciada...`);
         this._notificarEstadoGlobalActualizado('nueva_ronda_iniciada');
+        console.log(`[PARTIDA] Persistiendo estado de partida...`);
         this.persistirEstadoPartida(); // Guardar estado de la partida (nueva ronda, etc.)
     }
 
@@ -242,56 +303,160 @@ class PartidaGame {
     
     // --- Notificaciones y Estado Global ---
     _notificarEstadoGlobalActualizado(eventoRaiz = 'estado_juego_actualizado', detalleEventoRaiz = {}) {
+        console.log(`[PARTIDA] Notificando estado global actualizado. Evento: ${eventoRaiz}`);
+        
         if (this.notificarEstadoGlobal) {
             const estadoGlobal = this.obtenerEstadoGlobalParaCliente();
+            console.log(`[PARTIDA] Estado global obtenido para sala ${this.codigoSala}:`, {
+                codigoSala: estadoGlobal.codigoSala,
+                estadoPartida: estadoGlobal.estadoPartida,
+                numeroJugadores: estadoGlobal.jugadores?.length,
+                numeroRondaActual: estadoGlobal.numeroRondaActual
+            });
+            
+            // Emitir el evento específico (por ejemplo, 'ronda_iniciada', 'turno_actualizado', etc.)
             this.notificarEstadoGlobal(this.codigoSala, eventoRaiz, { ...estadoGlobal, ...detalleEventoRaiz });
+            
+            // Emitir SIEMPRE el estado global bajo el nombre 'estado_juego_actualizado'
+            if (eventoRaiz !== 'estado_juego_actualizado') {
+                this.notificarEstadoGlobal(this.codigoSala, 'estado_juego_actualizado', estadoGlobal);
+            }
+            
+            console.log(`[PARTIDA] ✅ Estado emitido a sala ${this.codigoSala}`);
+        } else {
+            console.log(`[PARTIDA] ❌ No hay callback de notificación configurado`);
         }
     }
 
     obtenerEstadoGlobalParaCliente(solicitanteJugadorId = null) {
-        // Construye el objeto de estado completo para enviar a los clientes.
-        // Debe incluir información de la partida, equipos, jugadores (con cartas filtradas),
-        // y el estado de la ronda actual.
-        let estadoGlobal = {
-            codigoSala: this.codigoSala,
-            tipoPartida: this.tipoPartida,
-            puntosVictoria: this.puntosVictoria,
-            estadoPartida: this.estadoPartida,
-            equipos: this.equipos.map(e => ({
-                id: e.id,
-                nombre: e.nombre,
-                puntosPartida: e.puntosPartida,
-                jugadoresIds: e.jugadores.map(j => j.id)
-            })),
-            jugadores: this.jugadores.map(j => ({
-                id: j.id,
-                nombreUsuario: j.nombreUsuario,
-                equipoId: j.equipoId,
-                esPie: j.esPie,
-                // Enviar cartas solo al jugador solicitante o si la partida terminó (para revisión)
-                cartasMano: (solicitanteJugadorId === j.id || this.estadoPartida === 'finalizada') ? j.cartasMano.map(c=>({...c})) : null,
-                cartasJugadasRonda: j.cartasJugadasRonda.map(c=>({...c})),
-                estadoConexion: j.estadoConexion,
-            })),
-            numeroRondaActual: this.numeroRondaActual,
-            indiceJugadorManoGlobal: this.indiceJugadorManoGlobal, // Quién será mano en la siguiente ronda
-            estadoRondaActual: this.rondaActual ? this.rondaActual.obtenerEstadoRonda() : null,
-            historialRondas: this.historialRondas,
-            // Información adicional que el cliente necesite
-            
-            // Estado de la ronda actual
-            rondaActual: {
-                numeroRonda: this.numeroRondaActual,
-                jugadorManoId: this.rondaActual ? this.rondaActual.jugadorManoRonda.id : null,
-                ganadorRondaEquipoId: this.rondaActual ? this.rondaActual.ganadorRondaEquipoId : null,
-                turnoInfo: this.rondaActual ? this.rondaActual.turnoHandler.getEstado() : null,
-                envidoInfo: this.rondaActual ? this.rondaActual.envidoHandler.getEstado() : null,
-                trucoInfo: this.rondaActual ? this.rondaActual.trucoHandler.getEstado() : null,
-                trucoPendientePorEnvidoPrimero: this.rondaActual ? this.rondaActual.trucoPendientePorEnvidoPrimero : false
-            }
-        };
+        console.log(`[PARTIDA] Obteniendo estado global para cliente. Solicitante: ${solicitanteJugadorId}`);
         
-        return estadoGlobal;
+        try {
+            // Verificar que tengamos los datos necesarios para construir un estado válido
+            if (!this.equipos || this.equipos.length === 0 || !this.jugadores || this.jugadores.length === 0) {
+                console.error(`[PARTIDA] ❌ Faltan datos esenciales para construir estado. Equipos: ${this.equipos?.length}, Jugadores: ${this.jugadores?.length}`);
+                return {
+                    codigoSala: this.codigoSala,
+                    tipoPartida: this.tipoPartida,
+                    estadoPartida: 'error',
+                    mensajeError: 'Error al configurar la partida. Faltan datos esenciales.'
+                };
+            }
+            
+            // Construye el objeto de estado completo para enviar a los clientes.
+            let estadoGlobal = {
+                codigoSala: this.codigoSala,
+                tipoPartida: this.tipoPartida,
+                puntosVictoria: this.puntosVictoria,
+                estadoPartida: this.estadoPartida,
+                equipos: this.equipos.map(e => ({
+                    id: e.id,
+                    nombre: e.nombre,
+                    puntosPartida: e.puntosPartida,
+                    jugadoresIds: e.jugadores?.map(j => j.id) || []
+                })),
+                jugadores: this.jugadores.map(j => ({
+                    id: j.id,
+                    nombreUsuario: j.nombreUsuario,
+                    equipoId: j.equipoId,
+                    esPie: j.esPie,
+                    // Enviar cartas solo al jugador solicitante o si la partida terminó (para revisión)
+                    cartasMano: (solicitanteJugadorId === j.id || this.estadoPartida === 'finalizada') ? 
+                        j.cartasMano?.map(c=>({...c})) || [] : null,
+                    cartasJugadasRonda: j.cartasJugadasRonda?.map(c=>({...c})) || [],
+                    estadoConexion: j.estadoConexion,
+                })),
+                numeroRondaActual: this.numeroRondaActual,
+                indiceJugadorManoGlobal: this.indiceJugadorManoGlobal, // Quién será mano en la siguiente ronda
+                estadoRondaActual: this.rondaActual ? this.rondaActual.obtenerEstadoRonda() : null,
+                historialRondas: this.historialRondas || [],
+                // Información adicional que el cliente necesite
+                
+                // Estado de la ronda actual
+                rondaActual: {
+                    numeroRonda: this.numeroRondaActual,
+                    jugadorManoId: this.rondaActual?.jugadorManoRonda?.id || null,
+                    ganadorRondaEquipoId: this.rondaActual?.ganadorRondaEquipoId || null,
+                    turnoInfo: this.rondaActual?.turnoHandler?.getEstado() || {
+                        jugadorTurnoActualId: null,
+                        manoActualNumero: 1,
+                        cartasEnMesaManoActual: [],
+                        manosJugadas: []
+                    },
+                    envidoInfo: this.rondaActual?.envidoHandler?.getEstado() || {
+                        cantado: false,
+                        querido: false,
+                        nivelActual: '',
+                        estadoResolucion: '',
+                        cantadoPorJugadorId: null,
+                        cantadoPorEquipoId: null,
+                        puntosEnJuego: 0,
+                        equipoGanadorId: null,
+                        puntosDeclarados: {}
+                    },
+                    trucoInfo: this.rondaActual?.trucoHandler?.getEstado() || {
+                        cantado: false,
+                        querido: false,
+                        nivelActual: '',
+                        puntosEnJuego: 1,
+                        cantadoPorJugadorId: null,
+                        cantadoPorEquipoId: null,
+                        estadoResolucion: '',
+                        equipoDebeResponderTrucoId: null,
+                        jugadorTurnoAlMomentoDelCantoId: null
+                    },
+                    trucoPendientePorEnvidoPrimero: this.rondaActual?.trucoPendientePorEnvidoPrimero || false
+                }
+            };
+            
+            // Obtener preferencias de skin para todos los jugadores
+            const jugadoresSkins = {};
+            for (const jugador of this.jugadores) {
+                // Recuperar de la base de datos la skin preferida para este jugador
+                jugadoresSkins[jugador.id] = jugador.skinPreferida || 'Original'; // Default si no hay preferencia
+            }
+            
+            console.log(`[PARTIDA] Estado global preparado:`, {
+                equipos: estadoGlobal.equipos.length,
+                jugadores: estadoGlobal.jugadores.length,
+                rondaActual: !!estadoGlobal.rondaActual,
+                numeroRondaActual: estadoGlobal.numeroRondaActual,
+                solicitante: solicitanteJugadorId
+            });
+            
+            return {
+                ...estadoGlobal,
+                jugadores: this.jugadores.map(j => ({
+                    id: j.id,
+                    nombreUsuario: j.nombreUsuario,
+                    equipoId: j.equipoId,
+                    esPie: j.esPie,
+                    skinPreferida: jugadoresSkins[j.id], // Añadir la preferencia de skin
+                    cartasMano: (solicitanteJugadorId === j.id || this.estadoPartida === 'finalizada') ? 
+                        j.cartasMano?.map(c=>({...c})) || [] : null,
+                    cartasJugadasRonda: j.cartasJugadasRonda?.map(c=>({...c})) || [],
+                    estadoConexion: j.estadoConexion,
+                })),
+            };
+        } catch (error) {
+            console.error(`[PARTIDA] Error al preparar estado global para cliente: ${error.message}`, error);
+            return {
+                codigoSala: this.codigoSala,
+                tipoPartida: this.tipoPartida,
+                estadoPartida: 'error',
+                mensajeError: 'Error al obtener estado de la partida',
+                errorDetail: error.message,
+                // Devolvemos información básica para permitir que el cliente intente reconectarse
+                equipos: [],
+                jugadores: this.jugadores?.map(j => ({
+                    id: j.id,
+                    nombreUsuario: j.nombreUsuario,
+                    equipoId: j.equipoId,
+                    cartasMano: null,
+                    estadoConexion: j.estadoConexion
+                })) || []
+            };
+        }
     }
     
     persistirEstadoPartida() {

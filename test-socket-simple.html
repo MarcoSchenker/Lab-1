@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Socket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; max-height: 300px; overflow-y: auto; }
+        button { padding: 10px; margin: 5px; }
+        input { padding: 8px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Simple Socket Connection Test</h1>
+    
+    <div>
+        <button onclick="connectSocket()">Connect Socket</button>
+        <button onclick="disconnect()">Disconnect</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div>
+        <input type="text" id="testMessage" placeholder="Test message" value="Hello Server">
+        <button onclick="sendTestMessage()">Send Test Message</button>
+    </div>
+    
+    <div id="log" class="log"></div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function connectSocket() {
+            if (socket) {
+                log('Socket already connected');
+                return;
+            }
+            
+            log('Attempting to connect to socket...');
+            socket = io('http://localhost:3001');
+            
+            socket.on('connect', () => {
+                log('✅ Socket connected successfully! ID: ' + socket.id);
+            });
+            
+            socket.on('disconnect', (reason) => {
+                log('❌ Socket disconnected: ' + reason);
+            });
+            
+            socket.on('connect_error', (error) => {
+                log('❌ Connection error: ' + error.message);
+            });
+            
+            socket.on('error', (error) => {
+                log('❌ Socket error: ' + error);
+            });
+            
+            // Listen for any events from server
+            socket.onAny((eventName, ...args) => {
+                log(`📨 Received event: ${eventName} with data: ${JSON.stringify(args)}`);
+            });
+        }
+        
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                log('Socket disconnected manually');
+            }
+        }
+        
+        function sendTestMessage() {
+            if (!socket) {
+                log('❌ No socket connection');
+                return;
+            }
+            
+            const message = document.getElementById('testMessage').value;
+            log(`📤 Sending test message: ${message}`);
+            socket.emit('test_message', { message: message });
+        }
+        
+        // Auto-connect on page load
+        window.onload = function() {
+            log('Page loaded, ready to test socket connection');
+        };
+    </script>
+</body>
+</html>

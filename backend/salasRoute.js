@@ -74,9 +74,9 @@ router.post('/crear', authenticateToken, async (req, res) => {
     const usuarioNombre = req.user.nombre_usuario;
     const codigoSala = uuidv4().substring(0, 8);
 
-    // Tiempo de expiración para TODAS las salas (5 minutos)
+    // Tiempo de expiración para TODAS las salas (30 minutos)
     const ahora = new Date();
-    const expiracion = new Date(ahora.getTime() + (3 * 60 * 1000));
+    const expiracion = new Date(ahora.getTime() + (30 * 60 * 1000));
     function toMySQLDatetime(date) {
       const pad = (n) => n < 10 ? '0' + n : n;
       return date.getFullYear() + '-' +
@@ -220,24 +220,40 @@ router.post('/unirse', authenticateToken, async (req, res) => {
       const tipoPartida = sala.max_jugadores === 2 ? '1v1' : 
                           sala.max_jugadores === 4 ? '2v2' : '3v3';
       
+      console.log(`=== INICIANDO PARTIDA DESDE SALAS ===`);
+      console.log('Datos para gameLogicHandler:', {
+        codigo_sala,
+        jugadoresInfo,
+        tipoPartida,
+        puntos_victoria: sala.puntos_victoria || 15
+      });
+      
       try {
-        await gameLogicHandler.crearNuevaPartida(
+        const partidaCreada = await gameLogicHandler.crearNuevaPartida(
           codigo_sala, 
           jugadoresInfo, 
           tipoPartida, 
           sala.puntos_victoria || 15
         );
         
-        // Notificar a los jugadores que la partida ha comenzado
-        const io = req.app.get('io');
-        if (io) {
-          io.to(codigo_sala).emit('partida_iniciada', { codigo_sala });
+        if (partidaCreada) {
+          console.log(`✅ Partida creada exitosamente para sala ${codigo_sala}`);
+          
+          // Notificar a los jugadores que la partida ha comenzado
+          const io = req.app.get('io');
+          if (io) {
+            console.log(`Notificando inicio de partida a sala ${codigo_sala}`);
+            io.to(codigo_sala).emit('partida_iniciada', { codigo_sala });
+          }
+          
+          return res.status(200).json({ 
+            mensaje: 'Te has unido a la sala y la partida ha comenzado',
+            codigo_sala 
+          });
+        } else {
+          console.log(`❌ Error: partida no pudo ser creada para sala ${codigo_sala}`);
+          return res.status(500).json({ error: 'Error al crear la partida' });
         }
-        
-        return res.status(200).json({ 
-          mensaje: 'Te has unido a la sala y la partida ha comenzado',
-          codigo_sala 
-        });
       } catch (error) {
         console.error('Error al iniciar la partida:', error);
         return res.status(500).json({ error: 'Error al iniciar la partida' });

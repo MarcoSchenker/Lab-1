@@ -24,11 +24,18 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { 
   cors: { 
-    origin: "*", 
-    methods: ["GET", "POST"] 
+    origin: ["*", "https://localhost:5173", "http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true,
   } 
 });
 app.set('io', io);
+
+// Para poder acceder a io desde otros módulos
+let ioInstance = io;
+function getIoInstance() {
+  return ioInstance;
+}
 
 // Inicializar gameLogicHandler con io
 gameLogicHandler.initializeGameLogic(io); 
@@ -73,6 +80,7 @@ app.use('/api/salas', salasRoutes);
 app.use('/api', skinsRoutes); // Todas las rutas de skins ahora tienen un prefijo /api
 app.use('/api', paymentRoutes); // Todas las rutas de pagos ahora tienen un prefijo /api
 app.use('/api/game', gameRoutes); // Todas las rutas de juego ahora tienen un prefijo /api
+app.use('/api/debug', require('./routes/debugRoutes')); // Debug routes
 
 
 // Inicializar la base de datos antes de arrancar el servidor
@@ -95,6 +103,56 @@ app.get('/ping', async (req, res) => {
   } catch (err) {
     console.error('Error al conectar con la base de datos:', err.message);
     res.status(500).json({ error: 'Error al conectar con la base de datos' });
+  }
+});
+
+// Ruta de prueba para crear partida
+app.get('/test-crear-partida', async (req, res) => {
+  try {
+    console.log('=== EJECUTANDO PRUEBA DE CREACIÓN DE PARTIDA ===');
+    const resultado = await gameLogicHandler.crearPartidaPrueba();
+    
+    if (resultado) {
+      res.json({ 
+        success: true, 
+        message: 'Partida de prueba creada exitosamente',
+        codigoSala: resultado.codigoSala 
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error al crear partida de prueba' 
+      });
+    }
+  } catch (err) {
+    console.error('Error en prueba de creación de partida:', err);
+    res.status(500).json({ error: 'Error en prueba de creación de partida' });
+  }
+});
+
+// Ruta de prueba para obtener estado de partida sin autenticación
+app.get('/test-obtener-estado/:codigo_sala/:jugador_id', async (req, res) => {
+  try {
+    const { codigo_sala, jugador_id } = req.params;
+    console.log(`=== PROBANDO OBTENER ESTADO ===`);
+    console.log(`Sala: ${codigo_sala}, Jugador: ${jugador_id}`);
+    
+    const estado = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, parseInt(jugador_id));
+    
+    if (estado) {
+      res.json({ 
+        success: true, 
+        estado 
+      });
+    } else {
+      res.status(404).json({ 
+        success: false, 
+        message: 'Estado no encontrado' 
+      });
+    }
+  } catch (err) {
+    console.error('Error en prueba de obtener estado:', err);
+    res.status(500).json({ error: 'Error en prueba de obtener estado' });
   }
 });
 
@@ -839,7 +897,6 @@ app.delete('/friend-requests/:id/reject', async (req, res) => {
   }
 });
 
-
 // Configuración de multer para manejar archivos en memoria
 const storage = multer.memoryStorage(); // Almacena los archivos en memoria
 const upload = multer({ storage });
@@ -1087,4 +1144,4 @@ server.listen(PORT, () => {
   console.log(`🔥 Servidor escuchando en http://localhost:${PORT}`);
 });
 
-module.exports = { app, server, io };
+module.exports = { app, server, io, getIoInstance };
