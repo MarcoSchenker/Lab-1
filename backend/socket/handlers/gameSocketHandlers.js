@@ -336,6 +336,120 @@ function setupGameHandlers(socket, io) {
     // Emitir el estado al jugador
     socket.emit('estado_juego_actualizado', data.estadoJuego);
   });
+
+  // 🟢 NUEVOS MANEJADORES SEGÚN TU PLAN DE WEBSOCKETS
+
+  // El cliente solicita su estado inicial después de recibir 'partida_iniciada'
+  socket.on('solicitar_estado_inicial', () => {
+    try {
+      if (!socket.currentRoom || !socket.currentUserId) {
+        socket.emit('error_juego', { message: 'No estás en una sala o no estás autenticado.' });
+        return;
+      }
+
+      debugLog('gameSocketHandlers', `Solicitud de estado inicial de usuario ${socket.currentUserId} en sala ${socket.currentRoom}`);
+      
+      const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(socket.currentRoom, socket.currentUserId);
+
+      if (estadoJuego) {
+        debugLog('gameSocketHandlers', `Enviando estado inicial a usuario ${socket.currentUserId}`);
+        socket.emit('estado_juego_actualizado', estadoJuego);
+      } else {
+        socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error al solicitar estado inicial: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error al obtener el estado inicial del juego.' });
+    }
+  });
+
+  // Manejador específico para jugar una carta
+  socket.on('jugar_carta_ws', (datos) => {
+    try {
+      const { carta } = datos;
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Jugando carta: ${carta.idUnico} - Usuario ${socket.currentUserId}`);
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'JUGAR_CARTA', { idUnicoCarta: carta.idUnico });
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error jugando carta: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error al jugar la carta.' });
+    }
+  });
+
+  // Manejador para cantos (envido/truco)
+  socket.on('cantar_ws', (datos) => {
+    try {
+      const { canto, detalle } = datos;
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Canto ${canto} - Usuario ${socket.currentUserId}`, detalle);
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'CANTO', { tipoCanto: canto, detalle });
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error procesando canto: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error procesando el canto.' });
+    }
+  });
+
+  // Manejador para respuestas a cantos
+  socket.on('responder_canto_ws', (datos) => {
+    try {
+      const { respuesta, nuevo_canto, puntos_envido } = datos;
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Respuesta a canto: ${respuesta} - Usuario ${socket.currentUserId}`);
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'RESPUESTA_CANTO', { 
+          respuesta, 
+          nuevo_canto, 
+          puntos_envido 
+        });
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error procesando respuesta a canto: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error procesando la respuesta al canto.' });
+    }
+  });
+
+  // Manejador para irse al mazo
+  socket.on('irse_al_mazo_ws', () => {
+    try {
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Irse al mazo - Usuario ${socket.currentUserId}`);
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'IRSE_AL_MAZO', {});
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error al irse al mazo: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error al irse al mazo.' });
+    }
+  });
+
+  // Manejador para solicitar el estado del juego (reconexiones)
+  socket.on('solicitar_estado_juego_ws', () => {
+    try {
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Solicitando estado del juego - Usuario ${socket.currentUserId}`);
+        const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(socket.currentRoom, socket.currentUserId);
+        
+        if (estadoJuego) {
+          socket.emit('estado_juego_actualizado', estadoJuego);
+        } else {
+          socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego.' });
+        }
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error obteniendo estado del juego: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error obteniendo el estado del juego.' });
+    }
+  });
 }
 
 module.exports = {

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WebSocket Flow</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
+        .error { border-left-color: #dc3545; background: #fff5f5; }
+        .success { border-left-color: #28a745; background: #f8fff9; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>Test WebSocket Flow - Truco Multiplayer</h1>
+    
+    <div>
+        <h2>Controles</h2>
+        <button id="connectBtn">Conectar Socket</button>
+        <button id="authenticateBtn" class="disabled">Autenticar</button>
+        <button id="joinRoomBtn" class="disabled">Unirse a Sala</button>
+        <button id="createGameBtn" class="disabled">Crear Partida</button>
+        <button id="requestStateBtn" class="disabled">Solicitar Estado</button>
+    </div>
+
+    <div>
+        <h2>Estado de Conexión</h2>
+        <div id="connectionStatus">Desconectado</div>
+    </div>
+
+    <div>
+        <h2>Logs</h2>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        const testUserId = 1; // User ID de prueba
+        const testRoomCode = 'TEST123';
+        
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateConnectionStatus(status) {
+            document.getElementById('connectionStatus').textContent = status;
+        }
+
+        function enableButton(id) {
+            const btn = document.getElementById(id);
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+        }
+
+        function disableButton(id) {
+            const btn = document.getElementById(id);
+            btn.classList.add('disabled');
+            btn.disabled = true;
+        }
+
+        // Connect Socket
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            log('Conectando al servidor WebSocket...');
+            socket = io('http://localhost:3001');
+
+            socket.on('connect', () => {
+                log('✅ Socket conectado exitosamente con ID: ' + socket.id, 'success');
+                updateConnectionStatus('Conectado - ID: ' + socket.id);
+                enableButton('authenticateBtn');
+            });
+
+            socket.on('connect_error', (error) => {
+                log('❌ Error de conexión: ' + error.message, 'error');
+                updateConnectionStatus('Error de conexión');
+            });
+
+            socket.on('disconnect', () => {
+                log('🔌 Socket desconectado', 'error');
+                updateConnectionStatus('Desconectado');
+                disableButton('authenticateBtn');
+                disableButton('joinRoomBtn');
+                disableButton('createGameBtn');
+                disableButton('requestStateBtn');
+            });
+
+            // Authentication events
+            socket.on('autenticacion_exitosa', (data) => {
+                log('✅ Autenticación exitosa: ' + JSON.stringify(data), 'success');
+                enableButton('joinRoomBtn');
+            });
+
+            socket.on('autenticacion_fallida', (error) => {
+                log('❌ Autenticación fallida: ' + JSON.stringify(error), 'error');
+            });
+
+            // Room events
+            socket.on('unido_sala_juego', (data) => {
+                log('✅ Unido a sala exitosamente: ' + JSON.stringify(data), 'success');
+                enableButton('createGameBtn');
+                enableButton('requestStateBtn');
+            });
+
+            // Game events - NEW WebSocket flow
+            socket.on('partida_iniciada', (data) => {
+                log('🎮 PARTIDA INICIADA (nuevo evento): ' + JSON.stringify(data), 'success');
+                
+                // Automatically request initial state
+                setTimeout(() => {
+                    log('📡 Solicitando estado inicial automáticamente...');
+                    socket.emit('solicitar_estado_inicial');
+                }, 500);
+            });
+
+            socket.on('estado_juego_actualizado', (estado) => {
+                log('📊 Estado del juego actualizado: ' + JSON.stringify({
+                    estadoPartida: estado.estadoPartida,
+                    equipos: estado.equipos?.length,
+                    jugadores: estado.jugadores?.length,
+                    codigoSala: estado.codigoSala
+                }), 'success');
+            });
+
+            socket.on('esperando_inicio_partida', (data) => {
+                log('⏳ Esperando inicio de partida: ' + JSON.stringify(data));
+            });
+
+            socket.on('error_estado_juego', (data) => {
+                log('❌ Error de estado de juego: ' + JSON.stringify(data), 'error');
+            });
+        });
+
+        // Authenticate
+        document.getElementById('authenticateBtn').addEventListener('click', () => {
+            if (!socket || !socket.connected) {
+                log('❌ Socket no conectado', 'error');
+                return;
+            }
+
+            log('🔐 Enviando autenticación...');
+            // Fake JWT token for testing - In real app this would come from localStorage
+            const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJ0ZXN0X3VzZXIiLCJpYXQiOjE2MzQ1NjQ0MDB9.fake';
+            socket.emit('autenticar_socket', fakeToken);
+        });
+
+        // Join Room
+        document.getElementById('joinRoomBtn').addEventListener('click', () => {
+            if (!socket || !socket.connected) {
+                log('❌ Socket no conectado', 'error');
+                return;
+            }
+
+            log('🏠 Uniéndose a sala: ' + testRoomCode);
+            socket.emit('unirse_sala_juego', testRoomCode);
+        });
+
+        // Create Game
+        document.getElementById('createGameBtn').addEventListener('click', () => {
+            if (!socket || !socket.connected) {
+                log('❌ Socket no conectado', 'error');
+                return;
+            }
+
+            log('🎯 Creando nueva partida en sala: ' + testRoomCode);
+            socket.emit('cliente_crear_partida', {
+                codigoSala: testRoomCode,
+                tipoPartida: 'PUBLICA',
+                puntosVictoria: 15
+            });
+        });
+
+        // Request State
+        document.getElementById('requestStateBtn').addEventListener('click', () => {
+            if (!socket || !socket.connected) {
+                log('❌ Socket no conectado', 'error');
+                return;
+            }
+
+            log('📋 Solicitando estado del juego...');
+            socket.emit('solicitar_estado_juego_ws');
+        });
+
+        // Log all events for debugging
+        const originalEmit = socket?.emit;
+        if (originalEmit) {
+            socket.emit = function(...args) {
+                log('📤 Enviando: ' + args[0] + (args[1] ? ' - ' + JSON.stringify(args[1]) : ''));
+                return originalEmit.apply(this, args);
+            };
+        }
+    </script>
+</body>
+</html>

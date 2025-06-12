@@ -269,36 +269,23 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     activeGames[codigoSala] = partida;
     
     // Notificar a los jugadores que la partida ha comenzado
-    console.log(`Partida ${codigoSala} creada e iniciada.`);
+    console.log(`Partida ${codigoSala} creada e iniciada. Notificando a la sala para que los clientes soliciten el estado.`);
     debugActiveGames(); // Debug después de crear partida
     
-    // Enviar explícitamente el estado inicial a todos los jugadores
+    // 🔴 CAMBIO IMPORTANTE: Ya no intentamos enviar el estado individualmente aquí.
+    // Solo enviamos una señal para que todos los clientes sepan que la partida empezó.
     try {
-        debugLog('gameLogicHandler', `Enviando estado inicial a todos los jugadores de la sala ${codigoSala}`);
+        debugLog('gameLogicHandler', `Notificando partida_iniciada a sala ${codigoSala}`);
         
-        // Primero, enviar a cada jugador su estado personalizado
-        for (const jugador of jugadoresInfo) {
-            const estadoJuego = partida.obtenerEstadoGlobalParaCliente(jugador.id);
-            // Usar socket.to() asegura que sólo ese jugador reciba su estado específico
-            const jugadorSocketId = await getSocketIdByUserId(io, jugador.id);
-            if (jugadorSocketId) {
-                io.to(jugadorSocketId).emit('estado_juego_actualizado', estadoJuego);
-                debugLog('gameLogicHandler', `Estado enviado a socket ${jugadorSocketId} (jugador ${jugador.nombre_usuario})`);
-            } else {
-                // Enviar a toda la sala como fallback, pero no es lo ideal
-                io.to(codigoSala).emit('estado_juego_actualizado', estadoJuego);
-                debugLog('gameLogicHandler', `Socket no encontrado para jugador ${jugador.nombre_usuario}, enviando a toda la sala`);
-            }
-        }
-        
-        // Luego enviar evento de inicio de partida a toda la sala
-        io.to(codigoSala).emit('partida_iniciada', { 
+        io.to(codigoSala).emit('partida_iniciada', {
             codigo_sala: codigoSala,
-            mensaje: 'Partida iniciada exitosamente' 
+            mensaje: 'Partida lista. Solicitando estado del juego...'
         });
+        
+        debugLog('gameLogicHandler', `✅ Evento partida_iniciada enviado a sala ${codigoSala}`);
     } catch (error) {
-        debugLog('gameLogicHandler', `Error al enviar estado inicial a jugadores: ${error}`, error);
-        console.error(`Error al enviar estado inicial a jugadores: ${error}`);
+        debugLog('gameLogicHandler', `Error al notificar partida_iniciada: ${error}`, error);
+        console.error(`Error al notificar partida_iniciada: ${error}`);
     }
     
     return partida;

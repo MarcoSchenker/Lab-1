@@ -205,7 +205,7 @@ const OnlineGamePage: React.FC = () => {
     window.location.reload();
   }, []);
 
-  // Función para solicitar estado del juego con múltiples intentos
+  // Función para solicitar estado del juego con múltiples intentos - actualizada para usar nuevo evento
   const requestGameState = useCallback(() => {
     if (!socketRef.current || !socketRef.current.connected) {
       gameStateDebugger.logError('request_state_failed', 'Socket no conectado para solicitar estado');
@@ -213,7 +213,8 @@ const OnlineGamePage: React.FC = () => {
     }
 
     gameStateDebugger.logSync('requesting_game_state', { socketId: socketRef.current.id });
-    socketRef.current.emit('cliente_solicitar_estado_juego');
+    // Usar el nuevo evento WebSocket para solicitar estado
+    socketRef.current.emit('solicitar_estado_juego_ws');
     
     // Configurar un timeout para mostrar error si no recibimos respuesta
     if (estadoTimeoutRef.current) clearTimeout(estadoTimeoutRef.current);
@@ -227,7 +228,7 @@ const OnlineGamePage: React.FC = () => {
       if (attemptsMade < maxAutoRetries && !estadoJuego) {
         attemptsMade++;
         gameStateDebugger.logSync('auto_retry_request_state', { attempt: attemptsMade, maxAutoRetries });
-        socketRef.current?.emit('cliente_solicitar_estado_juego');
+        socketRef.current?.emit('solicitar_estado_juego_ws');
         
         // Configurar el siguiente reintento
         estadoTimeoutRef.current = setTimeout(autoRetry, 2000);
@@ -365,11 +366,11 @@ const OnlineGamePage: React.FC = () => {
       console.log('[CLIENT] ⏳ Esperando inicio de partida:', data);
       setMensajeEstado(data.mensaje || 'Esperando que inicie la partida...');
       
-      // Reintentrar obtener estado periódicamente
+      // Reintentrar obtener estado periódicamente usando el nuevo evento
       const interval = setInterval(() => {
         console.log('[CLIENT] Reintentando obtener estado...');
         if (socketRef.current?.connected) {
-          socketRef.current.emit('cliente_solicitar_estado_juego');
+          socketRef.current.emit('solicitar_estado_juego_ws');
         } else {
           clearInterval(interval);
         }
@@ -456,9 +457,25 @@ const OnlineGamePage: React.FC = () => {
       // pero seguimos mostrando la pantalla de carga hasta recibir un estado completo
       if (data.estadoPartida === 'recuperando') {
         setTimeout(() => {
-          socket.emit('cliente_solicitar_estado_juego');
+          socket.emit('solicitar_estado_juego_ws');
         }, 3000);
       }
+    });
+
+    // Manejar inicio de partida - nuevo evento del backend
+    socket.on('partida_iniciada', (data) => {
+      console.log('[CLIENT] 🎮 Partida iniciada:', data);
+      gameStateDebugger.logAction('partida_iniciada_received', data);
+      
+      setMensajeEstado(data.mensaje || 'Partida iniciada, solicitando estado inicial...');
+      
+      // Solicitar el estado inicial inmediatamente
+      setTimeout(() => {
+        if (socketRef.current?.connected) {
+          console.log('[CLIENT] Solicitando estado inicial...');
+          socketRef.current.emit('solicitar_estado_inicial');
+        }
+      }, 500);
     });
 
     return () => {
@@ -468,6 +485,7 @@ const OnlineGamePage: React.FC = () => {
       socket.off('unido_sala_juego');
       socket.off('estado_juego_actualizado');
       socket.off('esperando_inicio_partida');
+      socket.off('partida_iniciada');
       socket.off('error_juego');
       socket.off('disconnect');
       socket.disconnect();
@@ -543,25 +561,25 @@ const OnlineGamePage: React.FC = () => {
     return respuestas[respuesta] || respuesta;
   };
 
-  // Funciones para acciones del juego
+  // Funciones para acciones del juego - actualizadas para usar nuevos eventos WebSocket
   const jugarCarta = (carta: Carta) => {
     if (!socketRef.current) return;
     setEsperandoRespuesta(true);
-    socketRef.current.emit('cliente_jugar_carta', { carta });
+    socketRef.current.emit('jugar_carta_ws', { carta });
     setTimeout(() => setEsperandoRespuesta(false), 500);
   };
 
   const cantar = (tipoCanto: string) => {
     if (!socketRef.current) return;
     setEsperandoRespuesta(true);
-    socketRef.current.emit('cliente_cantar', { tipo_canto: tipoCanto });
+    socketRef.current.emit('cantar_ws', { tipo_canto: tipoCanto });
     setTimeout(() => setEsperandoRespuesta(false), 500);
   };
 
   const responderCanto = (respuesta: string) => {
     if (!socketRef.current) return;
     setEsperandoRespuesta(true);
-    socketRef.current.emit('cliente_responder_canto', { 
+    socketRef.current.emit('responder_canto_ws', { 
       respuesta, 
       canto_respondido_tipo: estadoJuego?.rondaActual.envidoInfo.cantado ? 'ENVIDO' : 'TRUCO' 
     });
@@ -579,7 +597,7 @@ const OnlineGamePage: React.FC = () => {
     }
     
     setEsperandoRespuesta(true);
-    socketRef.current.emit('cliente_responder_canto', { 
+    socketRef.current.emit('responder_canto_ws', { 
       respuesta: puntos,
       canto_respondido_tipo: 'ENVIDO'
     });
@@ -590,14 +608,17 @@ const OnlineGamePage: React.FC = () => {
   const declararSonBuenas = () => {
     if (!socketRef.current) return;
     setEsperandoRespuesta(true);
-    socketRef.current.emit('cliente_son_buenas_envido', {});
+    socketRef.current.emit('responder_canto_ws', { 
+      respuesta: 'SON_BUENAS_ENVIDO',
+      canto_respondido_tipo: 'ENVIDO'
+    });
     setTimeout(() => setEsperandoRespuesta(false), 500);
   };
 
   const irseAlMazo = () => {
     if (!socketRef.current) return;
     if (window.confirm('¿Estás seguro de que quieres irte al mazo?')) {
-      socketRef.current.emit('cliente_irse_al_mazo');
+      socketRef.current.emit('irse_al_mazo_ws');
     }
   };
 
