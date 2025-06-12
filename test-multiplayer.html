@@ -110,11 +110,11 @@
             const password = document.getElementById(`password${player}`).value;
 
             try {
-                const response = await fetch(`${BASE_URL}/auth/login`, {
+                const response = await fetch(`${BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        email: email,
+                        nombre_usuario: document.getElementById(`usuario${player}`).value,
                         contraseña: password
                     })
                 });
@@ -122,7 +122,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    tokens[player] = data.token;
+                    tokens[player] = data.accessToken;
                     log(`Jugador ${player}: Login exitoso`);
                     updateStatus(player, 'Autenticado', 'connected');
                     

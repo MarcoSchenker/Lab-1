@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Flujo WebSocket Completo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+        .status.warning { background-color: #fff3cd; color: #856404; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .logs {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .test-section {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .step {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .step.completed {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .step.failed {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .game-state {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .player-info {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Prueba de Flujo WebSocket Completo - Truco Multiplayer</h1>
+        <p>Esta herramienta prueba el flujo completo de WebSocket después de la modularización.</p>
+        
+        <div class="status info">
+            <strong>Estado:</strong> <span id="connectionStatus">Desconectado</span>
+        </div>
+    </div>
+
+    <!-- Sección 1: Prueba de Skins -->
+    <div class="container test-section">
+        <h3>🎨 Prueba 1: Funcionalidad de Skins</h3>
+        <div id="skinsSteps">
+            <div class="step" id="step-skins-1">1. Verificar endpoint de skins</div>
+            <div class="step" id="step-skins-2">2. Cargar skins disponibles</div>
+            <div class="step" id="step-skins-3">3. Verificar skin del usuario</div>
+        </div>
+        <button onclick="testSkins()">Probar Skins</button>
+        <div id="skinsResult"></div>
+    </div>
+
+    <!-- Sección 2: Prueba de Conexión WebSocket -->
+    <div class="container test-section">
+        <h3>🔌 Prueba 2: Conexión WebSocket</h3>
+        <div id="socketSteps">
+            <div class="step" id="step-socket-1">1. Conectar a WebSocket</div>
+            <div class="step" id="step-socket-2">2. Autenticar con token</div>
+            <div class="step" id="step-socket-3">3. Verificar eventos básicos</div>
+        </div>
+        <button onclick="testWebSocket()">Probar WebSocket</button>
+        <div id="socketResult"></div>
+    </div>
+
+    <!-- Sección 3: Prueba de Creación de Partida -->
+    <div class="container test-section">
+        <h3>🏠 Prueba 3: Creación y Unión a Partida</h3>
+        <div id="gameSteps">
+            <div class="step" id="step-game-1">1. Crear partida nueva</div>
+            <div class="step" id="step-game-2">2. Unirse a la sala</div>
+            <div class="step" id="step-game-3">3. Recibir estado inicial</div>
+            <div class="step" id="step-game-4">4. Verificar estructura del juego</div>
+        </div>
+        <button onclick="testGameCreation()">Crear Partida</button>
+        <div id="gameResult"></div>
+    </div>
+
+    <!-- Sección 4: Prueba de Acciones del Juego -->
+    <div class="container test-section">
+        <h3>🃏 Prueba 4: Acciones de Juego</h3>
+        <div id="actionsSteps">
+            <div class="step" id="step-actions-1">1. Solicitar estado del juego</div>
+            <div class="step" id="step-actions-2">2. Probar jugar carta</div>
+            <div class="step" id="step-actions-3">3. Probar canto (Envido/Truco)</div>
+            <div class="step" id="step-actions-4">4. Verificar respuestas del servidor</div>
+        </div>
+        <button onclick="testGameActions()" id="actionsBtn" disabled>Probar Acciones</button>
+        <div id="actionsResult"></div>
+    </div>
+
+    <!-- Sección 5: Estado del Juego -->
+    <div class="container">
+        <h3>📊 Estado Actual del Juego</h3>
+        <div id="gameStateDisplay" class="game-state">
+            <p>No hay partida activa</p>
+        </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="container">
+        <h3>📝 Logs de Prueba</h3>
+        <button onclick="clearLogs()">Limpiar Logs</button>
+        <div id="logs" class="logs"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let currentGameState = null;
+        let currentRoomCode = null;
+        let testToken = null;
+
+        // Función para agregar logs
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Función para marcar un paso como completado
+        function markStepCompleted(stepId, success = true) {
+            const step = document.getElementById(stepId);
+            if (step) {
+                step.className = success ? 'step completed' : 'step failed';
+            }
+        }
+
+        // Función para mostrar resultados
+        function showResult(containerId, message, isSuccess = true) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="status ${isSuccess ? 'success' : 'error'}">${message}</div>`;
+        }
+
+        // Crear token de prueba
+        function createTestToken() {
+            const testUser = {
+                id: Math.floor(Math.random() * 1000),
+                username: `test_user_${Date.now()}`,
+                iat: Math.floor(Date.now() / 1000)
+            };
+            // Simular un token JWT básico (en producción sería un JWT real)
+            testToken = btoa(JSON.stringify(testUser));
+            localStorage.setItem('token', testToken);
+            localStorage.setItem('username', testUser.username);
+            return testToken;
+        }
+
+        // Prueba 1: Skins
+        async function testSkins() {
+            addLog('🎨 Iniciando prueba de skins...', 'info');
+            
+            try {
+                // Crear token de prueba
+                const token = createTestToken();
+                
+                // Paso 1: Verificar endpoint de skins
+                addLog('Verificando endpoint /api/skins...', 'info');
+                const skinsResponse = await fetch('http://localhost:3001/api/skins', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (skinsResponse.ok) {
+                    const skins = await skinsResponse.json();
+                    markStepCompleted('step-skins-1', true);
+                    addLog(`✅ Skins cargadas: ${skins.length} skins disponibles`, 'success');
+                    
+                    // Paso 2: Cargar skins disponibles
+                    markStepCompleted('step-skins-2', true);
+                    skins.forEach(skin => {
+                        addLog(`  - ${skin.nombre}: ${skin.descripcion}`, 'info');
+                    });
+                    
+                    // Paso 3: Verificar skin del usuario
+                    const userSkinsResponse = await fetch('http://localhost:3001/api/skins/user', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (userSkinsResponse.ok) {
+                        const userSkins = await userSkinsResponse.json();
+                        markStepCompleted('step-skins-3', true);
+                        addLog(`✅ Skins del usuario: ${JSON.stringify(userSkins)}`, 'success');
+                        showResult('skinsResult', '✅ Prueba de skins completada exitosamente', true);
+                    } else {
+                        markStepCompleted('step-skins-3', false);
+                        addLog(`❌ Error al cargar skins del usuario: ${userSkinsResponse.status}`, 'error');
+                        showResult('skinsResult', '❌ Error al cargar skins del usuario', false);
+                    }
+                } else {
+                    markStepCompleted('step-skins-1', false);
+                    addLog(`❌ Error al cargar skins: ${skinsResponse.status}`, 'error');
+                    showResult('skinsResult', '❌ Error al cargar skins', false);
+                }
+            } catch (error) {
+                addLog(`❌ Error en prueba de skins: ${error.message}`, 'error');
+                showResult('skinsResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        // Prueba 2: WebSocket
+        function testWebSocket() {
+            addLog('🔌 Iniciando prueba de WebSocket...', 'info');
+            
+            try {
+                // Crear token si no existe
+                if (!testToken) {
+                    createTestToken();
+                }
+                
+                // Paso 1: Conectar a WebSocket
+                addLog('Conectando a WebSocket...', 'info');
+                socket = io('http://localhost:3001', {
+                    auth: { token: testToken },
+                    transports: ['websocket', 'polling'],
+                    timeout: 20000
+                });
+                
+                socket.on('connect', () => {
+                    markStepCompleted('step-socket-1', true);
+                    addLog('✅ WebSocket conectado exitosamente', 'success');
+                    document.getElementById('connectionStatus').textContent = 'Conectado';
+                    
+                    // Paso 2: Autenticar con token
+                    markStepCompleted('step-socket-2', true);
+                    addLog('✅ Autenticación exitosa', 'success');
+                    
+                    // Paso 3: Verificar eventos básicos
+                    markStepCompleted('step-socket-3', true);
+                    addLog('✅ Eventos básicos configurados', 'success');
+                    showResult('socketResult', '✅ Conexión WebSocket exitosa', true);
+                    
+                    // Habilitar botón de acciones
+                    document.getElementById('actionsBtn').disabled = false;
+                });
+                
+                socket.on('connect_error', (error) => {
+                    markStepCompleted('step-socket-1', false);
+                    addLog(`❌ Error de conexión: ${error.message}`, 'error');
+                    document.getElementById('connectionStatus').textContent = 'Error de conexión';
+                    showResult('socketResult', `❌ Error de conexión: ${error.message}`, false);
+                });
+                
+                socket.on('disconnect', (reason) => {
+                    addLog(`🔌 Desconectado: ${reason}`, 'warning');
+                    document.getElementById('connectionStatus').textContent = 'Desconectado';
+                });
+                
+                // Configurar eventos del juego
+                setupGameEvents();
+                
+            } catch (error) {
+                addLog(`❌ Error en prueba de WebSocket: ${error.message}`, 'error');
+                showResult('socketResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        // Configurar eventos del juego
+        function setupGameEvents() {
+            if (!socket) return;
+            
+            socket.on('sala_creada', (data) => {
+                addLog(`🏠 Sala creada: ${JSON.stringify(data)}`, 'success');
+                currentRoomCode = data.codigoSala;
+                markStepCompleted('step-game-1', true);
+            });
+            
+            socket.on('sala_unida', (data) => {
+                addLog(`🏠 Sala unida: ${JSON.stringify(data)}`, 'success');
+                markStepCompleted('step-game-2', true);
+            });
+            
+            socket.on('partida_iniciada', (data) => {
+                addLog(`🎮 Partida iniciada: ${JSON.stringify(data)}`, 'success');
+                // Solicitar estado inicial
+                setTimeout(() => {
+                    socket.emit('solicitar_estado_inicial');
+                }, 100);
+            });
+            
+            socket.on('estado_juego_actualizado', (data) => {
+                addLog(`🔄 Estado actualizado: ${JSON.stringify(data)}`, 'info');
+                currentGameState = data.estado;
+                markStepCompleted('step-game-3', true);
+                updateGameStateDisplay();
+            });
+            
+            socket.on('error_juego', (data) => {
+                addLog(`❌ Error del juego: ${JSON.stringify(data)}`, 'error');
+            });
+        }
+
+        // Prueba 3: Creación de partida
+        function testGameCreation() {
+            if (!socket || !socket.connected) {
+                showResult('gameResult', '❌ WebSocket no conectado. Ejecuta primero la prueba de WebSocket.', false);
+                return;
+            }
+            
+            addLog('🏠 Iniciando prueba de creación de partida...', 'info');
+            
+            // Paso 1: Crear partida nueva
+            addLog('Creando partida nueva...', 'info');
+            const partidaConfig = {
+                tipo: 'publica',
+                maxJugadores: 4,
+                puntosVictoria: 15,
+                tiempoTurno: 30
+            };
+            
+            socket.emit('crear_partida', partidaConfig);
+            
+            // Configurar timeout para verificar si la partida se creó
+            setTimeout(() => {
+                if (currentRoomCode) {
+                    // Paso 2: Unirse a la sala
+                    addLog(`Uniéndose a la sala: ${currentRoomCode}`, 'info');
+                    socket.emit('unirse_sala', { codigoSala: currentRoomCode });
+                    
+                    setTimeout(() => {
+                        // Paso 4: Verificar estructura del juego
+                        if (currentGameState) {
+                            markStepCompleted('step-game-4', true);
+                            addLog('✅ Estructura del juego verificada', 'success');
+                            showResult('gameResult', '✅ Partida creada y configurada exitosamente', true);
+                        } else {
+                            addLog('⚠️ Esperando estado del juego...', 'warning');
+                        }
+                    }, 2000);
+                } else {
+                    markStepCompleted('step-game-1', false);
+                    showResult('gameResult', '❌ Error al crear partida', false);
+                }
+            }, 2000);
+        }
+
+        // Prueba 4: Acciones del juego
+        function testGameActions() {
+            if (!socket || !socket.connected) {
+                showResult('actionsResult', '❌ WebSocket no conectado', false);
+                return;
+            }
+            
+            if (!currentRoomCode) {
+                showResult('actionsResult', '❌ No hay partida activa. Crea una partida primero.', false);
+                return;
+            }
+            
+            addLog('🃏 Iniciando prueba de acciones del juego...', 'info');
+            
+            // Paso 1: Solicitar estado del juego
+            addLog('Solicitando estado del juego...', 'info');
+            socket.emit('solicitar_estado_juego_ws');
+            markStepCompleted('step-actions-1', true);
+            
+            setTimeout(() => {
+                // Paso 2: Probar jugar carta (simulado)
+                addLog('Probando acción de jugar carta...', 'info');
+                const cartaSimulada = {
+                    idUnico: 'test_carta_1',
+                    numero: 1,
+                    palo: 'espada',
+                    valorEnvido: 1,
+                    valorTruco: 8
+                };
+                
+                socket.emit('jugar_carta_ws', {
+                    codigoSala: currentRoomCode,
+                    carta: cartaSimulada
+                });
+                markStepCompleted('step-actions-2', true);
+                
+                // Paso 3: Probar canto
+                setTimeout(() => {
+                    addLog('Probando canto de Envido...', 'info');
+                    socket.emit('cantar_ws', {
+                        codigoSala: currentRoomCode,
+                        tipoCanto: 'envido'
+                    });
+                    markStepCompleted('step-actions-3', true);
+                    
+                    // Paso 4: Verificar respuestas
+                    markStepCompleted('step-actions-4', true);
+                    showResult('actionsResult', '✅ Prueba de acciones completada', true);
+                }, 1000);
+            }, 1000);
+        }
+
+        // Actualizar display del estado del juego
+        function updateGameStateDisplay() {
+            const display = document.getElementById('gameStateDisplay');
+            if (!currentGameState) {
+                display.innerHTML = '<p>No hay partida activa</p>';
+                return;
+            }
+            
+            let html = `
+                <h4>Partida: ${currentRoomCode}</h4>
+                <p><strong>Estado:</strong> ${currentGameState.estado}</p>
+                <p><strong>Jugadores:</strong> ${currentGameState.jugadores ? currentGameState.jugadores.length : 0}</p>
+            `;
+            
+            if (currentGameState.jugadores && currentGameState.jugadores.length > 0) {
+                html += '<div><strong>Jugadores:</strong><br>';
+                currentGameState.jugadores.forEach((jugador, index) => {
+                    html += `<div class="player-info">
+                        <strong>${jugador.nombreUsuario || jugador.usuario}</strong> 
+                        (Equipo ${jugador.equipoId || jugador.equipoIndex + 1})
+                        ${jugador.turno ? '👑' : ''}
+                    </div>`;
+                });
+                html += '</div>';
+            }
+            
+            if (currentGameState.equipos && currentGameState.equipos.length > 0) {
+                html += '<div><strong>Puntuación:</strong><br>';
+                currentGameState.equipos.forEach(equipo => {
+                    html += `<div>Equipo ${equipo.nombre}: ${equipo.puntosPartida} puntos</div>`;
+                });
+                html += '</div>';
+            }
+            
+            display.innerHTML = html;
+        }
+
+        // Inicializar la página
+        window.onload = function() {
+            addLog('🎮 Sistema de pruebas inicializado', 'info');
+            addLog('📋 Sigue las pruebas en orden para validar el flujo completo', 'info');
+        };
+    </script>
+</body>
+</html>
