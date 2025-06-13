@@ -1,4 +1,5 @@
 import React from 'react';
+import { CardAnimation } from '../animations/CardAnimations';
 
 interface Carta {
   idUnico: string;
@@ -69,36 +70,42 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
       </div>
       
       <div className="cards-container">
-        {jugadorActual.cartasMano.map((carta) => (
-          <div 
+        {jugadorActual.cartasMano.map((carta, index) => (
+          <CardAnimation
             key={carta.idUnico}
-            className={`card-wrapper ${carta.estaJugada ? 'played' : ''} ${esMiTurno && !carta.estaJugada ? 'playable' : ''}`}
-            onClick={() => handleCardClick(carta)}
+            type="deal"
+            delay={index * 100}
+            duration={600}
           >
-            <div className="card-container">
-              <img 
-                src={`${rutaSkin}/${carta.palo}_${carta.numero}.png`}
-                alt={`${carta.numero} de ${carta.palo}`}
-                className="card-image"
-                onError={(e) => {
-                  // Fallback a skin original si no se encuentra la imagen
-                  (e.target as HTMLImageElement).src = `/cartas/mazoOriginal/${carta.palo}_${carta.numero}.png`;
-                }}
-              />
-              {carta.estaJugada && (
-                <div className="card-played-overlay">
-                  <span>Jugada</span>
+            <div 
+              className={`card-wrapper ${carta.estaJugada ? 'played' : ''} ${esMiTurno && !carta.estaJugada ? 'playable' : ''}`}
+              onClick={() => handleCardClick(carta)}
+            >
+              <div className="card-container">
+                <img 
+                  src={`${rutaSkin}/${carta.palo}_${carta.numero}.png`}
+                  alt={`${carta.numero} de ${carta.palo}`}
+                  className="card-image"
+                  onError={(e) => {
+                    // Fallback a skin original si no se encuentra la imagen
+                    (e.target as HTMLImageElement).src = `/cartas/mazoOriginal/${carta.palo}_${carta.numero}.png`;
+                  }}
+                />
+                {carta.estaJugada && (
+                  <div className="card-played-overlay">
+                    <span>Jugada</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="card-info">
+                <div className="card-values">
+                  <span className="envido-value">E: {carta.valorEnvido}</span>
+                  <span className="truco-value">T: {carta.valorTruco}</span>
                 </div>
-              )}
-            </div>
-            
-            <div className="card-info">
-              <div className="card-values">
-                <span className="envido-value">E: {carta.valorEnvido}</span>
-                <span className="truco-value">T: {carta.valorTruco}</span>
               </div>
             </div>
-          </div>
+          </CardAnimation>
         ))}
       </div>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import PlayerAvatar from './PlayerAvatar';
+import { CardAnimation, TurnIndicator } from '../animations/CardAnimations';
 
 interface Carta {
   idUnico: string;
@@ -32,6 +33,8 @@ interface GameBoardProps {
   jugadorEnTurnoId?: number | null;
   cartasEnMesa?: CartaEnMesa[];
   jugadorSkins?: Record<number, string>;
+  ganadorRonda?: number | null;
+  manoActual?: number;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ 
@@ -39,9 +42,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
   jugadorActualId,
   jugadorEnTurnoId, 
   cartasEnMesa = [],
-  jugadorSkins = {}
+  jugadorSkins = {},
+  ganadorRonda = null,
+  manoActual = 0
 }) => {
   const numJugadores = jugadores.length;
+  
+  // Log mano actual para debug si es necesario
+  console.log(`GameBoard - Mano actual: ${manoActual + 1}`);
 
   const obtenerRutaSkin = (jugadorId: number): string => {
     const nombreSkin = jugadorSkins[jugadorId] || 'Original';
@@ -60,20 +68,29 @@ const GameBoard: React.FC<GameBoardProps> = ({
       <div className="played-cards-area">
         {cartasEnMesa.map((cartaJugada, index) => {
           const rutaSkin = obtenerRutaSkin(cartaJugada.jugadorId);
+          const isWinningCard = ganadorRonda === cartaJugada.jugadorId;
+          
           return (
-            <div key={`${cartaJugada.jugadorId}-${index}`} className="played-card">
-              <img 
-                src={`${rutaSkin}/${cartaJugada.carta.palo}_${cartaJugada.carta.numero}.png`}
-                alt={`${cartaJugada.carta.numero} de ${cartaJugada.carta.palo}`}
-                onError={(e) => {
-                  // Fallback a skin original si no se encuentra la imagen
-                  (e.target as HTMLImageElement).src = `/cartas/mazoOriginal/${cartaJugada.carta.palo}_${cartaJugada.carta.numero}.png`;
-                }}
-              />
-              <span className="played-card-player">
-                {obtenerNombreJugador(cartaJugada.jugadorId)}
-              </span>
-            </div>
+            <CardAnimation
+              key={`${cartaJugada.jugadorId}-${index}`}
+              type="play"
+              duration={500}
+              delay={index * 200}
+            >
+              <div className={`played-card ${isWinningCard ? 'winning-card' : ''}`}>
+                <img 
+                  src={`${rutaSkin}/${cartaJugada.carta.palo}_${cartaJugada.carta.numero}.png`}
+                  alt={`${cartaJugada.carta.numero} de ${cartaJugada.carta.palo}`}
+                  onError={(e) => {
+                    // Fallback a skin original si no se encuentra la imagen
+                    (e.target as HTMLImageElement).src = `/cartas/mazoOriginal/${cartaJugada.carta.palo}_${cartaJugada.carta.numero}.png`;
+                  }}
+                />
+                <span className="played-card-player">
+                  {obtenerNombreJugador(cartaJugada.jugadorId)}
+                </span>
+              </div>
+            </CardAnimation>
           );
         })}
       </div>
@@ -82,6 +99,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <div className="game-board-container">
+      {/* Indicador de turno */}
+      {jugadorEnTurnoId && (
+        <TurnIndicator 
+          currentPlayer={obtenerNombreJugador(jugadorEnTurnoId)}
+          isMyTurn={jugadorEnTurnoId === jugadorActualId}
+        />
+      )}
+      
       {/* Contenedor para los avatares de los jugadores */}
       <div className={`player-avatars-container player-count-${numJugadores}`}>
         {jugadores.map((jugador, index) => (
