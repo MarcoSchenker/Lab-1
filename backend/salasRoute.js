@@ -193,6 +193,8 @@ router.post('/unirse', authenticateToken, async (req, res) => {
     // Verificar si ahora la sala está llena para iniciar la partida
     const nuevaCantidadJugadores = sala.jugadores_actuales + 1;
     if (nuevaCantidadJugadores === sala.max_jugadores) {
+      console.log(`[salasRoute] La sala ${codigo_sala} está llena. Iniciando la partida...`);
+      
       // Cambiar estado de la sala a 'en_juego'
       await connection.query(
         `UPDATE partidas SET estado = 'en_juego' WHERE codigo_sala = ?`,
@@ -220,8 +222,8 @@ router.post('/unirse', authenticateToken, async (req, res) => {
       const tipoPartida = sala.max_jugadores === 2 ? '1v1' : 
                           sala.max_jugadores === 4 ? '2v2' : '3v3';
       
-      console.log(`=== INICIANDO PARTIDA DESDE SALAS ===`);
-      console.log('Datos para gameLogicHandler:', {
+      console.log(`[salasRoute] Creando instancia de partida para sala ${codigo_sala}`);
+      console.log('[salasRoute] Datos para gameLogicHandler:', {
         codigo_sala,
         jugadoresInfo,
         tipoPartida,
@@ -229,6 +231,7 @@ router.post('/unirse', authenticateToken, async (req, res) => {
       });
       
       try {
+        // 1. Crear la instancia de la partida en el backend
         const partidaCreada = await gameLogicHandler.crearNuevaPartida(
           codigo_sala, 
           jugadoresInfo, 
@@ -237,30 +240,34 @@ router.post('/unirse', authenticateToken, async (req, res) => {
         );
         
         if (partidaCreada) {
-          console.log(`✅ Partida creada exitosamente para sala ${codigo_sala}`);
+          console.log(`[salasRoute] ✅ Partida creada exitosamente para sala ${codigo_sala}`);
           
-          // Notificar a los jugadores que la partida ha comenzado
+          // 2. Notificar a TODOS los sockets en esa sala de lobby para que se redirijan
           const io = req.app.get('io');
           if (io) {
-            console.log(`Notificando inicio de partida a sala ${codigo_sala}`);
-            io.to(codigo_sala).emit('partida_iniciada', { codigo_sala });
+            console.log(`[salasRoute] Emitiendo 'iniciar_redireccion_juego' a la sala ${codigo_sala}`);
+            // ✅ Small delay to ensure frontend sockets have joined the lobby room
+            setTimeout(() => {
+              io.to(codigo_sala).emit('iniciar_redireccion_juego', { codigoSala: codigo_sala });
+            }, 100);
           }
           
           return res.status(200).json({ 
-            mensaje: 'Te has unido a la sala y la partida ha comenzado',
-            codigo_sala 
+            message: 'Te has unido a la sala exitosamente.',
+            codigo_sala,
+            juego_iniciado: true  // Flag para indicar que el juego fue iniciado
           });
         } else {
-          console.log(`❌ Error: partida no pudo ser creada para sala ${codigo_sala}`);
+          console.log(`[salasRoute] ❌ Error: partida no pudo ser creada para sala ${codigo_sala}`);
           return res.status(500).json({ error: 'Error al crear la partida' });
         }
       } catch (error) {
-        console.error('Error al iniciar la partida:', error);
+        console.error('[salasRoute] Error al iniciar la partida:', error);
         return res.status(500).json({ error: 'Error al iniciar la partida' });
       }
     } else {
       await connection.commit();
-      return res.status(200).json({ mensaje: 'Te has unido a la sala correctamente', codigo_sala });
+      return res.status(200).json({ message: 'Te has unido a la sala exitosamente.', codigo_sala });
     }
     
   } catch (error) {

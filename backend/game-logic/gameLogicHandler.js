@@ -35,6 +35,29 @@ let io;
 
 const { debugLog } = require('../utils/debugUtils');
 
+// ✅ Caché de estado por jugador - importado de gameSocketHandlers
+let playerStatesCache = null;
+
+// ✅ Función para establecer referencia al caché de estados
+function setPlayerStatesCache(cacheRef) {
+    playerStatesCache = cacheRef;
+}
+
+// ✅ Función auxiliar para enviar y guardar estado en caché
+function enviarEstadoConCache(sala, jugadorId, estado) {
+    if (!io) return;
+    
+    // Enviar por WebSocket
+    io.to(sala).emit('estado_juego_actualizado', estado);
+    
+    // Guardar en caché si está disponible
+    if (playerStatesCache) {
+        const cacheKey = `${sala}_${jugadorId}`;
+        playerStatesCache[cacheKey] = estado;
+        console.log(`[gameLogicHandler] 💾 Estado guardado en caché para jugador ${jugadorId} en sala ${sala}`);
+    }
+}
+
 // Función para debuggear el estado de activeGames
 function debugActiveGames() {
     debugLog('gameLogicHandler', 'Estado de activeGames', {
@@ -177,7 +200,17 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     // Callbacks para PartidaGame
     const notificarEstadoGlobalCallback = (sala, evento, estado) => {
         console.log(`Notificando a sala ${sala}, evento ${evento}`);
-        io.to(sala).emit(evento, estado);
+        
+        // ✅ Para eventos de estado del juego, guardar en caché por jugador
+        if (evento === 'estado_juego_actualizado' && estado && estado.jugadores) {
+            // Guardar estado en caché para cada jugador en la partida
+            estado.jugadores.forEach(jugador => {
+                enviarEstadoConCache(sala, jugador.id, estado);
+            });
+        } else {
+            // Para otros eventos, usar la emisión normal
+            io.to(sala).emit(evento, estado);
+        }
     };
 
     const persistirPartidaCallback = async (partidaId, estadoParaDB) => {
@@ -269,24 +302,12 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     activeGames[codigoSala] = partida;
     
     // Notificar a los jugadores que la partida ha comenzado
-    console.log(`Partida ${codigoSala} creada e iniciada. Notificando a la sala para que los clientes soliciten el estado.`);
+    console.log(`Partida ${codigoSala} creada e iniciada y guardada en memoria.`);
     debugActiveGames(); // Debug después de crear partida
     
-    // 🔴 CAMBIO IMPORTANTE: Ya no intentamos enviar el estado individualmente aquí.
-    // Solo enviamos una señal para que todos los clientes sepan que la partida empezó.
-    try {
-        debugLog('gameLogicHandler', `Notificando partida_iniciada a sala ${codigoSala}`);
-        
-        io.to(codigoSala).emit('partida_iniciada', {
-            codigo_sala: codigoSala,
-            mensaje: 'Partida lista. Solicitando estado del juego...'
-        });
-        
-        debugLog('gameLogicHandler', `✅ Evento partida_iniciada enviado a sala ${codigoSala}`);
-    } catch (error) {
-        debugLog('gameLogicHandler', `Error al notificar partida_iniciada: ${error}`, error);
-        console.error(`Error al notificar partida_iniciada: ${error}`);
-    }
+    // 🟢 CAMBIO IMPORTANTE: Ya no emitimos partida_iniciada aquí
+    // La partida está lista, pero la notificación se hará desde la ruta de iniciar partida
+    debugLog('gameLogicHandler', `Partida ${codigoSala} creada exitosamente en memoria`);
     
     return partida;
 }
@@ -541,8 +562,8 @@ function forceRefreshGameState(codigoSala) {
             }
         }
         
-        // Notificar a todos los clientes que la partida ha iniciado (por si alguno está esperando)
-        io.to(codigoSala).emit('partida_iniciada', { codigo_sala: codigoSala });
+        // 🟢 CAMBIO: Ya no emitimos partida_iniciada aquí
+        debugLog('gameLogicHandler', `Estado forzado para ${estadosEnviados.length} jugadores en sala ${codigoSala}`);
         
         return {
             success: true,
@@ -598,5 +619,7 @@ module.exports = {
     getActiveGames,
     getGameById,
     forceRefreshGameState,
-    getSocketIdByUserId // Exportar la nueva función
+    getSocketIdByUserId, // Exportar la nueva función
+    setPlayerStatesCache, // ✅ Exportar función de conexión de caché
+    enviarEstadoConCache  // ✅ Exportar función auxiliar
 };

@@ -2,117 +2,125 @@ const gameLogicHandler = require('../../game-logic/gameLogicHandler');
 const { debugLog, getSocketRoomInfo } = require('../../utils/debugUtils');
 const { verificarEstadoJuegoCompleto, reconstruirEstadoMinimo } = require('../../utils/stateRecovery');
 
+// ✅ CACHÉ DE ÚLTIMO ESTADO POR JUGADOR
+const lastPlayerStates = {}; // Formato: `${codigo_sala}_${jugadorId}` -> estadoJuego
+
+/**
+ * Función auxiliar para enviar estado a jugador y guardarlo en caché
+ * @param {Socket} socket - Socket del jugador
+ * @param {string} codigo_sala - Código de la sala
+ * @param {number} jugadorId - ID del jugador
+ * @param {Object} estado - Estado del juego
+ */
+function enviarEstadoAJugador(socket, codigo_sala, jugadorId, estado) {
+  socket.emit('estado_juego_actualizado', estado);
+  
+  // Guardar en caché
+  const cacheKey = `${codigo_sala}_${jugadorId}`;
+  lastPlayerStates[cacheKey] = estado;
+  console.log(`[gameSocketHandlers] 💾 Estado guardado en caché para jugador ${jugadorId} en sala ${codigo_sala}`);
+}
+
+/**
+ * Función auxiliar para obtener estado desde caché
+ * @param {string} codigo_sala - Código de la sala
+ * @param {number} jugadorId - ID del jugador
+ * @returns {Object|null} - Estado en caché o null
+ */
+function obtenerEstadoDesdeCache(codigo_sala, jugadorId) {
+  const cacheKey = `${codigo_sala}_${jugadorId}`;
+  return lastPlayerStates[cacheKey] || null;
+}
+
 /**
  * Configura los manejadores de eventos relacionados con el juego
  * @param {SocketIO.Socket} socket - El socket del cliente
  * @param {SocketIO.Server} io - El servidor Socket.IO
  */
 function setupGameHandlers(socket, io) {
+  // Evento para unirse a la sala de juego (disparado desde OnlineGamePage)
   socket.on('unirse_sala_juego', (codigo_sala) => {
-    debugLog('gameSocketHandlers', `Socket ${socket.id} intentando unirse a sala ${codigo_sala}`, 
-        { usuario: socket.currentUserId });
-    
     if (!socket.currentUserId) {
-      debugLog('gameSocketHandlers', 'Socket no autenticado intentando unirse a sala');
-      return socket.emit('error_juego', { 
-        message: 'Socket no autenticado.',
-        code: 'AUTH_REQUIRED'
-      });
+      console.error(`[gameSocketHandlers] Error: Socket ${socket.id} intentó unirse sin autenticar.`);
+      return socket.emit('error_juego', { message: 'Socket no autenticado.' });
     }
     
-    // Verificar estado anterior para posible reconexión
-    const wasInRoom = socket.currentRoom === codigo_sala;
-    
-    if (socket.currentRoom && socket.currentRoom !== codigo_sala) {
-      debugLog('gameSocketHandlers', `Socket ${socket.id} saliendo de sala anterior: ${socket.currentRoom}`);
-      socket.leave(socket.currentRoom);
+    socket.join(codigo_sala);
+    socket.currentRoom = codigo_sala;
+    console.log(`[gameSocketHandlers] Socket ${socket.id} (Usuario ${socket.currentUserId}) se unió a la sala de juego: ${codigo_sala}`);
+
+    // ✅ 1. Verificar si tenemos un estado guardado en caché para este jugador
+    const estadoCache = obtenerEstadoDesdeCache(codigo_sala, socket.currentUserId);
+    if (estadoCache) {
+      console.log(`[gameSocketHandlers] CACHÉ: Enviando estado en caché para jugador ${socket.currentUserId} en sala ${codigo_sala}`);
+      socket.emit('estado_juego_actualizado', estadoCache);
+      return;
     }
-    
-    // Unir al socket a la sala y guardar información
-    try {
-      const previousRooms = getSocketRoomInfo(socket);
+
+    // ✅ 2. Si no hay caché, intentar obtener de la partida activa
+    const partidaActiva = gameLogicHandler.getActiveGame(codigo_sala);
+
+    if (partidaActiva) {
+      console.log(`[gameSocketHandlers] Partida para ${codigo_sala} ya está activa. Obteniendo estado para jugador ${socket.currentUserId}.`);
+      const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
       
-      // Verificar si ya está en la sala antes de unir
-      if (!previousRooms.rooms.includes(codigo_sala)) {
-        socket.join(codigo_sala);
-        debugLog('gameSocketHandlers', `Socket ${socket.id} unido a sala ${codigo_sala}`);
+      if (estadoJuego) {
+        console.log(`[gameSocketHandlers] Enviando 'estado_juego_actualizado' a ${socket.id}`);
+        enviarEstadoAJugador(socket, codigo_sala, socket.currentUserId, estadoJuego);
       } else {
-        debugLog('gameSocketHandlers', `Socket ${socket.id} ya estaba en sala ${codigo_sala}`);
+        console.error(`[gameSocketHandlers] Error: Partida activa encontrada pero no se pudo generar el estado para el jugador ${socket.currentUserId}`);
+        socket.emit('error_juego', { message: 'No se pudo obtener el estado de la partida.' });
       }
-      
-      socket.currentRoom = codigo_sala;
-      socket.datosUsuarioSala = { codigo_sala, usuario_id: socket.currentUserId };
-      
-      const roomInfo = getSocketRoomInfo(socket);
-      debugLog('gameSocketHandlers', `Estado de sala para socket ${socket.id}`, roomInfo);
-      
-      // Notificar al usuario que se unió exitosamente a la sala (frontend está esperando este evento)
-      socket.emit('unido_sala_juego', { 
-        codigo_sala,
-        wasReconnection: wasInRoom
-      });
-      
-      // Mostrar estado de partidas activas y emitir evento de unión a los demás en la sala
-      gameLogicHandler.debugActiveGames();
-      
-      // Verificar si es una reconexión o una nueva conexión
-      if (wasInRoom) {
-        // Este es un caso de reconexión - notificamos a todos en la sala
-        socket.to(codigo_sala).emit('jugador_reconectado', { 
-          jugadorId: socket.currentUserId,
-          mensaje: `Jugador ${socket.currentUserId} se ha reconectado a la sala`
-        });
-      } else {
-        // Nueva conexión - notificar a los demás en la sala
-        socket.to(codigo_sala).emit('jugador_conectado', { 
-          jugadorId: socket.currentUserId,
-          mensaje: `Jugador ${socket.currentUserId} se ha unido a la sala`
-        });
-      }
-      
-      // Intentar obtener el estado del juego para este jugador
-      debugLog('gameSocketHandlers', `Solicitando estado del juego para usuario ${socket.currentUserId} en sala ${codigo_sala}`);
-      
-      // Esperar un momento para asegurarnos que la unión a la sala se completó
-      setTimeout(() => {
-        const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(codigo_sala, socket.currentUserId);
-        
-        if (estadoJuego) {
-          debugLog('gameSocketHandlers', `Enviando estado del juego a usuario ${socket.currentUserId}`, 
-              { estadoPartida: estadoJuego.estadoPartida });
-          socket.emit('estado_juego_actualizado', estadoJuego);
-          
-          // Si la partida ya está en curso, enviar evento adicional para asegurar transición de UI
-          if (estadoJuego.estadoPartida === 'en_juego') {
-            socket.emit('partida_iniciada', { 
-              codigo_sala: codigo_sala,
-              mensaje: 'La partida ya está en curso' 
-            });
-            
-            // Notificar a la sala que el jugador se ha reconectado
-            io.to(codigo_sala).emit('jugador_reconectado', { 
-              jugadorId: socket.currentUserId,
-              nombre: estadoJuego.jugadores.find(j => j.id === socket.currentUserId)?.nombreUsuario
-            });
-          }
-        } else {
-          debugLog('gameSocketHandlers', `No se encontró partida activa para sala ${codigo_sala}`, 
-              { usuario: socket.currentUserId });
-          socket.emit('esperando_inicio_partida', { 
-            mensaje: 'Esperando que la partida inicie...',
-            codigo_sala 
-          });
-        }
-      }, 300);
-    } catch (error) {
-      debugLog('gameSocketHandlers', `Error al unir socket ${socket.id} a sala ${codigo_sala}`, error);
-      socket.emit('error_juego', { 
-        message: 'Error al unirse a la sala de juego.',
-        details: error.message
-      });
+    } else {
+      console.log(`[gameSocketHandlers] Partida para ${codigo_sala} aún no ha sido creada en memoria. El jugador esperará.`);
     }
   });
+
+  // ✅ LOBBY ROOM JOINING - For receiving redirection events
+  socket.on('unirse_sala_lobby', (codigo_sala) => {
+    if (!socket.currentUserId) {
+      console.error(`[gameSocketHandlers] Error: Socket ${socket.id} intentó unirse a lobby sin autenticar.`);
+      return;
+    }
+    
+    console.log(`[gameSocketHandlers] Socket ${socket.id} (Usuario ${socket.currentUserId}) uniéndose a sala de lobby: ${codigo_sala}`);
+    socket.join(codigo_sala);
+    console.log(`[gameSocketHandlers] Socket ${socket.id} unido a sala de lobby ${codigo_sala} para recibir notificaciones de redirección.`);
+  });
   
+  // ✅ Nuevo manejador para solicitar estado del juego con caché
+  socket.on('solicitar_estado_juego_ws', () => {
+    try {
+      if (!socket.currentRoom || !socket.currentUserId) {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+        return;
+      }
+      
+      const cacheKey = `${socket.currentRoom}_${socket.currentUserId}`;
+      console.log(`[gameSocketHandlers] Solicitud de estado del juego - Usuario ${socket.currentUserId} - Sala ${socket.currentRoom}`);
+      
+      // ✅ 1. Verificar caché primero
+      if (lastPlayerStates[cacheKey]) {
+        console.log(`[gameSocketHandlers] CACHÉ: Enviando estado en caché para solicitud explícita`);
+        socket.emit('estado_juego_actualizado', lastPlayerStates[cacheKey]);
+        return;
+      }
+      
+      // ✅ 2. Si no hay caché, intentar obtener de la partida activa
+      const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(socket.currentRoom, socket.currentUserId);
+      
+      if (estadoJuego) {
+        console.log(`[gameSocketHandlers] Enviando estado tras solicitud explícita`);
+        enviarEstadoAJugador(socket, socket.currentRoom, socket.currentUserId, estadoJuego);
+      } else {
+        socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego.' });
+      }
+    } catch (error) {
+      console.error(`[gameSocketHandlers] Error obteniendo estado del juego: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error obteniendo el estado del juego.' });
+    }
+  });
+
   socket.on('cliente_solicitar_estado_juego', async () => {
     try {
       const { codigo_sala, usuario_id } = socket.datosUsuarioSala || {};
@@ -337,8 +345,6 @@ function setupGameHandlers(socket, io) {
     socket.emit('estado_juego_actualizado', data.estadoJuego);
   });
 
-  // 🟢 NUEVOS MANEJADORES SEGÚN TU PLAN DE WEBSOCKETS
-
   // El cliente solicita su estado inicial después de recibir 'partida_iniciada'
   socket.on('solicitar_estado_inicial', () => {
     try {
@@ -453,5 +459,8 @@ function setupGameHandlers(socket, io) {
 }
 
 module.exports = {
-  setupGameHandlers
+  setupGameHandlers,
+  lastPlayerStates, // ✅ Exportar caché para conectarlo con gameLogicHandler
+  enviarEstadoAJugador, // ✅ Exportar función auxiliar
+  obtenerEstadoDesdeCache // ✅ Exportar función de obtener caché
 };

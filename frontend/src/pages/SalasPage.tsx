@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {IoAddCircleOutline, IoFilterOutline, IoLockClosed, IoLockOpen, IoRefreshOutline } from "react-icons/io5";
+import { io, Socket } from 'socket.io-client';
 import './SalasPage.css';
 import Header from '../components/HeaderDashboard';
 
@@ -18,6 +19,7 @@ interface Sala {
 
 const SalasPage: React.FC = () => {
   const navigate = useNavigate();
+  const socketRef = useRef<Socket | null>(null);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showJoinPrivateModal, setShowJoinPrivateModal] = useState(false);
@@ -27,7 +29,7 @@ const SalasPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-    const isAnonymous = localStorage.getItem('isAnonymous') === 'true';
+  const isAnonymous = localStorage.getItem('isAnonymous') === 'true';
   
   // Estado para nueva sala
   const [nuevaSala, setNuevaSala] = useState({
@@ -44,6 +46,45 @@ const SalasPage: React.FC = () => {
     const intervalId = setInterval(fetchSalas, 10000);
     return () => clearInterval(intervalId);
   }, [filtro]);
+
+  // ✅ SOCKET SETUP FOR REDIRECTION EVENT
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Connect socket for lobby events
+    const socket = io('http://localhost:3001', {
+      auth: { token }
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('[SalasPage] Socket conectado para lobby:', socket.id);
+      socket.emit('autenticar_socket', token);
+    });
+
+    socket.on('autenticacion_exitosa', () => {
+      console.log('[SalasPage] Socket autenticado en lobby');
+    });
+
+    // ✅ KEY EVENT: Listen for game redirection
+    socket.on('iniciar_redireccion_juego', (data: { codigoSala: string }) => {
+      console.log('[SalasPage] 🎮 Recibido evento de redirección a juego:', data);
+      // Navigate to the game page immediately
+      navigate(`/online-game-page/${data.codigoSala}`);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('[SalasPage] Error de conexión socket:', error);
+    });
+
+    return () => {
+      console.log('[SalasPage] Desconectando socket del lobby');
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [navigate]);
 
   const fetchSalas = async () => {
     try {
@@ -184,6 +225,12 @@ const SalasPage: React.FC = () => {
         return;
       }
       
+      // ✅ JOIN SOCKET ROOM FOR LOBBY NOTIFICATIONS FIRST
+      if (socketRef.current && socketRef.current.connected) {
+        console.log(`[SalasPage] Uniéndose a sala de lobby por socket ANTES de la API: ${sala.codigo_sala}`);
+        socketRef.current.emit('unirse_sala_lobby', sala.codigo_sala);
+      }
+      
       // Si es una sala pública, unirse directamente
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/salas/unirse`, {
@@ -200,7 +247,19 @@ const SalasPage: React.FC = () => {
         throw new Error(errorData.error || 'Error al unirse a la sala');
       }
 
-      navigate(`/online-game-page/${sala.codigo_sala}`);
+      const data = await response.json();
+      console.log('[SalasPage] Respuesta al unirse a sala:', data);
+      
+      // Check if the game has been started (room is now full)
+      if (data.juego_iniciado) {
+        console.log('[SalasPage] Partida iniciada, navegando a página de juego');
+        // Game has started - navigate immediately
+        navigate(`/online-game-page/${sala.codigo_sala}`);
+      } else {
+        // Still waiting for more players - navigate to game page to wait
+        console.log('[SalasPage] Esperando más jugadores, navegando a página de juego');
+        navigate(`/online-game-page/${sala.codigo_sala}`);
+      }
     } catch (error: any) {
       console.error('Error al unirse a la sala:', error);
       setError(error.message || 'Error al unirse a la sala');
@@ -218,6 +277,12 @@ const SalasPage: React.FC = () => {
         if (!codigoPrivado || codigoPrivado.length < 4) {
           setError('Por favor, introduce un código de acceso válido');
           return;
+        }
+
+        // ✅ JOIN SOCKET ROOM FOR LOBBY NOTIFICATIONS FIRST
+        if (socketRef.current && socketRef.current.connected && salaSeleccionada) {
+          console.log(`[SalasPage] Uniéndose a sala de lobby por socket ANTES de la API: ${salaSeleccionada}`);
+          socketRef.current.emit('unirse_sala_lobby', salaSeleccionada);
         }
 
         const token = localStorage.getItem('token');
@@ -239,9 +304,19 @@ const SalasPage: React.FC = () => {
           throw new Error(errorData.error || 'Código inválido o sala llena');
         }
 
+        const data = await response.json();
+        console.log('[SalasPage] Respuesta al unirse a sala privada específica:', data);
+
         setShowJoinPrivateModal(false);
         setCodigoPrivado('');
         setSalaSeleccionada(null);
+        
+        // Check if the game has been started (room is now full)
+        if (data.partida_iniciada) {
+          console.log('[SalasPage] Partida iniciada, navegando a página de juego');
+        } else {
+          console.log('[SalasPage] Esperando más jugadores, navegando a página de juego');
+        }
         navigate(`/online-game-page/${salaSeleccionada}`);
       } else {
         // Unirse a través de código sin conocer la sala
@@ -266,8 +341,23 @@ const SalasPage: React.FC = () => {
         }
 
         const data = await response.json();
+        console.log('[SalasPage] Respuesta al unirse con código privado:', data);
+        
+        // ✅ JOIN SOCKET ROOM FOR LOBBY NOTIFICATIONS  
+        if (socketRef.current && socketRef.current.connected && data.codigo_sala) {
+          console.log(`[SalasPage] Uniéndose a sala de lobby por socket: ${data.codigo_sala}`);
+          socketRef.current.emit('unirse_sala_lobby', data.codigo_sala);
+        }
+        
         setShowJoinPrivateModal(false);
         setCodigoPrivado('');
+        
+        // Check if the game has been started (room is now full)
+        if (data.partida_iniciada) {
+          console.log('[SalasPage] Partida iniciada, navegando a página de juego');
+        } else {
+          console.log('[SalasPage] Esperando más jugadores, navegando a página de juego');
+        }
         navigate(`/online-game-page/${data.codigo_sala}`);
       }
     } catch (error: any) {
@@ -322,10 +412,6 @@ const SalasPage: React.FC = () => {
     setSalaSeleccionada(null); // No estamos usando una sala específica
     setCodigoPrivado(''); // Limpiar código anterior
     setShowJoinPrivateModal(true);
-  };
-
-  const handleVolverAtras = () => {
-    navigate(-1); // Volver a la página anterior
   };
 
   return (

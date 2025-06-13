@@ -38,6 +38,18 @@ const OnlineGamePage: React.FC = () => {
   const [showReconnectOption, setShowReconnectOption] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const maxReconnectAttempts = 5;
+  // Nuevo estado para manejar timeout y evitar loading infinito
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  // Timeout de emergencia para evitar carga infinita
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('📢 Timeout de emergencia activado - Forzando fin de loading');
+      setLoadingTimeout(true);
+    }, 10000); // 10 segundos máximo de espera
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Actualizar preferencias de skins basado en el estado del juego
   useEffect(() => {
@@ -85,8 +97,10 @@ const OnlineGamePage: React.FC = () => {
     requestGameState();
   }, [socket, requestGameState]);
 
-  // Pantalla de carga
-  if (isLoading) {
+  // SOLUCIÓN AL PROBLEMA DE LOADING INFINITO
+  // Cambiamos la condición de "isLoading || !gameState" a una lógica más robusta
+  if ((isLoading && !loadingTimeout) && !gameState) {
+    // Pantalla de carga normal, solo mientras carga y no hayamos superado el timeout
     return (
       <div className="game-container">
         <div className="loading-screen">
@@ -109,9 +123,43 @@ const OnlineGamePage: React.FC = () => {
       </div>
     );
   }
+  
+  // Si el timeout se activó pero no tenemos gameState, mostramos pantalla de solicitud manual
+  if (!gameState) {
+    return (
+      <div className="game-container">
+        <div className="loading-screen">
+          <h2>No se pudo cargar el juego</h2>
+          <p>El servidor no respondió a tiempo o hubo un error de conexión.</p>
+          
+          <button
+            className="retry-button"
+            onClick={forceRefreshState}
+            style={{ 
+              padding: '10px 20px', 
+              margin: '20px 0', 
+              fontSize: '16px',
+              cursor: 'pointer'
+            }}
+          >
+            Solicitar estado del juego
+          </button>
+          
+          <p>
+            <small>
+              También puedes intentar <span 
+                style={{textDecoration: 'underline', cursor: 'pointer'}}
+                onClick={() => window.location.reload()}
+              >recargar la página</span>.
+            </small>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  // Pantalla de error
-  if (error && !gameState) {
+  // Pantalla de error específica
+  if (error) {
     return (
       <div className="game-container">
         <div className="error-screen">
@@ -133,17 +181,8 @@ const OnlineGamePage: React.FC = () => {
     );
   }
 
-  // Pantalla principal del juego
-  if (!gameState) {
-    return (
-      <div className="game-container">
-        <div className="loading-screen">
-          <p>Esperando estado del juego...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Si llegamos aquí, significa que tenemos gameState y no hay error
+  // Renderizamos el juego normalmente
   return (
     <div className="game-container">
       {/* Header del juego con puntajes */}

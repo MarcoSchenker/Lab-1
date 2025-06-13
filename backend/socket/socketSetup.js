@@ -1,6 +1,6 @@
 const { Server } = require('socket.io');
 const { setupAuthHandlers } = require('./socketMiddleware');
-const { setupGameHandlers } = require('./handlers/gameSocketHandlers');
+const { setupGameHandlers, lastPlayerStates } = require('./handlers/gameSocketHandlers');
 const gameLogicHandler = require('../game-logic/gameLogicHandler');
 
 /**
@@ -19,6 +19,10 @@ function setupSocketServer(server) {
 
   // Inicializar gameLogicHandler con io
   gameLogicHandler.initializeGameLogic(io);
+  
+  // ✅ Conectar el caché de estados entre módulos
+  gameLogicHandler.setPlayerStatesCache(lastPlayerStates);
+  console.log('[socketSetup] ✅ Caché de estados conectado entre gameLogicHandler y gameSocketHandlers');
 
   // Configurar manejadores de eventos de conexión
   io.on('connection', (socket) => {
