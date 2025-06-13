@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import gameStateDebugger from '../utils/gameStateDebugger';
+import { gamePerformanceMonitor } from '../utils/gamePerformanceMonitor';
 
 // Interfaces para el estado del juego
 interface Carta {
@@ -95,6 +96,7 @@ interface UseGameSocketReturn {
   error: string | null;
   isLoading: boolean;
   reconnectAttempts: number;
+  loadingTimeoutActive: boolean; // ✅ Nuevo estado para timeout de carga
   // Action functions
   jugarCarta: (carta: Carta) => void;
   cantar: (tipoCanto: string) => void;
@@ -114,6 +116,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   const [isLoading, setIsLoading] = useState(true);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [esperandoRespuesta, setEsperandoRespuesta] = useState(false);
+  const [loadingTimeoutActive, setLoadingTimeoutActive] = useState(false); // ✅ Nuevo estado
   
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -169,6 +172,8 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
         console.log('[CLIENT] 🔄 Cargando estado previo desde localStorage');
         setGameState(savedState);
         setIsLoading(false);
+        gamePerformanceMonitor.trackCacheHit('localStorage');
+        gamePerformanceMonitor.trackInfiniteLoadingPrevented();
       }
       
       gameStateDebugger.logAction('user_identified', { userId: payload.id });
@@ -184,11 +189,19 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     if (reconnectAttempts >= maxReconnectAttempts) {
       console.log('[CLIENT] ⚠️ Máximos intentos de reconexión alcanzados');
       setError('No se pudo conectar después de varios intentos. Intenta volver a las salas.');
+      setLoadingTimeoutActive(true); // ✅ Activar timeout al alcanzar max intentos
+      gamePerformanceMonitor.trackRecoveryAttempt('max_attempts_reached');
       return Promise.reject('Max attempts reached');
     }
 
+    // ✅ Resetear estados de timeout al intentar reconectar
+    setLoadingTimeoutActive(false);
+    setError(null);
     setReconnectAttempts(prev => prev + 1);
     console.log(`[CLIENT] 🔄 Intento de reconexión ${reconnectAttempts + 1}/${maxReconnectAttempts}`);
+    
+    // ✅ Track recovery attempt
+    gamePerformanceMonitor.trackRecoveryAttempt(`reconnection_attempt_${reconnectAttempts + 1}`);
 
     if (socketRef.current) {
       socketRef.current.disconnect();
@@ -203,7 +216,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     });
   }, [reconnectAttempts]);
 
-  // ✅ Mejorado: Request game state function con retry automático
+  // ✅ Mejorado: Request game state function con retry automático y manejo de timeout
   const requestGameState = useCallback(() => {
     if (!socketRef.current || !socketRef.current.connected) {
       console.log('[CLIENT] 🔌 Socket no conectado para solicitar estado. Intentando reconectar...');
@@ -226,16 +239,29 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     console.log('[CLIENT] 🎮 Solicitando estado del juego...');
     socketRef.current.emit('solicitar_estado_juego_ws');
     
-    if (estadoTimeoutRef.current) clearTimeout(estadoTimeoutRef.current);
+    // Limpiar timeout anterior si existe
+    if (estadoTimeoutRef.current) {
+      clearTimeout(estadoTimeoutRef.current);
+      estadoTimeoutRef.current = null;
+    }
     
-    // Establecer timeout para respuesta
+    // Establecer timeout para respuesta del servidor
     estadoTimeoutRef.current = setTimeout(() => {
       if (!gameState) {
-        console.log('[CLIENT] ⏱️ Timeout esperando estado');
-        setError('No se recibió respuesta del servidor. Intenta reconectar.');
-        setIsLoading(false); // Importante: terminar el loading
+        console.log('[CLIENT] ⏱️ Timeout esperando estado del servidor');
+        setError('El servidor no respondió a tiempo. Verifica tu conexión.');
+        setIsLoading(false);
+        setLoadingTimeoutActive(true); // ✅ Activar indicador de timeout
+        
+        // Después del timeout, intentar reconectar automáticamente
+        setTimeout(() => {
+          if (!gameState && socketRef.current?.disconnected) {
+            console.log('[CLIENT] 🔄 Intentando reconexión automática tras timeout...');
+            retryConnection();
+          }
+        }, 2000);
       }
-    }, 10000);
+    }, 10000); // 10 segundos para timeout
   }, [gameState, retryConnection]);
 
   // Initialize socket connection
@@ -250,12 +276,32 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     setIsLoading(true);
     setError(null);
 
-    // Timeout de emergencia para evitar carga infinita
+    // ✅ Track socket connection start time for performance monitoring
+    const socketStartTime = Date.now();
+
+    // ✅ Timeout de emergencia mejorado para evitar carga infinita
     const emergencyTimeout = setTimeout(() => {
-      console.warn('[CLIENT] ⚠️ Timeout de emergencia activado');
-      setIsLoading(false);
-      setError('Tiempo de conexión agotado. Intenta nuevamente.');
-    }, 15000); // 15 segundos
+      console.warn('[CLIENT] ⚠️ Timeout de emergencia activado - No se recibió estado');
+      
+      // ✅ Track loading timeout for monitoring
+      gamePerformanceMonitor.trackLoadingTimeout(15000);
+      
+      // Verificar si ya tenemos un estado en localStorage como backup
+      const backupState = loadSavedState();
+      if (backupState) {
+        console.log('[CLIENT] 🔄 Usando estado de backup desde localStorage');
+        setGameState(backupState);
+        setIsLoading(false);
+        setError('Usando estado guardado. Conexión lenta detectada.');
+        setLoadingTimeoutActive(false); // ✅ Resetear timeout si se encontró backup
+        gamePerformanceMonitor.trackCacheHit('localStorage');
+        gamePerformanceMonitor.trackInfiniteLoadingPrevented();
+      } else {
+        setIsLoading(false);
+        setLoadingTimeoutActive(true); // ✅ Activar timeout si no hay backup
+        setError('Tiempo de conexión agotado. No se pudo cargar el juego.');
+      }
+    }, 15000); // 15 segundos para emergency timeout
 
     const socket = io('http://localhost:3001', {
       reconnectionAttempts: 5,
@@ -273,8 +319,12 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
 
     // Connection events
     socket.on('connect', () => {
+      const connectionTime = Date.now() - socketStartTime;
       console.log('[CLIENT] Socket conectado:', socket.id);
       setIsLoading(true);
+      
+      // ✅ Track connection time
+      gamePerformanceMonitor.trackConnectionTime(connectionTime);
       
       const token = localStorage.getItem('token');
       if (token) {
@@ -284,10 +334,25 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
 
     socket.on('connect_error', (error) => {
       console.error('[CLIENT] Error de conexión:', error);
-      setError('Error de conexión al servidor');
+      
+      // ✅ Track network error
+      gamePerformanceMonitor.trackNetworkError('connection_error');
+      
+      // ✅ En caso de error de conexión, verificar localStorage
+      const backupState = loadSavedState();
+      if (backupState) {
+        console.log('[CLIENT] 📦 Usando estado de backup por error de conexión');
+        setGameState(backupState);
+        setError('Modo offline: usando datos guardados. Reintentando conexión...');
+        gamePerformanceMonitor.trackCacheHit('localStorage');
+      } else {
+        setError('Error de conexión al servidor');
+      }
+      
       setIsLoading(false);
       clearEmergencyTimeout();
       
+      // Programar reintento de conexión
       setTimeout(() => {
         if (socketRef.current?.disconnected) {
           retryConnection();
@@ -311,9 +376,26 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     // Room events
     socket.on('unido_sala_juego', (data) => {
       console.log('[CLIENT] Unido a sala:', data);
-      setTimeout(() => {
-        requestGameState();
-      }, 500);
+      
+      // ✅ Verificar si ya tenemos estado en localStorage antes de solicitar
+      const existingState = loadSavedState();
+      if (existingState) {
+        console.log('[CLIENT] 📦 Estado encontrado en localStorage, usando como base');
+        setGameState(existingState);
+        setIsLoading(false);
+        setError(null);
+        clearEmergencyTimeout();
+        
+        // Aún así solicitar estado actualizado del servidor
+        setTimeout(() => {
+          requestGameState();
+        }, 500);
+      } else {
+        // Si no hay estado guardado, solicitar inmediatamente
+        setTimeout(() => {
+          requestGameState();
+        }, 500);
+      }
     });
 
     // Game events - NEW WebSocket flow
@@ -333,7 +415,11 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     socket.on('estado_juego_actualizado', (estado) => {
       console.log('[CLIENT] 🎯 Estado recibido:', estado);
       
+      // ✅ Track performance metrics
+      gamePerformanceMonitor.trackStateReceived();
+      
       setIsLoading(false);
+      setLoadingTimeoutActive(false); // ✅ Resetear timeout al recibir estado
       clearEmergencyTimeout();
       
       if (estadoTimeoutRef.current) {
@@ -349,6 +435,8 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
         const errorMsg = estado.mensajeError || 'Estado de juego incompleto';
         console.error('[CLIENT] ❌ Estado inválido:', errorMsg);
         setError(errorMsg);
+        setLoadingTimeoutActive(true); // ✅ Activar timeout para estado inválido
+        gamePerformanceMonitor.trackNetworkError('invalid_game_state');
       } else {
         console.log('[CLIENT] ✅ Estado válido, actualizando gameState');
         setGameState(estado);
@@ -357,6 +445,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
         
         // ✅ Guardar en localStorage para persistencia
         saveStateToLocalStorage(estado);
+        gamePerformanceMonitor.trackCacheHit('localStorage');
       }
     });
 
@@ -396,14 +485,34 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
 
     socket.on('disconnect', () => {
       console.log('[CLIENT] Socket desconectado');
-      setError('Desconectado del servidor. Intentando reconectar...');
-      // NO cambiar isLoading a false aquí para mantener la pantalla de carga
-      clearEmergencyTimeout();
       
-      // ✅ Si ya tenemos estado, mantenlo visible
-      if (!gameState) {
+      // ✅ Manejo inteligente de desconexión
+      const currentState = gameState || loadSavedState();
+      
+      if (currentState) {
+        // Si tenemos estado (actual o guardado), mantener la UI funcional
+        console.log('[CLIENT] 📦 Manteniendo estado durante desconexión');
+        setError('Desconectado del servidor. Reintentando conexión...');
+        // NO cambiar isLoading a true si ya tenemos estado válido
+        if (!gameState) {
+          setGameState(currentState);
+          setIsLoading(false);
+        }
+      } else {
+        // Si no hay estado disponible, mostrar loading
+        setError('Desconectado del servidor. Intentando reconectar...');
         setIsLoading(true);
       }
+      
+      clearEmergencyTimeout();
+      
+      // Intentar reconexión automática después de un breve delay
+      setTimeout(() => {
+        if (socketRef.current?.disconnected) {
+          console.log('[CLIENT] 🔄 Iniciando reconexión automática...');
+          retryConnection();
+        }
+      }, 2000);
     });
 
     return () => {
@@ -455,6 +564,8 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   // Initialize socket when we have all required data
   useEffect(() => {
     if (codigoSala && jugadorId && !socketRef.current) {
+      // ✅ Track game start for performance monitoring
+      gamePerformanceMonitor.trackGameStart();
       initializeSocket();
     }
     
@@ -560,6 +671,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     error,
     isLoading,
     reconnectAttempts,
+    loadingTimeoutActive, // ✅ Incluir nuevo estado
     jugarCarta,
     cantar,
     responderCanto,

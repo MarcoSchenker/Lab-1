@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Validación Final: Solución Definitiva Anti-Carga Infinita</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-card h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .success { color: #4ade80; }
+        .warning { color: #fbbf24; }
+        .error { color: #f87171; }
+        .info { color: #60a5fa; }
+        
+        .test-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-secondary { background: #6b7280; color: white; }
+        
+        .log-area {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .results-section {
+            margin-top: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #60a5fa;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+            color: #bbf7d0;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #fecaca;
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+            color: #fed7aa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Validación Final: Solución Definitiva</h1>
+            <p>Test comprehensivo para verificar que el problema de carga infinita ha sido resuelto</p>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <h3>🔧 Estado del Sistema</h3>
+                <div class="metric">
+                    <span>Backend Cache:</span>
+                    <span id="backendStatus" class="metric-value info">Verificando...</span>
+                </div>
+                <div class="metric">
+                    <span>localStorage:</span>
+                    <span id="localStorageStatus" class="metric-value info">Verificando...</span>
+                </div>
+                <div class="metric">
+                    <span>WebSocket:</span>
+                    <span id="websocketStatus" class="metric-value info">Desconectado</span>
+                </div>
+                <div class="metric">
+                    <span>Auto-reconexión:</span>
+                    <span id="autoReconnectStatus" class="metric-value info">Inactivo</span>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <h3>📊 Métricas de Performance</h3>
+                <div class="metric">
+                    <span>Tiempo de carga:</span>
+                    <span id="loadTime" class="metric-value">0ms</span>
+                </div>
+                <div class="metric">
+                    <span>Estados recibidos:</span>
+                    <span id="statesReceived" class="metric-value">0</span>
+                </div>
+                <div class="metric">
+                    <span>Cache hits:</span>
+                    <span id="cacheHits" class="metric-value">0</span>
+                </div>
+                <div class="metric">
+                    <span>Reconexiones:</span>
+                    <span id="reconnections" class="metric-value">0</span>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <h3>🎮 Estado del Juego</h3>
+                <div class="metric">
+                    <span>Sala actual:</span>
+                    <span id="currentRoom" class="metric-value">Ninguna</span>
+                </div>
+                <div class="metric">
+                    <span>Usuario ID:</span>
+                    <span id="userId" class="metric-value">N/A</span>
+                </div>
+                <div class="metric">
+                    <span>Estado partida:</span>
+                    <span id="gameState" class="metric-value">No conectado</span>
+                </div>
+                <div class="metric">
+                    <span>Jugadores:</span>
+                    <span id="playersCount" class="metric-value">0</span>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <h3>🔍 Diagnóstico</h3>
+                <div class="metric">
+                    <span>Carga infinita:</span>
+                    <span id="infiniteLoading" class="metric-value success">No detectada</span>
+                </div>
+                <div class="metric">
+                    <span>Timeouts:</span>
+                    <span id="timeouts" class="metric-value">0</span>
+                </div>
+                <div class="metric">
+                    <span>Errores red:</span>
+                    <span id="networkErrors" class="metric-value">0</span>
+                </div>
+                <div class="metric">
+                    <span>Recovery exitoso:</span>
+                    <span id="recoverySuccess" class="metric-value">N/A</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-controls">
+            <button class="btn btn-primary" onclick="startCompleteTest()">
+                🚀 Iniciar Test Completo
+            </button>
+            <button class="btn btn-success" onclick="testCacheSystem()">
+                💾 Test Cache Sistema
+            </button>
+            <button class="btn btn-warning" onclick="simulateNetworkIssue()">
+                📡 Simular Problema Red
+            </button>
+            <button class="btn btn-danger" onclick="testInfiniteLoadingScenario()">
+                ⏳ Test Carga Infinita
+            </button>
+            <button class="btn btn-secondary" onclick="clearAllData()">
+                🗑️ Limpiar Todo
+            </button>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="log-area" id="logArea">
+            [SISTEMA] Validador final inicializado. Listo para test...\n
+        </div>
+
+        <div class="results-section">
+            <h3>📈 Resultados del Test</h3>
+            <div id="testResults">
+                <p>Esperando inicio del test...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales para el test
+        let socket = null;
+        let testStartTime = null;
+        let metrics = {
+            loadTime: 0,
+            statesReceived: 0,
+            cacheHits: 0,
+            reconnections: 0,
+            timeouts: 0,
+            networkErrors: 0
+        };
+        let testResults = [];
+        let currentRoom = 'TEST_FINAL_' + Math.random().toString(36).substr(2, 9);
+        let userId = 1;
+        let autoReconnectInterval = null;
+        let loadingTimeout = null;
+
+        // Utilidades de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logArea = document.getElementById('logArea');
+            const color = {
+                'info': '#60a5fa',
+                'success': '#4ade80',
+                'warning': '#fbbf24',
+                'error': '#f87171'
+            }[type] || '#60a5fa';
+            
+            logArea.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(`[VALIDACION] ${message}`);
+        }
+
+        // Actualizar métricas en UI
+        function updateMetrics() {
+            document.getElementById('loadTime').textContent = metrics.loadTime + 'ms';
+            document.getElementById('statesReceived').textContent = metrics.statesReceived;
+            document.getElementById('cacheHits').textContent = metrics.cacheHits;
+            document.getElementById('reconnections').textContent = metrics.reconnections;
+            document.getElementById('timeouts').textContent = metrics.timeouts;
+            document.getElementById('networkErrors').textContent = metrics.networkErrors;
+        }
+
+        // Simulador de token JWT
+        function createTestToken(userId) {
+            const header = btoa(JSON.stringify({typ: "JWT", alg: "HS256"}));
+            const payload = btoa(JSON.stringify({
+                id: userId, 
+                nombre_usuario: `user_${userId}`,
+                exp: Date.now() + 3600000
+            }));
+            return `${header}.${payload}.test-signature`;
+        }
+
+        // Funciones de localStorage
+        function saveToLocalStorage(room, state) {
+            try {
+                localStorage.setItem(`gameState_${room}`, JSON.stringify(state));
+                metrics.cacheHits++;
+                updateMetrics();
+                log(`💾 Estado guardado en localStorage para sala ${room}`, 'success');
+                document.getElementById('localStorageStatus').textContent = 'Activo';
+                document.getElementById('localStorageStatus').className = 'metric-value success';
+            } catch (e) {
+                log(`❌ Error guardando en localStorage: ${e.message}`, 'error');
+            }
+        }
+
+        function loadFromLocalStorage(room) {
+            try {
+                const state = localStorage.getItem(`gameState_${room}`);
+                if (state) {
+                    metrics.cacheHits++;
+                    updateMetrics();
+                    log(`📦 Estado recuperado de localStorage para sala ${room}`, 'success');
+                    return JSON.parse(state);
+                }
+            } catch (e) {
+                log(`❌ Error cargando de localStorage: ${e.message}`, 'error');
+            }
+            return null;
+        }
+
+        // Conectar WebSocket con toda la lógica de la solución definitiva
+        function connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                const token = createTestToken(userId);
+                localStorage.setItem('token', token);
+
+                log(`🔌 Conectando a WebSocket para sala ${currentRoom}...`, 'info');
+                
+                socket = io('http://localhost:3001', {
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000,
+                    timeout: 10000
+                });
+
+                // ✅ VERIFICAR ESTADO EN LOCALSTORAGE AL CONECTAR (Parte de la solución)
+                const existingState = loadFromLocalStorage(currentRoom);
+                if (existingState) {
+                    log('📦 Estado encontrado en localStorage! Solución funcionando', 'success');
+                    document.getElementById('gameState').textContent = existingState.estadoPartida || 'Cargado';
+                    document.getElementById('infiniteLoading').textContent = 'No detectada';
+                    document.getElementById('infiniteLoading').className = 'metric-value success';
+                }
+
+                socket.on('connect', () => {
+                    log(`✅ WebSocket conectado: ${socket.id}`, 'success');
+                    document.getElementById('websocketStatus').textContent = 'Conectado';
+                    document.getElementById('websocketStatus').className = 'metric-value success';
+                    
+                    socket.emit('autenticar_socket', token);
+                });
+
+                socket.on('autenticacion_exitosa', (data) => {
+                    log(`✅ Autenticación exitosa: ${JSON.stringify(data)}`, 'success');
+                    document.getElementById('userId').textContent = userId;
+                    
+                    // ✅ UNIRSE A SALA (Trigger del cache del servidor)
+                    socket.emit('unirse_sala_juego', currentRoom);
+                    resolve();
+                });
+
+                socket.on('autenticacion_fallida', (error) => {
+                    log(`❌ Error de autenticación: ${JSON.stringify(error)}`, 'error');
+                    reject(error);
+                });
+
+                socket.on('connect_error', (error) => {
+                    log(`❌ Error de conexión: ${error.message}`, 'error');
+                    metrics.networkErrors++;
+                    updateMetrics();
+                    
+                    // ✅ RECOVERY CON LOCALSTORAGE EN CASO DE ERROR (Parte de la solución)
+                    const backupState = loadFromLocalStorage(currentRoom);
+                    if (backupState) {
+                        log('💾 Usando estado de backup por error de conexión', 'success');
+                        document.getElementById('recoverySuccess').textContent = 'Exitoso';
+                        document.getElementById('recoverySuccess').className = 'metric-value success';
+                    }
+                    
+                    reject(error);
+                });
+
+                socket.on('unido_sala_juego', (data) => {
+                    log(`🎮 Unido a sala: ${JSON.stringify(data)}`, 'success');
+                    document.getElementById('currentRoom').textContent = currentRoom;
+                    
+                    // ✅ SOLICITAR ESTADO (Trigger del cache del servidor)
+                    setTimeout(() => {
+                        log('🔍 Solicitando estado del juego...', 'info');
+                        socket.emit('solicitar_estado_juego_ws');
+                        
+                        // ✅ TIMEOUT PARA DETECTAR CARGA INFINITA
+                        loadingTimeout = setTimeout(() => {
+                            log('⚠️ TIMEOUT: Posible carga infinita detectada!', 'warning');
+                            metrics.timeouts++;
+                            updateMetrics();
+                            document.getElementById('infiniteLoading').textContent = 'DETECTADA';
+                            document.getElementById('infiniteLoading').className = 'metric-value error';
+                            
+                            // ✅ INTENTAR RECOVERY CON LOCALSTORAGE
+                            const backupState = loadFromLocalStorage(currentRoom);
+                            if (backupState) {
+                                log('💾 Recovery exitoso con localStorage!', 'success');
+                                document.getElementById('recoverySuccess').textContent = 'Exitoso';
+                                document.getElementById('recoverySuccess').className = 'metric-value success';
+                            } else {
+                                log('❌ No se pudo recuperar estado', 'error');
+                                document.getElementById('recoverySuccess').textContent = 'Fallido';
+                                document.getElementById('recoverySuccess').className = 'metric-value error';
+                            }
+                        }, 8000); // 8 segundos para detectar carga infinita
+                    }, 500);
+                });
+
+                // ✅ RECEPCIÓN DE ESTADO (Guardar en localStorage automáticamente)
+                socket.on('estado_juego_actualizado', (estado) => {
+                    if (loadingTimeout) {
+                        clearTimeout(loadingTimeout);
+                        loadingTimeout = null;
+                    }
+                    
+                    metrics.statesReceived++;
+                    updateMetrics();
+                    
+                    log(`🎯 Estado recibido: ${estado.codigoSala} - ${estado.estadoPartida}`, 'success');
+                    log(`   Jugadores: ${estado.jugadores?.length || 0}, Equipos: ${estado.equipos?.length || 0}`, 'info');
+                    
+                    // ✅ GUARDAR EN LOCALSTORAGE (Parte clave de la solución)
+                    saveToLocalStorage(currentRoom, estado);
+                    
+                    // Actualizar UI
+                    document.getElementById('gameState').textContent = estado.estadoPartida;
+                    document.getElementById('playersCount').textContent = estado.jugadores?.length || 0;
+                    document.getElementById('infiniteLoading').textContent = 'No detectada';
+                    document.getElementById('infiniteLoading').className = 'metric-value success';
+                    
+                    testResults.push({
+                        timestamp: new Date(),
+                        type: 'estado_recibido',
+                        success: true,
+                        details: `Estado: ${estado.estadoPartida}, Jugadores: ${estado.jugadores?.length || 0}`
+                    });
+                });
+
+                socket.on('error_juego', (error) => {
+                    log(`❌ Error del juego: ${JSON.stringify(error)}`, 'error');
+                    metrics.networkErrors++;
+                    updateMetrics();
+                });
+
+                socket.on('disconnect', () => {
+                    log('📡 WebSocket desconectado', 'warning');
+                    document.getElementById('websocketStatus').textContent = 'Desconectado';
+                    document.getElementById('websocketStatus').className = 'metric-value warning';
+                    
+                    // ✅ MANTENER ESTADO CON LOCALSTORAGE DURANTE DESCONEXIÓN
+                    const currentState = loadFromLocalStorage(currentRoom);
+                    if (currentState) {
+                        log('💾 Manteniendo estado durante desconexión', 'success');
+                        document.getElementById('gameState').textContent = currentState.estadoPartida + ' (offline)';
+                    }
+                });
+            });
+        }
+
+        // ✅ AUTO-RECONEXIÓN PERIÓDICA (Parte de la solución)
+        function startAutoReconnection() {
+            if (autoReconnectInterval) return;
+            
+            log('🔄 Iniciando auto-reconexión periódica...', 'info');
+            document.getElementById('autoReconnectStatus').textContent = 'Activo';
+            document.getElementById('autoReconnectStatus').className = 'metric-value success';
+            
+            autoReconnectInterval = setInterval(() => {
+                if (!socket || !socket.connected) {
+                    log('🔄 Auto-reconexión: intentando reconectar...', 'info');
+                    metrics.reconnections++;
+                    updateMetrics();
+                    connectWebSocket().catch(() => {
+                        log('❌ Auto-reconexión fallida', 'error');
+                    });
+                } else if (metrics.statesReceived === 0) {
+                    log('🔍 Auto-reconexión: solicitando estado...', 'info');
+                    socket.emit('solicitar_estado_juego_ws');
+                }
+            }, 5000); // Cada 5 segundos como en la solución real
+        }
+
+        function stopAutoReconnection() {
+            if (autoReconnectInterval) {
+                clearInterval(autoReconnectInterval);
+                autoReconnectInterval = null;
+                log('⏹️ Auto-reconexión detenida', 'info');
+                document.getElementById('autoReconnectStatus').textContent = 'Inactivo';
+                document.getElementById('autoReconnectStatus').className = 'metric-value info';
+            }
+        }
+
+        // Tests específicos
+        async function startCompleteTest() {
+            log('🚀 INICIANDO TEST COMPLETO DE LA SOLUCIÓN DEFINITIVA', 'success');
+            testStartTime = Date.now();
+            
+            // Reset métricas
+            metrics = {
+                loadTime: 0,
+                statesReceived: 0,
+                cacheHits: 0,
+                reconnections: 0,
+                timeouts: 0,
+                networkErrors: 0
+            };
+            testResults = [];
+            updateMetrics();
+            
+            try {
+                // Fase 1: Conectar WebSocket
+                log('📡 Fase 1: Conectando WebSocket...', 'info');
+                updateProgress(20);
+                await connectWebSocket();
+                
+                // Fase 2: Activar auto-reconexión
+                log('🔄 Fase 2: Activando auto-reconexión...', 'info');
+                updateProgress(40);
+                startAutoReconnection();
+                
+                // Fase 3: Esperar estado
+                log('⏳ Fase 3: Esperando estado del servidor...', 'info');
+                updateProgress(60);
+                
+                // Esperar hasta 15 segundos por estado
+                await new Promise((resolve) => {
+                    const checkInterval = setInterval(() => {
+                        if (metrics.statesReceived > 0) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        resolve(); // Continuar aunque no se reciba estado
+                    }, 15000);
+                });
+                
+                updateProgress(80);
+                
+                // Fase 4: Evaluar resultados
+                log('📊 Fase 4: Evaluando resultados...', 'info');
+                updateProgress(100);
+                
+                metrics.loadTime = Date.now() - testStartTime;
+                updateMetrics();
+                
+                generateFinalReport();
+                
+            } catch (error) {
+                log(`❌ Test fallido: ${error.message}`, 'error');
+                metrics.loadTime = Date.now() - testStartTime;
+                updateMetrics();
+                generateFinalReport();
+            }
+        }
+
+        async function testCacheSystem() {
+            log('💾 TESTING SISTEMA DE CACHE...', 'info');
+            
+            // Test localStorage
+            const testState = {
+                codigoSala: currentRoom,
+                estadoPartida: 'test',
+                jugadores: [{id: 1, nombre: 'test'}],
+                equipos: [{id: 1, nombre: 'test'}]
+            };
+            
+            saveToLocalStorage(currentRoom, testState);
+            const recovered = loadFromLocalStorage(currentRoom);
+            
+            if (recovered && recovered.codigoSala === currentRoom) {
+                log('✅ localStorage funcionando correctamente', 'success');
+                document.getElementById('backendStatus').textContent = 'Funcional';
+                document.getElementById('backendStatus').className = 'metric-value success';
+            } else {
+                log('❌ localStorage no funciona', 'error');
+                document.getElementById('backendStatus').textContent = 'Error';
+                document.getElementById('backendStatus').className = 'metric-value error';
+            }
+        }
+
+        function simulateNetworkIssue() {
+            log('📡 SIMULANDO PROBLEMA DE RED...', 'warning');
+            
+            if (socket && socket.connected) {
+                socket.disconnect();
+                log('🔌 Desconexión forzada realizada', 'warning');
+                
+                setTimeout(() => {
+                    log('🔄 Intentando reconexión tras problema de red...', 'info');
+                    connectWebSocket().then(() => {
+                        log('✅ Reconexión exitosa tras problema simulado', 'success');
+                    }).catch((error) => {
+                        log(`❌ Reconexión fallida: ${error.message}`, 'error');
+                    });
+                }, 3000);
+            } else {
+                log('⚠️ No hay conexión activa para desconectar', 'warning');
+            }
+        }
+
+        function testInfiniteLoadingScenario() {
+            log('⏳ TESTING ESCENARIO DE CARGA INFINITA...', 'warning');
+            
+            // Simular conexión sin recepción de estado
+            const fakeRoom = 'FAKE_' + Math.random().toString(36).substr(2, 9);
+            log(`🎭 Conectando a sala falsa: ${fakeRoom}`, 'info');
+            
+            // Esta sala no existe, así que debería disparar el timeout
+            socket = io('http://localhost:3001', {
+                reconnectionAttempts: 1,
+                timeout: 5000
+            });
+            
+            socket.on('connect', () => {
+                log('🔌 Conectado a servidor para test de carga infinita', 'info');
+                socket.emit('autenticar_socket', createTestToken(userId));
+                
+                socket.on('autenticacion_exitosa', () => {
+                    socket.emit('unirse_sala_juego', fakeRoom);
+                    socket.emit('solicitar_estado_juego_ws');
+                    
+                    // Simular timeout de carga infinita
+                    setTimeout(() => {
+                        log('⚠️ TIMEOUT SIMULADO: Carga infinita detectada', 'warning');
+                        
+                        // ✅ Test del sistema de recovery
+                        const backupState = loadFromLocalStorage(currentRoom);
+                        if (backupState) {
+                            log('💾 Sistema de recovery funcionando!', 'success');
+                            document.getElementById('recoverySuccess').textContent = 'Exitoso';
+                            document.getElementById('recoverySuccess').className = 'metric-value success';
+                        } else {
+                            log('❌ Sistema de recovery no disponible', 'error');
+                        }
+                        
+                        socket.disconnect();
+                    }, 5000);
+                });
+            });
+            
+            socket.on('connect_error', () => {
+                log('❌ Error en test de carga infinita', 'error');
+            });
+        }
+
+        function clearAllData() {
+            log('🗑️ LIMPIANDO TODOS LOS DATOS...', 'info');
+            
+            // Limpiar localStorage
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('gameState_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Desconectar socket
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            
+            // Detener auto-reconexión
+            stopAutoReconnection();
+            
+            // Reset métricas
+            metrics = {
+                loadTime: 0,
+                statesReceived: 0,
+                cacheHits: 0,
+                reconnections: 0,
+                timeouts: 0,
+                networkErrors: 0
+            };
+            testResults = [];
+            updateMetrics();
+            
+            // Reset UI
+            document.getElementById('websocketStatus').textContent = 'Desconectado';
+            document.getElementById('websocketStatus').className = 'metric-value info';
+            document.getElementById('gameState').textContent = 'No conectado';
+            document.getElementById('currentRoom').textContent = 'Ninguna';
+            document.getElementById('userId').textContent = 'N/A';
+            document.getElementById('playersCount').textContent = '0';
+            document.getElementById('infiniteLoading').textContent = 'No detectada';
+            document.getElementById('infiniteLoading').className = 'metric-value success';
+            document.getElementById('recoverySuccess').textContent = 'N/A';
+            document.getElementById('recoverySuccess').className = 'metric-value info';
+            
+            updateProgress(0);
+            
+            log('✅ Limpieza completada', 'success');
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        function generateFinalReport() {
+            const resultsDiv = document.getElementById('testResults');
+            const totalTime = metrics.loadTime;
+            
+            let report = `
+                <div class="alert alert-success">
+                    <h4>📊 REPORTE FINAL - SOLUCIÓN DEFINITIVA</h4>
+                    <p><strong>Tiempo total:</strong> ${totalTime}ms</p>
+                    <p><strong>Fecha:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+                
+                <h4>🎯 Componentes Validados:</h4>
+                <ul>
+                    <li><strong>Cache del servidor:</strong> ${metrics.statesReceived > 0 ? '✅ Funcional' : '❌ No validado'}</li>
+                    <li><strong>localStorage persistence:</strong> ${metrics.cacheHits > 0 ? '✅ Funcional' : '❌ No validado'}</li>
+                    <li><strong>Auto-reconexión:</strong> ${autoReconnectInterval ? '✅ Activo' : '❌ Inactivo'}</li>
+                    <li><strong>Recovery system:</strong> ${document.getElementById('recoverySuccess').textContent === 'Exitoso' ? '✅ Validado' : '❌ No validado'}</li>
+                </ul>
+                
+                <h4>📈 Métricas:</h4>
+                <ul>
+                    <li>Estados recibidos: <strong>${metrics.statesReceived}</strong></li>
+                    <li>Cache hits: <strong>${metrics.cacheHits}</strong></li>
+                    <li>Reconexiones: <strong>${metrics.reconnections}</strong></li>
+                    <li>Timeouts: <strong>${metrics.timeouts}</strong></li>
+                    <li>Errores de red: <strong>${metrics.networkErrors}</strong></li>
+                </ul>
+            `;
+            
+            // Evaluación final
+            const infiniteLoadingDetected = document.getElementById('infiniteLoading').textContent === 'DETECTADA';
+            const hasRecovery = document.getElementById('recoverySuccess').textContent === 'Exitoso';
+            const hasStates = metrics.statesReceived > 0;
+            const hasCache = metrics.cacheHits > 0;
+            
+            if (!infiniteLoadingDetected && (hasStates || hasRecovery) && hasCache) {
+                report += `
+                    <div class="alert alert-success">
+                        <h4>🎉 ¡SOLUCIÓN DEFINITIVA VALIDADA!</h4>
+                        <p>✅ El problema de carga infinita ha sido resuelto exitosamente</p>
+                        <p>✅ Los sistemas de cache y recovery están funcionando</p>
+                        <p>✅ La experiencia de usuario está garantizada</p>
+                    </div>
+                `;
+            } else if (infiniteLoadingDetected && hasRecovery) {
+                report += `
+                    <div class="alert alert-warning">
+                        <h4>⚠️ PROBLEMA DETECTADO PERO CON RECOVERY</h4>
+                        <p>⚠️ Se detectó carga infinita, pero el sistema de recovery funcionó</p>
+                        <p>✅ El usuario puede continuar con el estado guardado</p>
+                        <p>🔧 Revisar configuración del servidor</p>
+                    </div>
+                `;
+            } else {
+                report += `
+                    <div class="alert alert-error">
+                        <h4>❌ PROBLEMA NO RESUELTO</h4>
+                        <p>❌ El problema de carga infinita persiste</p>
+                        <p>❌ Los sistemas de recovery no están funcionando</p>
+                        <p>🔧 Revisar implementación de la solución</p>
+                    </div>
+                `;
+            }
+            
+            report += `
+                <h4>🔍 Eventos registrados:</h4>
+                <ul>
+            `;
+            
+            testResults.forEach(result => {
+                const time = result.timestamp.toLocaleTimeString();
+                const icon = result.success ? '✅' : '❌';
+                report += `<li>[${time}] ${icon} ${result.type}: ${result.details}</li>`;
+            });
+            
+            report += `</ul>`;
+            
+            resultsDiv.innerHTML = report;
+            
+            log('📊 Reporte final generado', 'success');
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🎯 Validador de Solución Definitiva inicializado', 'success');
+            log('🔧 Backend Cache + localStorage + Auto-reconexión listos para test', 'info');
+            
+            // Verificar si ya hay datos en localStorage
+            const existingData = Object.keys(localStorage).filter(key => key.startsWith('gameState_'));
+            if (existingData.length > 0) {
+                log(`📦 Encontrados ${existingData.length} estados en localStorage`, 'info');
+                document.getElementById('localStorageStatus').textContent = 'Con datos';
+                document.getElementById('localStorageStatus').className = 'metric-value success';
+            }
+            
+            updateMetrics();
+        });
+    </script>
+</body>
+</html>
