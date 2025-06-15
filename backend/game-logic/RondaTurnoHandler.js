@@ -292,6 +292,13 @@ class RondaTurnoHandler {
     }
 
     getEstado() {
+        console.log(`[TURNO] getEstado() llamado - jugadorTurnoActual:`, {
+            existe: !!this.jugadorTurnoActual,
+            id: this.jugadorTurnoActual?.id,
+            nombre: this.jugadorTurnoActual?.nombreUsuario,
+            indice: this.indiceJugadorTurnoActual
+        });
+        
         return {
             cartasEnMesaManoActual: this.cartasEnMesaManoActual.map(j => ({ ...j, carta: j.carta.toJSON() })),
             manosJugadas: this.manosJugadas.map(m => ({

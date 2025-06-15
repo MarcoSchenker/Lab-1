@@ -796,7 +796,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     
     setEsperandoRespuesta(true);
     console.log('[CLIENT] 🎵 Cantando:', tipoCanto);
-    socketRef.current.emit('cantar_ws', { tipoCanto });
+    socketRef.current.emit('cantar_ws', { canto: tipoCanto });
     
     setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);

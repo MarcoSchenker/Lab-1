@@ -1,5 +1,6 @@
 import React from 'react';
 import { CardAnimation } from '../animations/CardAnimations';
+import GameCard from './GameCard';
 
 interface Carta {
   idUnico: string;
@@ -40,36 +41,32 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
   
   if (!jugadorActual || !jugadorActual.cartasMano) {
     return (
-      <div className="player-hand">
-        <div className="hand-placeholder">
+      <div className="player-hand p-4 bg-green-800 rounded-lg">
+        <div className="hand-placeholder text-center text-white">
           <span>Esperando cartas...</span>
         </div>
       </div>
     );
   }
 
-  const obtenerRutaSkin = (jugadorId: number): string => {
-    const nombreSkin = jugadorSkins[jugadorId] || 'Original';
-    return `/cartas/mazo${nombreSkin}`;
-  };
+  const skinName = jugadorSkins[jugadorActualId!] || 'Original';
 
   const handleCardClick = (carta: Carta) => {
     if (esMiTurno && !carta.estaJugada) {
+      console.log('[PlayerHand] Jugando carta:', carta);
       onJugarCarta(carta);
     }
   };
 
-  const rutaSkin = obtenerRutaSkin(jugadorActualId!);
-
   return (
-    <div className="player-hand">
-      <div className="hand-title">
-        <span>Tus cartas</span>
-        {!esMiTurno && <span className="turn-indicator">Esperando turno...</span>}
-        {esMiTurno && <span className="turn-indicator active">¡Tu turno!</span>}
+    <div className="player-hand p-4 bg-green-800 rounded-lg shadow-lg">
+      <div className="hand-title mb-3 flex justify-between items-center">
+        <span className="text-white font-bold">Tus cartas</span>
+        {!esMiTurno && <span className="turn-indicator text-yellow-300 text-sm">Esperando turno...</span>}
+        {esMiTurno && <span className="turn-indicator active text-green-300 text-sm animate-pulse">¡Tu turno!</span>}
       </div>
       
-      <div className="cards-container">
+      <div className="cards-container flex gap-3 justify-center">
         {jugadorActual.cartasMano.map((carta, index) => (
           <CardAnimation
             key={carta.idUnico}
@@ -77,40 +74,22 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
             delay={index * 100}
             duration={600}
           >
-            <div 
-              className={`card-wrapper ${carta.estaJugada ? 'played' : ''} ${esMiTurno && !carta.estaJugada ? 'playable' : ''}`}
-              onClick={() => handleCardClick(carta)}
-            >
-              <div className="card-container">
-                <img 
-                  src={`${rutaSkin}/${carta.palo}_${carta.numero}.png`}
-                  alt={`${carta.numero} de ${carta.palo}`}
-                  className="card-image"
-                  onError={(e) => {
-                    // Fallback a skin original si no se encuentra la imagen
-                    (e.target as HTMLImageElement).src = `/cartas/mazoOriginal/${carta.palo}_${carta.numero}.png`;
-                  }}
-                />
-                {carta.estaJugada && (
-                  <div className="card-played-overlay">
-                    <span>Jugada</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="card-info">
-                <div className="card-values">
-                  <span className="envido-value">E: {carta.valorEnvido}</span>
-                  <span className="truco-value">T: {carta.valorTruco}</span>
-                </div>
-              </div>
-            </div>
+            <GameCard
+              carta={carta}
+              skinName={skinName}
+              isPlayable={esMiTurno && !carta.estaJugada}
+              isPlayed={carta.estaJugada}
+              onClick={handleCardClick}
+              showValues={true}
+              size="large"
+              className="hover:scale-110"
+            />
           </CardAnimation>
         ))}
       </div>
 
       {jugadorActual.cartasMano.length === 0 && (
-        <div className="empty-hand">
+        <div className="empty-hand text-center text-white py-4">
           <span>No tienes cartas en la mano</span>
         </div>
       )}

@@ -255,32 +255,34 @@ const OnlineGamePage: React.FC = () => {
       
       {/* Contenido principal del juego */}
       <main className="game-content">
-        {/* Tablero de juego con jugadores */}
-        <GameBoard 
-          jugadores={gameState.jugadores} 
-          jugadorActualId={jugadorId}
-          jugadorEnTurnoId={gameState.rondaActual.turnoInfo.jugadorTurnoActualId}
-          cartasEnMesa={gameState.rondaActual.turnoInfo.cartasEnMesaManoActual}
-          jugadorSkins={jugadorSkins}
-        />
+        {/* Tablero de juego con jugadores - ahora más centrado */}
+        <div className="game-main-area">
+          <GameBoard 
+            jugadores={gameState.jugadores} 
+            jugadorActualId={jugadorId}
+            jugadorEnTurnoId={gameState.rondaActual.turnoInfo.jugadorTurnoActualId}
+            cartasEnMesa={gameState.rondaActual.turnoInfo.cartasEnMesaManoActual}
+            jugadorSkins={jugadorSkins}
+          />
 
-        {/* Panel de acciones */}
-        <ActionsPanel
-          jugadorId={jugadorId}
-          equipos={gameState.equipos}
-          envidoInfo={gameState.rondaActual.envidoInfo}
-          trucoInfo={gameState.rondaActual.trucoInfo}
-          esMiTurno={esMiTurno()}
-          trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
-          onCantar={cantar}
-          onResponderCanto={responderCanto}
-          onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
-          onDeclararSonBuenas={declararSonBuenas}
-          onIrseAlMazo={irseAlMazo}
-        />
+          {/* Panel de acciones */}
+          <ActionsPanel
+            jugadorId={jugadorId}
+            equipos={gameState.equipos}
+            envidoInfo={gameState.rondaActual.envidoInfo}
+            trucoInfo={gameState.rondaActual.trucoInfo}
+            esMiTurno={esMiTurno()}
+            trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
+            onCantar={cantar}
+            onResponderCanto={responderCanto}
+            onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
+            onDeclararSonBuenas={declararSonBuenas}
+            onIrseAlMazo={irseAlMazo}
+          />
+        </div>
       </main>
 
-      {/* Mano del jugador */}
+      {/* Mano del jugador - vuelve a estar fija en la parte inferior */}
       <PlayerHand 
         jugadorActualId={jugadorId}
         jugadores={gameState.jugadores}

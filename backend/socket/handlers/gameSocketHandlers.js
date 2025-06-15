@@ -431,6 +431,37 @@ function setupGameHandlers(socket, io) {
     }
   });
 
+  // Manejador para declarar puntos de envido
+  socket.on('declarar_puntos_envido_ws', (datos) => {
+    try {
+      const { puntos } = datos;
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Declarando puntos envido: ${puntos} - Usuario ${socket.currentUserId}`);
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'DECLARAR_PUNTOS_ENVIDO', { puntos });
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error declarando puntos envido: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error declarando puntos envido.' });
+    }
+  });
+
+  // Manejador para declarar "son buenas"
+  socket.on('declarar_son_buenas_ws', () => {
+    try {
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `Declarando son buenas - Usuario ${socket.currentUserId}`);
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'DECLARAR_SON_BUENAS', {});
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `Error declarando son buenas: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error declarando son buenas.' });
+    }
+  });
+
   // Manejador para irse al mazo
   socket.on('irse_al_mazo_ws', () => {
     try {
@@ -443,27 +474,6 @@ function setupGameHandlers(socket, io) {
     } catch (error) {
       debugLog('gameSocketHandlers', `Error al irse al mazo: ${error.message}`, error);
       socket.emit('error_juego', { message: 'Error al irse al mazo.' });
-    }
-  });
-
-  // Manejador para solicitar el estado del juego (reconexiones)
-  socket.on('solicitar_estado_juego_ws', () => {
-    try {
-      if (socket.currentRoom && socket.currentUserId) {
-        debugLog('gameSocketHandlers', `Solicitando estado del juego - Usuario ${socket.currentUserId}`);
-        const estadoJuego = gameLogicHandler.obtenerEstadoJuegoParaJugador(socket.currentRoom, socket.currentUserId);
-        
-        if (estadoJuego) {
-          socket.emit('estado_juego_actualizado', estadoJuego);
-        } else {
-          socket.emit('error_juego', { message: 'No se pudo obtener el estado del juego.' });
-        }
-      } else {
-        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
-      }
-    } catch (error) {
-      debugLog('gameSocketHandlers', `Error obteniendo estado del juego: ${error.message}`, error);
-      socket.emit('error_juego', { message: 'Error obteniendo el estado del juego.' });
     }
   });
 }

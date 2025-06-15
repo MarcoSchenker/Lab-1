@@ -198,7 +198,8 @@ class RondaEnvidoHandler {
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados });
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else { 
-            return this.registrarCanto(jugadorId, respuesta); 
+            // Es un canto encadenado (ENVIDO, REAL_ENVIDO, FALTA_ENVIDO)
+            return this.registrarCantoEncadenado(jugadorId, respuesta); 
         }
         this.equipoRespondedorCanto = null;
         return true;
@@ -303,6 +304,88 @@ class RondaEnvidoHandler {
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados, puntosDeclarados: this.puntosDeclaradosPorJugador });
             this.resolverDependenciaTrucoYRestaurarTurno();
         }
+        return true;
+    }
+
+    registrarCantoEncadenado(jugadorId, tipoCantoOriginal) {
+        console.log(`[ENVIDO] Registrando canto encadenado: ${tipoCantoOriginal} por jugador ${jugadorId}`);
+        
+        // Verificar que el jugador puede responder (debe ser del equipo contrario al último que cantó)
+        const jugadorCantor = this.ronda.jugadoresEnOrden.find(j => j.id === jugadorId);
+        if (!jugadorCantor) {
+            console.error(`[ENVIDO] Jugador ${jugadorId} no encontrado`);
+            return false;
+        }
+        
+        // Verificar que sea del equipo respondedor
+        if (!this.equipoRespondedorCanto || jugadorCantor.equipoId !== this.equipoRespondedorCanto.id) {
+            this.ronda.notificarEstado('error_accion_juego', { 
+                jugadorId, 
+                mensaje: 'No es tu turno de responder al envido.' 
+            });
+            return false;
+        }
+        
+        // Normalizar el tipo de canto encadenado
+        const tipoNormalizado = this._normalizarTipoCanto(tipoCantoOriginal);
+        if (!tipoNormalizado || !VALORES_CANTO_ENVIDO[tipoNormalizado]) {
+            this.ronda.notificarEstado('error_accion_juego', { 
+                jugadorId, 
+                mensaje: `Canto de envido ${tipoCantoOriginal} no válido o fuera de secuencia.` 
+            });
+            return false;
+        }
+        
+        console.log(`[ENVIDO] Canto normalizado: ${tipoNormalizado}`);
+        
+        // Actualizar el estado del envido
+        this.valorTipoCantoActual = tipoNormalizado;
+        const valores = VALORES_CANTO_ENVIDO[tipoNormalizado];
+        
+        // Agregar el nuevo canto a la cadena
+        this.cantosRealizados.push({ 
+            tipoOriginal: tipoCantoOriginal, 
+            tipoNormalizado, 
+            jugadorId, 
+            equipoId: jugadorCantor.equipoId,
+            valorSiSeQuiere: valores.querido, 
+            valorSiNoSeQuiere: valores.noQuerido 
+        });
+        
+        // El equipo respondedor ahora es el equipo contrario
+        this.equipoRespondedorCanto = this.ronda.equipos.find(e => e.id !== jugadorCantor.equipoId);
+        this.estadoResolucion = 'cantado_pendiente_respuesta';
+        
+        console.log(`[ENVIDO] Nuevo equipo respondedor: ${this.equipoRespondedorCanto.id}`);
+        
+        // Persistir la acción
+        this.ronda.persistirAccion({ 
+            tipo_accion: 'CANTO_ENVIDO_ENCADENADO', 
+            usuario_id_accion: jugadorId, 
+            detalle_accion: { 
+                tipo_canto: tipoCantoOriginal, 
+                normalizado: tipoNormalizado,
+                es_encadenado: true,
+                secuencia: this.cantosRealizados.map(c => c.tipoNormalizado)
+            } 
+        });
+        
+        // Notificar el nuevo canto
+        this.ronda._actualizarEstadoParaNotificar('canto_realizado', { 
+            jugadorId, 
+            tipo_canto: tipoCantoOriginal, 
+            esEnvido: true, 
+            esCantoEncadenado: true,
+            estadoEnvido: this.getEstado() 
+        });
+        
+        // Cambiar turno al primer jugador del equipo respondedor
+        const primerJugadorRespondedor = this.equipoRespondedorCanto.jugadores[0];
+        if (primerJugadorRespondedor) {
+            this.ronda.turnoHandler.setTurnoA(primerJugadorRespondedor.id);
+        }
+        
+        console.log(`[ENVIDO] Canto encadenado registrado exitosamente`);
         return true;
     }
 

@@ -11,15 +11,22 @@ interface Jugador {
 
 interface PlayerAvatarProps {
   jugador: Jugador;
-  esTurno: boolean;
-  esJugadorActual: boolean;
+  esTurno?: boolean;
+  esJugadorActual?: boolean;
+  className?: string;
 }
 
-const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ jugador, esTurno, esJugadorActual }) => {
+const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ 
+  jugador, 
+  esTurno = false, 
+  esJugadorActual = false, 
+  className = '' 
+}) => {
   const getAvatarClass = () => {
     let classes = 'player-avatar';
     if (esTurno) classes += ' turn-active';
     if (esJugadorActual) classes += ' current-player';
+    if (className) classes += ` ${className}`;
     return classes;
   };
 

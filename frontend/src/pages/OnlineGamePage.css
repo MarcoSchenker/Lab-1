@@ -8,6 +8,7 @@
   color: #fff;
   position: relative;
   font-family: 'Poppins', 'Segoe UI', sans-serif;
+  overflow-x: hidden; /* Evitar scroll horizontal */
 }
 
 .game-container::before {
@@ -28,7 +29,10 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  padding-top: 24vh;
+  padding-bottom: 180px; /* Espacio para las cartas fijas en la parte inferior */
+  display: flex;
+  flex-direction: column;
+  min-height: 70vh;
 }
 
 .game-header {
@@ -67,10 +71,27 @@
   to { opacity: 1; }
 }
 
+.game-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 20px;
+}
+
 .game-board {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
+}
+
+/* Ajustar el game-board para que esté más centrado */
+.game-main-area .game-board {
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 30px;
 }
 
 .equipos-container {

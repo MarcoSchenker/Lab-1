@@ -210,10 +210,22 @@ class PartidaGame {
         // Añadir contexto de partida si es necesario y llamar al callback de persistencia
         const accionConContexto = {
             ...accion,
-            partida_estado_id: this.idEnDB, // Asumiendo que tenemos un ID de la partida en la DB
-            ronda_numero: this.numeroRondaActual,
+            partida_estado_id: this.idEnDB || null, // No undefined, usar null
+            ronda_numero: this.numeroRondaActual || null, // No undefined, usar null
+            mano_numero_en_ronda: this.rondaActual?.numeroManoActual || null, // No undefined, usar null
+            // Asegurar que todos los campos requeridos no sean undefined
+            usuario_id_accion: accion.usuario_id_accion || null,
+            tipo_accion: accion.tipo_accion || 'ACCION_DESCONOCIDA',
+            detalle_accion: accion.detalle_accion || {}
         };
-        this.persistirAccion(accionConContexto);
+        
+        console.log(`[PARTIDA] Persistiendo acción con contexto:`, accionConContexto);
+        
+        if (this.persistirAccion) {
+            this.persistirAccion(accionConContexto);
+        } else {
+            console.warn(`[PARTIDA] No hay callback de persistir acción configurado`);
+        }
     }
 
     _procesarRondaFinalizada(estadoRondaFinalizada) {
@@ -266,38 +278,95 @@ class PartidaGame {
 
     // --- Métodos para que el gameLogicHandler llame ---
     manejarAccionJugador(jugadorId, tipoAccion, datosAccion) {
+        console.log(`[PARTIDA] 🎯 Recibida acción ${tipoAccion} de jugador ${jugadorId}:`, datosAccion);
+        
         if (this.estadoPartida !== 'en_juego' || !this.rondaActual) {
-            console.warn("Acción de jugador recibida pero la partida no está en juego o no hay ronda activa.");
+            console.warn("[PARTIDA] ❌ Acción de jugador recibida pero la partida no está en juego o no hay ronda activa.");
+            console.warn(`[PARTIDA] Estado partida: ${this.estadoPartida}, Ronda actual: ${!!this.rondaActual}`);
             return; // O enviar error
         }
 
-        // Delegar la acción a la ronda actual
-        let resultadoAccion = false;
-        switch (tipoAccion) {
-            case 'JUGAR_CARTA':
-                resultadoAccion = this.rondaActual.manejarJugarCarta(jugadorId, datosAccion.idUnicoCarta);
-                break;
-            case 'CANTO': // Genérico para envido, truco, etc.
-                resultadoAccion = this.rondaActual.manejarCanto(jugadorId, datosAccion.tipoCanto, datosAccion.detalleCanto);
-                break;
-            case 'RESPUESTA_CANTO':
-                resultadoAccion = this.rondaActual.manejarRespuestaCanto(jugadorId, datosAccion.respuesta, datosAccion.cantoRespondidoTipo, datosAccion.nuevoCantoSiMas);
-                break;
-            case 'IRSE_AL_MAZO':
-                resultadoAccion = this.rondaActual.manejarIrseAlMazo(jugadorId);
-                break;
-            // Otros tipos de acción...
-            default:
-                console.warn(`Tipo de acción no reconocido: ${tipoAccion}`);
-        }
-        
-        if (resultadoAccion) {
-            // La notificación ya la hace RondaGame internamente y se propaga
-            // this._notificarEstadoGlobalActualizado(); // Redundante si RondaGame notifica bien
-            this.persistirEstadoPartida(); // Guardar el estado general de la partida después de una acción válida
-        } else {
-            // La ronda ya debería haber notificado el error al jugador específico.
-            console.log(`Acción ${tipoAccion} de ${jugadorId} no fue procesada exitosamente por la ronda.`);
+        try {
+            // Delegar la acción a la ronda actual
+            let resultadoAccion = false;
+            
+            console.log(`[PARTIDA] 🎮 Procesando acción ${tipoAccion}...`);
+            
+            switch (tipoAccion) {
+                case 'JUGAR_CARTA':
+                    console.log(`[PARTIDA] 🃏 Jugando carta con idUnico: ${datosAccion.idUnicoCarta}`);
+                    if (!this.rondaActual.manejarJugarCarta) {
+                        throw new Error('Método manejarJugarCarta no disponible en ronda actual');
+                    }
+                    resultadoAccion = this.rondaActual.manejarJugarCarta(jugadorId, datosAccion.idUnicoCarta);
+                    console.log(`[PARTIDA] 🃏 Resultado jugar carta: ${resultadoAccion}`);
+                    break;
+                case 'CANTO': // Genérico para envido, truco, etc.
+                    console.log(`[PARTIDA] 🎵 Procesando canto: ${datosAccion.tipoCanto}`);
+                    resultadoAccion = this.rondaActual.manejarCanto(jugadorId, datosAccion.tipoCanto, datosAccion.detalleCanto);
+                    break;
+                case 'RESPUESTA_CANTO':
+                    console.log(`[PARTIDA] 💬 Procesando respuesta canto: ${datosAccion.respuesta}`);
+                    resultadoAccion = this.rondaActual.manejarRespuestaCanto(jugadorId, datosAccion.respuesta, datosAccion.cantoRespondidoTipo, datosAccion.nuevoCantoSiMas);
+                    break;
+                case 'DECLARAR_PUNTOS_ENVIDO':
+                    console.log(`[PARTIDA] 🔢 Declarando puntos envido: ${datosAccion.puntos}`);
+                    resultadoAccion = this.rondaActual.manejarDeclaracionPuntosEnvido(jugadorId, datosAccion.puntos);
+                    break;
+                case 'DECLARAR_SON_BUENAS':
+                    console.log(`[PARTIDA] ✅ Declarando son buenas`);
+                    resultadoAccion = this.rondaActual.manejarDeclaracionSonBuenas(jugadorId);
+                    break;
+                case 'IRSE_AL_MAZO':
+                    console.log(`[PARTIDA] 🏃 Yéndose al mazo`);
+                    resultadoAccion = this.rondaActual.manejarIrseAlMazo(jugadorId);
+                    break;
+                // Otros tipos de acción...
+                default:
+                    console.warn(`[PARTIDA] ❌ Tipo de acción no reconocido: ${tipoAccion}`);
+                    return false;
+            }
+            
+            console.log(`[PARTIDA] 📊 Resultado de acción ${tipoAccion}: ${resultadoAccion}`);
+            
+            if (resultadoAccion) {
+                console.log(`[PARTIDA] ✅ Acción ${tipoAccion} procesada exitosamente`);
+                
+                // Dar un poco de tiempo para que se procese la acción antes de notificar el estado
+                setTimeout(() => {
+                    try {
+                        console.log(`[PARTIDA] 📡 Notificando estado después de ${tipoAccion}`);
+                        this._notificarEstadoGlobalActualizado(); 
+                        this.persistirEstadoPartida(); // Guardar el estado general de la partida después de una acción válida
+                    } catch (notifyError) {
+                        console.error(`[PARTIDA] ❌ Error al notificar estado después de ${tipoAccion}:`, notifyError);
+                    }
+                }, 100);
+                
+                return true;
+            } else {
+                console.log(`[PARTIDA] ❌ Acción ${tipoAccion} de ${jugadorId} no fue procesada exitosamente por la ronda.`);
+                return false;
+            }
+        } catch (error) {
+            console.error(`[PARTIDA] ❌ Error crítico en manejarAccionJugador ${tipoAccion}:`, error);
+            console.error(`[PARTIDA] ❌ Stack trace:`, error.stack);
+            
+            // Intentar notificar el error al jugador
+            try {
+                if (this.notificarEstadoGlobal) {
+                    this.notificarEstadoGlobal(this.codigoSala, 'error_accion_juego', {
+                        jugadorId,
+                        tipoAccion,
+                        error: error.message,
+                        mensaje: `Error procesando acción ${tipoAccion}: ${error.message}`
+                    });
+                }
+            } catch (notifyError) {
+                console.error(`[PARTIDA] ❌ Error adicional al notificar error:`, notifyError);
+            }
+            
+            return false;
         }
     }
     
@@ -343,6 +412,106 @@ class PartidaGame {
                 };
             }
             
+            console.log(`[PARTIDA] 1. Datos básicos verificados`);
+            
+            // Verificar estado de la ronda actual con manejo de errores
+            let turnoInfo = null;
+            let envidoInfo = null;
+            let trucoInfo = null;
+            let trucoPendientePorEnvidoPrimero = false;
+            
+            try {
+                console.log(`[PARTIDA] 2. Obteniendo información turno...`);
+                turnoInfo = this.rondaActual?.turnoHandler?.getEstado() || {
+                    jugadorTurnoActualId: null,
+                    manoActualNumero: 1,
+                    cartasEnMesaManoActual: [],
+                    manosJugadas: []
+                };
+                console.log(`[PARTIDA] 2.1 Turno info obtenido:`, {
+                    jugadorTurnoActualId: turnoInfo.jugadorTurnoActualId,
+                    manoActualNumero: turnoInfo.manoActualNumero,
+                    cartasEnMesa: turnoInfo.cartasEnMesaManoActual?.length || 0
+                });
+            } catch (turnoError) {
+                console.error(`[PARTIDA] Error obteniendo turno info:`, turnoError);
+                turnoInfo = {
+                    jugadorTurnoActualId: null,
+                    manoActualNumero: 1,
+                    cartasEnMesaManoActual: [],
+                    manosJugadas: []
+                };
+            }
+            
+            try {
+                console.log(`[PARTIDA] 3. Obteniendo información envido...`);
+                envidoInfo = this.rondaActual?.envidoHandler?.getEstado() || {
+                    cantado: false,
+                    querido: false,
+                    nivelActual: '',
+                    estadoResolucion: '',
+                    cantadoPorJugadorId: null,
+                    cantadoPorEquipoId: null,
+                    puntosEnJuego: 0,
+                    equipoGanadorId: null,
+                    puntosDeclarados: {}
+                };
+                console.log(`[PARTIDA] 3.1 Envido info obtenido`);
+            } catch (envidoError) {
+                console.error(`[PARTIDA] Error obteniendo envido info:`, envidoError);
+                envidoInfo = {
+                    cantado: false,
+                    querido: false,
+                    nivelActual: '',
+                    estadoResolucion: '',
+                    cantadoPorJugadorId: null,
+                    cantadoPorEquipoId: null,
+                    puntosEnJuego: 0,
+                    equipoGanadorId: null,
+                    puntosDeclarados: {}
+                };
+            }
+            
+            try {
+                console.log(`[PARTIDA] 4. Obteniendo información truco...`);
+                trucoInfo = this.rondaActual?.trucoHandler?.getEstado() || {
+                    cantado: false,
+                    querido: false,
+                    nivelActual: '',
+                    puntosEnJuego: 1,
+                    cantadoPorJugadorId: null,
+                    cantadoPorEquipoId: null,
+                    estadoResolucion: '',
+                    equipoDebeResponderTrucoId: null,
+                    jugadorTurnoAlMomentoDelCantoId: null
+                };
+                console.log(`[PARTIDA] 4.1 Truco info obtenido`);
+            } catch (trucoError) {
+                console.error(`[PARTIDA] Error obteniendo truco info:`, trucoError);
+                trucoInfo = {
+                    cantado: false,
+                    querido: false,
+                    nivelActual: '',
+                    puntosEnJuego: 1,
+                    cantadoPorJugadorId: null,
+                    cantadoPorEquipoId: null,
+                    estadoResolucion: '',
+                    equipoDebeResponderTrucoId: null,
+                    jugadorTurnoAlMomentoDelCantoId: null
+                };
+            }
+            
+            try {
+                console.log(`[PARTIDA] 5. Obteniendo trucoPendientePorEnvidoPrimero...`);
+                trucoPendientePorEnvidoPrimero = this.rondaActual?.trucoPendientePorEnvidoPrimero || false;
+                console.log(`[PARTIDA] 5.1 TrucoPendientePorEnvidoPrimero:`, trucoPendientePorEnvidoPrimero);
+            } catch (trucoPendienteError) {
+                console.error(`[PARTIDA] Error obteniendo trucoPendientePorEnvidoPrimero:`, trucoPendienteError);
+                trucoPendientePorEnvidoPrimero = false;
+            }
+            
+            console.log(`[PARTIDA] 6. Construyendo estado global...`);
+            
             // Construye el objeto de estado completo para enviar a los clientes.
             let estadoGlobal = {
                 codigoSala: this.codigoSala,
@@ -360,11 +529,14 @@ class PartidaGame {
                     nombreUsuario: j.nombreUsuario,
                     equipoId: j.equipoId,
                     esPie: j.esPie,
-                    // Enviar cartas solo al jugador solicitante o si la partida terminó (para revisión)
-                    cartasMano: (solicitanteJugadorId === j.id || this.estadoPartida === 'finalizada') ? 
-                        j.cartasMano?.map(c=>({...c})) || [] : null,
+                    // ⚠️ TEMPORAL: Enviar cartas siempre para debugging
+                    // TODO: Restaurar lógica de seguridad cuando todo funcione
+                    cartasMano: j.cartasMano?.map(c=>({...c})) || [],
                     cartasJugadasRonda: j.cartasJugadasRonda?.map(c=>({...c})) || [],
                     estadoConexion: j.estadoConexion,
+                    // Debug info
+                    tieneCartas: (j.cartasMano?.length || 0) > 0,
+                    numeroCartas: j.cartasMano?.length || 0
                 })),
                 numeroRondaActual: this.numeroRondaActual,
                 indiceJugadorManoGlobal: this.indiceJugadorManoGlobal, // Quién será mano en la siguiente ronda
@@ -377,37 +549,14 @@ class PartidaGame {
                     numeroRonda: this.numeroRondaActual,
                     jugadorManoId: this.rondaActual?.jugadorManoRonda?.id || null,
                     ganadorRondaEquipoId: this.rondaActual?.ganadorRondaEquipoId || null,
-                    turnoInfo: this.rondaActual?.turnoHandler?.getEstado() || {
-                        jugadorTurnoActualId: null,
-                        manoActualNumero: 1,
-                        cartasEnMesaManoActual: [],
-                        manosJugadas: []
-                    },
-                    envidoInfo: this.rondaActual?.envidoHandler?.getEstado() || {
-                        cantado: false,
-                        querido: false,
-                        nivelActual: '',
-                        estadoResolucion: '',
-                        cantadoPorJugadorId: null,
-                        cantadoPorEquipoId: null,
-                        puntosEnJuego: 0,
-                        equipoGanadorId: null,
-                        puntosDeclarados: {}
-                    },
-                    trucoInfo: this.rondaActual?.trucoHandler?.getEstado() || {
-                        cantado: false,
-                        querido: false,
-                        nivelActual: '',
-                        puntosEnJuego: 1,
-                        cantadoPorJugadorId: null,
-                        cantadoPorEquipoId: null,
-                        estadoResolucion: '',
-                        equipoDebeResponderTrucoId: null,
-                        jugadorTurnoAlMomentoDelCantoId: null
-                    },
-                    trucoPendientePorEnvidoPrimero: this.rondaActual?.trucoPendientePorEnvidoPrimero || false
+                    turnoInfo: turnoInfo,
+                    envidoInfo: envidoInfo,
+                    trucoInfo: trucoInfo,
+                    trucoPendientePorEnvidoPrimero: trucoPendientePorEnvidoPrimero
                 }
             };
+            
+            console.log(`[PARTIDA] 7. Estado global base construido`);
             
             // Obtener preferencias de skin para todos los jugadores
             const jugadoresSkins = {};
@@ -415,6 +564,8 @@ class PartidaGame {
                 // Recuperar de la base de datos la skin preferida para este jugador
                 jugadoresSkins[jugador.id] = jugador.skinPreferida || 'Original'; // Default si no hay preferencia
             }
+            
+            console.log(`[PARTIDA] 8. Skins obtenidas`);
             
             console.log(`[PARTIDA] Estado global preparado:`, {
                 equipos: estadoGlobal.equipos.length,
@@ -424,7 +575,7 @@ class PartidaGame {
                 solicitante: solicitanteJugadorId
             });
             
-            return {
+            const estadoFinal = {
                 ...estadoGlobal,
                 jugadores: this.jugadores.map(j => ({
                     id: j.id,
@@ -432,12 +583,18 @@ class PartidaGame {
                     equipoId: j.equipoId,
                     esPie: j.esPie,
                     skinPreferida: jugadoresSkins[j.id], // Añadir la preferencia de skin
-                    cartasMano: (solicitanteJugadorId === j.id || this.estadoPartida === 'finalizada') ? 
-                        j.cartasMano?.map(c=>({...c})) || [] : null,
+                    // ⚠️ TEMPORAL: Enviar cartas siempre para debugging
+                    cartasMano: j.cartasMano?.map(c=>({...c})) || [],
                     cartasJugadasRonda: j.cartasJugadasRonda?.map(c=>({...c})) || [],
                     estadoConexion: j.estadoConexion,
+                    // Debug info
+                    tieneCartas: (j.cartasMano?.length || 0) > 0,
+                    numeroCartas: j.cartasMano?.length || 0
                 })),
             };
+            
+            console.log(`[PARTIDA] 9. Estado final construido exitosamente`);
+            return estadoFinal;
         } catch (error) {
             console.error(`[PARTIDA] Error al preparar estado global para cliente: ${error.message}`, error);
             return {

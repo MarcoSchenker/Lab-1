@@ -264,13 +264,26 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     const persistirAccionCallback = async (accion) => {
         console.log(`Persistiendo acción para partida ${partidaDBId}:`, accion);
         try {
+            // Asegurar que todos los parámetros sean valores válidos (no undefined)
+            const parametros = [
+                partidaDBId || null,
+                accion.ronda_numero || null,
+                accion.mano_numero_en_ronda || null,
+                accion.usuario_id_accion || null,
+                accion.tipo_accion || 'ACCION_DESCONOCIDA',
+                JSON.stringify(accion.detalle_accion || {})
+            ];
+            
+            console.log(`Parámetros SQL:`, parametros);
+            
             const connection = await pool.getConnection();
             await connection.execute(
                 `INSERT INTO partidas_acciones_historial (partida_estado_id, ronda_numero, mano_numero_en_ronda, usuario_id_accion, tipo_accion, detalle_accion)
                  VALUES (?, ?, ?, ?, ?, ?)`,
-                [partidaDBId, accion.ronda_numero, accion.mano_numero_en_ronda, accion.usuario_id_accion, accion.tipo_accion, JSON.stringify(accion.detalle_accion)]
+                parametros
             );
             connection.release();
+            console.log(`✅ Acción persistida exitosamente`);
         } catch (error) {
             console.error(`Error al persistir acción para partida ${partidaDBId}:`, error);
         }
