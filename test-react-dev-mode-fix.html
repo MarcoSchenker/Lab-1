@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test React Dev Mode Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { margin: 5px 0; padding: 5px; background: #f0f0f0; border-radius: 3px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Test React Dev Mode Socket Fix</h1>
+    <div id="logs"></div>
+    
+    <button onclick="simulateReactDevMode()">🔄 Simular React Dev Mode</button>
+    <button onclick="clearLogs()">🧹 Limpiar Logs</button>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const SERVER_URL = 'http://localhost:3001';
+        const TEST_ROOM = 'test-dev-mode-' + Date.now();
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('logs').appendChild(div);
+            console.log(message);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+        
+        function simulateReactDevMode() {
+            log('🚀 Iniciando simulación de React Dev Mode...', 'info');
+            
+            // Simular el doble efecto de React Dev Mode
+            let socket1, socket2;
+            let cleanup1Called = false, cleanup2Called = false;
+            
+            // Primera ejecución del efecto (mount)
+            log('📍 Primera ejecución del efecto (mount)');
+            socket1 = io(SERVER_URL, {
+                query: { 
+                    codigoSala: TEST_ROOM, 
+                    token: 'test-token',
+                    anonymous: false 
+                },
+                transports: ['websocket', 'polling'],
+                autoConnect: false,
+                forceNew: true
+            });
+            
+            // Marcar timestamp como hace nuestro hook
+            const startTime = Date.now();
+            socket1.connectedAt = startTime;
+            
+            socket1.on('connect', () => {
+                log(`✅ Socket1 conectado: ${socket1.id}`, 'success');
+                socket1.connectedAt = Date.now(); // Actualizar timestamp real
+            });
+            
+            socket1.on('disconnect', () => {
+                log(`❌ Socket1 desconectado`, 'error');
+            });
+            
+            socket1.connect();
+            
+            // Simular cleanup inmediato (React Dev Mode)
+            setTimeout(() => {
+                log('🧹 Ejecutando cleanup inmediato (React Dev Mode)');
+                
+                const connectionAge = Date.now() - (socket1.connectedAt || startTime);
+                const isImmediateCleanup = connectionAge < 500;
+                
+                log(`🔍 Connection age: ${connectionAge}ms, isImmediate: ${isImmediateCleanup}`);
+                
+                if (isImmediateCleanup && socket1.connected) {
+                    log('🔄 Detectado cleanup inmediato, evitando desconexión', 'success');
+                    cleanup1Called = true;
+                    return; // No desconectar
+                } else {
+                    log('⚠️ Cleanup normal, desconectando socket1', 'error');
+                    socket1.disconnect();
+                    cleanup1Called = true;
+                }
+            }, 100); // Cleanup muy rápido
+            
+            // Segunda ejecución del efecto (remount en dev mode)
+            setTimeout(() => {
+                log('📍 Segunda ejecución del efecto (remount)');
+                socket2 = io(SERVER_URL, {
+                    query: { 
+                        codigoSala: TEST_ROOM, 
+                        token: 'test-token',
+                        anonymous: false 
+                    },
+                    transports: ['websocket', 'polling'],
+                    autoConnect: false,
+                    forceNew: true
+                });
+                
+                socket2.on('connect', () => {
+                    log(`✅ Socket2 conectado: ${socket2.id}`, 'success');
+                    socket2.connectedAt = Date.now();
+                });
+                
+                socket2.on('disconnect', () => {
+                    log(`❌ Socket2 desconectado`, 'error');
+                });
+                
+                socket2.connect();
+            }, 200);
+            
+            // Verificar resultado después de un tiempo
+            setTimeout(() => {
+                log('🔍 Verificando resultado final...', 'info');
+                
+                const socket1Status = socket1 ? (socket1.connected ? '🟢 Conectado' : '🔴 Desconectado') : '❌ No existe';
+                const socket2Status = socket2 ? (socket2.connected ? '🟢 Conectado' : '🔴 Desconectado') : '❌ No existe';
+                
+                log(`Socket1: ${socket1Status}`);
+                log(`Socket2: ${socket2Status}`);
+                
+                // Idealmente, socket1 debería seguir conectado y socket2 también
+                if (socket1 && socket1.connected) {
+                    log('✅ SUCCESS: Socket1 sobrevivió al cleanup inmediato', 'success');
+                } else {
+                    log('❌ FAIL: Socket1 fue desconectado prematuramente', 'error');
+                }
+                
+                if (socket2 && socket2.connected) {
+                    log('✅ SUCCESS: Socket2 conectó correctamente', 'success');
+                } else {
+                    log('❌ FAIL: Socket2 no logró conectar', 'error');
+                }
+                
+                // Cleanup final
+                setTimeout(() => {
+                    log('🧹 Cleanup final de sockets de prueba');
+                    if (socket1) socket1.disconnect();
+                    if (socket2) socket2.disconnect();
+                }, 2000);
+                
+            }, 3000);
+        }
+        
+        log('🔧 Test de React Dev Mode listo. Haz clic en "Simular React Dev Mode" para comenzar.');
+    </script>
+</body>
+</html>

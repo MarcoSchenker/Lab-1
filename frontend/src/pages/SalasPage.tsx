@@ -28,6 +28,7 @@ const SalasPage: React.FC = () => {
   const [filtro, setFiltro] = useState<'todas' | 'publicas' | 'privadas'>('todas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [waitingForPlayers, setWaitingForPlayers] = useState<string | null>(null);
 
   const isAnonymous = localStorage.getItem('isAnonymous') === 'true';
   
@@ -71,6 +72,7 @@ const SalasPage: React.FC = () => {
     // ✅ KEY EVENT: Listen for game redirection
     socket.on('iniciar_redireccion_juego', (data: { codigoSala: string }) => {
       console.log('[SalasPage] 🎮 Recibido evento de redirección a juego:', data);
+      setWaitingForPlayers(null);
       // Navigate to the game page immediately
       navigate(`/online-game-page/${data.codigoSala}`);
     });
@@ -204,9 +206,17 @@ const SalasPage: React.FC = () => {
         throw new Error('Respuesta incompleta del servidor');
       }
   
+      // ✅ JOIN SOCKET ROOM FOR LOBBY NOTIFICATIONS AFTER CREATING ROOM
+      if (socketRef.current && socketRef.current.connected) {
+        console.log(`[SalasPage] Uniéndose a sala de lobby por socket después de crear: ${data.codigo_sala}`);
+        socketRef.current.emit('unirse_sala_lobby', data.codigo_sala);
+      }
+  
       setShowModal(false);
-      // Redirigir a la sala de juego
-      navigate(`/online-game-page/${data.codigo_sala}`);
+      setWaitingForPlayers(data.codigo_sala);
+      // ✅ Don't navigate immediately - wait for iniciar_redireccion_juego event
+      // The event listener above will handle the navigation when the room is full
+      console.log(`[SalasPage] Sala creada: ${data.codigo_sala}. Esperando a que se una otro jugador...`);
     } catch (error: any) {
       console.error('Error al crear sala:', error);
       setError(error.message || 'Error al crear la sala');
@@ -459,6 +469,16 @@ const SalasPage: React.FC = () => {
         {error && (
           <div className="error-message">
             {error}
+          </div>
+        )}
+        
+        {waitingForPlayers && (
+          <div className="waiting-message">
+            <div className="waiting-content">
+              <div className="spinner"></div>
+              <p>Sala <strong>{waitingForPlayers}</strong> creada exitosamente</p>
+              <p>Esperando a que se una otro jugador...</p>
+            </div>
           </div>
         )}
         

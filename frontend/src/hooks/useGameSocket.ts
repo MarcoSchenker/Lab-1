@@ -96,7 +96,7 @@ interface UseGameSocketReturn {
   error: string | null;
   isLoading: boolean;
   reconnectAttempts: number;
-  loadingTimeoutActive: boolean; // ✅ Nuevo estado para timeout de carga
+  loadingTimeoutActive: boolean;
   // Action functions
   jugarCarta: (carta: Carta) => void;
   cantar: (tipoCanto: string) => void;
@@ -108,6 +108,12 @@ interface UseGameSocketReturn {
   retryConnection: () => void;
 }
 
+// 🔥 Flag global para detectar React Dev Mode y evitar cleanup múltiple
+let reactDevModeCleanupCount = 0;
+let lastCleanupTime = 0;
+let cleanupTimeoutId: NodeJS.Timeout | null = null; // Para debounce del cleanup
+let isFirstMount = true; // Flag para detectar primer mount
+
 export function useGameSocket(codigoSala: string | undefined): UseGameSocketReturn {
   const navigate = useNavigate();
   const [gameState, setGameState] = useState<EstadoJuego | null>(null);
@@ -116,123 +122,63 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   const [isLoading, setIsLoading] = useState(true);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [esperandoRespuesta, setEsperandoRespuesta] = useState(false);
-  const [loadingTimeoutActive, setLoadingTimeoutActive] = useState(false); // ✅ Nuevo estado
+  const [loadingTimeoutActive, setLoadingTimeoutActive] = useState(false);
   
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const estadoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoReconnectIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const emergencyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isConnectingRef = useRef(false); // Flag para evitar múltiples conexiones
+  const isCleaningUpRef = useRef(false); // Flag para evitar cleanup innecesario
+  const currentRoomRef = useRef<string | undefined>(null); // Track current room
+  const hasConnectedOnceRef = useRef(false); // Flag para evitar cleanup en primera conexión
   
   const maxReconnectAttempts = 5;
+  const initialLoadTimeout = 15000; // 15 segundos para timeout inicial
+  const SERVER_URL = 'http://localhost:3001';
 
-  // ✅ Función para cargar estado desde localStorage
-  const loadSavedState = useCallback(() => {
-    if (!codigoSala) return null;
-    
-    try {
-      const savedState = localStorage.getItem(`gameState_${codigoSala}`);
-      if (savedState) {
-        console.log('[CLIENT] 📦 Recuperando estado guardado de localStorage');
-        return JSON.parse(savedState);
-      }
-    } catch (e) {
-      console.error('[CLIENT] Error recuperando estado de localStorage:', e);
+  // ✅ Función para limpiar timeouts - sin dependencias para evitar recreación
+  const clearTimeouts = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
-    return null;
-  }, [codigoSala]);
-
-  // ✅ Función para guardar estado en localStorage
-  const saveStateToLocalStorage = useCallback((estado: EstadoJuego) => {
-    if (!codigoSala) return;
-    
-    try {
-      console.log('[CLIENT] 💾 Guardando estado en localStorage');
-      localStorage.setItem(`gameState_${codigoSala}`, JSON.stringify(estado));
-    } catch (e) {
-      console.error('[CLIENT] Error guardando estado en localStorage:', e);
+    if (autoReconnectIntervalRef.current) {
+      clearInterval(autoReconnectIntervalRef.current);
+      autoReconnectIntervalRef.current = null;
     }
-  }, [codigoSala]);
-
-  // Determinar el jugador actual basado en el token
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('No estás autenticado. Por favor, inicia sesión.');
-      navigate('/login');
-      return;
+    if (estadoTimeoutRef.current) {
+      clearTimeout(estadoTimeoutRef.current);
+      estadoTimeoutRef.current = null;
     }
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setJugadorId(payload.id);
-      
-      // ✅ Intentar cargar estado guardado al inicio
-      const savedState = loadSavedState();
-      if (savedState) {
-        console.log('[CLIENT] 🔄 Cargando estado previo desde localStorage');
-        setGameState(savedState);
-        setIsLoading(false);
-        gamePerformanceMonitor.trackCacheHit('localStorage');
-        gamePerformanceMonitor.trackInfiniteLoadingPrevented();
-      }
-      
-      gameStateDebugger.logAction('user_identified', { userId: payload.id });
-    } catch (error) {
-      gameStateDebugger.logError('Error al decodificar token', error);
-      setError('Error al identificar usuario. Por favor, inicia sesión nuevamente.');
-      navigate('/login');
+    if (emergencyTimeoutRef.current) {
+      clearTimeout(emergencyTimeoutRef.current);
+      emergencyTimeoutRef.current = null;
     }
-  }, [navigate, loadSavedState]);
+  }, []); // Sin dependencias para evitar recreación
 
-  // ✅ Mejorado: Retry connection function with immediate state request
-  const retryConnection = useCallback(() => {
-    if (reconnectAttempts >= maxReconnectAttempts) {
-      console.log('[CLIENT] ⚠️ Máximos intentos de reconexión alcanzados');
-      setError('No se pudo conectar después de varios intentos. Intenta volver a las salas.');
-      setLoadingTimeoutActive(true); // ✅ Activar timeout al alcanzar max intentos
-      gamePerformanceMonitor.trackRecoveryAttempt('max_attempts_reached');
-      return Promise.reject('Max attempts reached');
-    }
-
-    // ✅ Resetear estados de timeout al intentar reconectar
-    setLoadingTimeoutActive(false);
-    setError(null);
-    setReconnectAttempts(prev => prev + 1);
-    console.log(`[CLIENT] 🔄 Intento de reconexión ${reconnectAttempts + 1}/${maxReconnectAttempts}`);
-    
-    // ✅ Track recovery attempt
-    gamePerformanceMonitor.trackRecoveryAttempt(`reconnection_attempt_${reconnectAttempts + 1}`);
-
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-
-    return new Promise<void>((resolve) => {
-      reconnectTimeoutRef.current = setTimeout(() => {
-        initializeSocket();
-        resolve();
-      }, 2000);
-    });
-  }, [reconnectAttempts]);
-
-  // ✅ Mejorado: Request game state function con retry automático y manejo de timeout
+  // ✅ Función robusta para solicitar estado del juego - mejorada para evitar dependencias problemáticas
   const requestGameState = useCallback(() => {
     if (!socketRef.current || !socketRef.current.connected) {
-      console.log('[CLIENT] 🔌 Socket no conectado para solicitar estado. Intentando reconectar...');
+      console.log('[CLIENT] 🔌 Socket no conectado para solicitar estado.');
       
-      // Intentar reconectar primero
-      retryConnection().then(() => {
-        setTimeout(() => {
-          if (socketRef.current?.connected) {
-            console.log('[CLIENT] 🎮 Socket reconectado, solicitando estado...');
-            socketRef.current.emit('solicitar_estado_juego_ws');
+      // Verificar si tenemos estado en localStorage como backup
+      if (codigoSala) {
+        try {
+          const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+          if (savedState) {
+            const backupState = JSON.parse(savedState);
+            console.log('[CLIENT] 📦 Usando estado de backup durante desconexión');
+            setGameState(backupState);
+            setIsLoading(false);
+            setError('Usando datos guardados. Intentando reconectar...');
+            gamePerformanceMonitor.trackCacheHit('localStorage');
           }
-        }, 1000); // Dar tiempo para la reconexión
-      }).catch(err => {
-        console.log('[CLIENT] Error reconectando:', err);
-      });
-      
+        } catch (e) {
+          console.error('[CLIENT] Error recuperando estado de localStorage:', e);
+        }
+      }
       return;
     }
     
@@ -247,186 +193,260 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     
     // Establecer timeout para respuesta del servidor
     estadoTimeoutRef.current = setTimeout(() => {
-      if (!gameState) {
-        console.log('[CLIENT] ⏱️ Timeout esperando estado del servidor');
-        setError('El servidor no respondió a tiempo. Verifica tu conexión.');
-        setIsLoading(false);
-        setLoadingTimeoutActive(true); // ✅ Activar indicador de timeout
-        
-        // Después del timeout, intentar reconectar automáticamente
-        setTimeout(() => {
-          if (!gameState && socketRef.current?.disconnected) {
-            console.log('[CLIENT] 🔄 Intentando reconexión automática tras timeout...');
-            retryConnection();
+      // Usar closure para verificar estado actual
+      setGameState(currentGameState => {
+        if (!currentGameState) {
+          console.log('[CLIENT] ⏱️ Timeout esperando estado del servidor');
+          setError('El servidor no respondió a tiempo. Verifica tu conexión.');
+          setIsLoading(false);
+          setLoadingTimeoutActive(true);
+          
+          // Intentar con estado de backup
+          if (codigoSala) {
+            try {
+              const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+              if (savedState) {
+                const backupState = JSON.parse(savedState);
+                console.log('[CLIENT] 🔄 Usando estado de backup tras timeout');
+                setError('Usando datos guardados. Conexión lenta detectada.');
+                setLoadingTimeoutActive(false);
+                gamePerformanceMonitor.trackCacheHit('localStorage');
+                return backupState;
+              }
+            } catch (e) {
+              console.error('[CLIENT] Error recuperando estado de backup:', e);
+            }
           }
-        }, 2000);
-      }
-    }, 10000); // 10 segundos para timeout
-  }, [gameState, retryConnection]);
+        }
+        return currentGameState;
+      });
+    }, initialLoadTimeout);
+  }, [codigoSala, initialLoadTimeout]); // Solo dependencias realmente necesarias
 
-  // Initialize socket connection
-  const initializeSocket = useCallback(() => {
-    if (!codigoSala || !jugadorId) {
-      console.log('[CLIENT] Falta código de sala o ID de jugador para conectar');
+  // ✅ Función de reconexión mejorada - sin dependencias que causen recreación
+  const retryConnection = useCallback(() => {
+    // Usar closure para obtener el valor actual de reconnectAttempts
+    setReconnectAttempts(currentAttempts => {
+      if (currentAttempts >= maxReconnectAttempts) {
+        console.log('[CLIENT] ⚠️ Máximos intentos de reconexión alcanzados');
+        setError('No se pudo conectar después de varios intentos. Intenta volver a las salas.');
+        setLoadingTimeoutActive(true);
+        gamePerformanceMonitor.trackRecoveryAttempt('max_attempts_reached');
+        return currentAttempts;
+      }
+
+      setLoadingTimeoutActive(false);
+      setError(null);
+      console.log(`[CLIENT] 🔄 Intento de reconexión ${currentAttempts + 1}/${maxReconnectAttempts}`);
+      
+      gamePerformanceMonitor.trackRecoveryAttempt(`reconnection_attempt_${currentAttempts + 1}`);
+
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connectSocket();
+      }, 2000);
+
+      return currentAttempts + 1;
+    });
+  }, []); // Sin dependencias para evitar recreación
+
+  // ✅ Función principal de conexión del socket - mejorada para evitar recreación
+  const connectSocket = useCallback(() => {
+    console.log('[CLIENT] 🔍 Debug connectSocket llamado con codigoSala:', codigoSala);
+    
+    if (!codigoSala) {
+      console.error('[CLIENT] ❌ Código de sala no proporcionado o es undefined/null');
+      setError('Código de sala no proporcionado.');
       setIsLoading(false);
       return;
     }
+    
+    // Evitar múltiples conexiones simultáneas
+    if (isConnectingRef.current) {
+      console.log('[CLIENT] 🔄 Conexión ya en progreso, ignorando nueva solicitud');
+      return;
+    }
+    
+    // Evitar reconexión durante cleanup
+    if (isCleaningUpRef.current) {
+      console.log('[CLIENT] 🧹 Cleanup en progreso, ignorando conexión');
+      return;
+    }
 
-    console.log("[CLIENT] Conectando socket para sala:", codigoSala);
+    if (socketRef.current && socketRef.current.connected) {
+      console.log('[CLIENT] ✅ Socket ya conectado, verificando sala actual');
+      // Si estamos conectados a la misma sala, no reconectar
+      if (currentRoomRef.current === codigoSala) {
+        console.log('[CLIENT] ✅ Ya conectado a la sala correcta');
+        return;
+      }
+    }
+
+    isConnectingRef.current = true;
+    console.log(`[CLIENT] 🔌 Conectando a sala ${codigoSala}...`);
     setIsLoading(true);
     setError(null);
+    setLoadingTimeoutActive(false);
 
-    // ✅ Track socket connection start time for performance monitoring
-    const socketStartTime = Date.now();
+    const token = localStorage.getItem('token');
+    const anonymous = localStorage.getItem('isAnonymous') === 'true';
 
-    // ✅ Timeout de emergencia mejorado para evitar carga infinita
-    const emergencyTimeout = setTimeout(() => {
-      console.warn('[CLIENT] ⚠️ Timeout de emergencia activado - No se recibió estado');
-      
-      // ✅ Track loading timeout for monitoring
-      gamePerformanceMonitor.trackLoadingTimeout(15000);
-      
-      // Verificar si ya tenemos un estado en localStorage como backup
-      const backupState = loadSavedState();
-      if (backupState) {
-        console.log('[CLIENT] 🔄 Usando estado de backup desde localStorage');
-        setGameState(backupState);
-        setIsLoading(false);
-        setError('Usando estado guardado. Conexión lenta detectada.');
-        setLoadingTimeoutActive(false); // ✅ Resetear timeout si se encontró backup
-        gamePerformanceMonitor.trackCacheHit('localStorage');
-        gamePerformanceMonitor.trackInfiniteLoadingPrevented();
-      } else {
-        setIsLoading(false);
-        setLoadingTimeoutActive(true); // ✅ Activar timeout si no hay backup
-        setError('Tiempo de conexión agotado. No se pudo cargar el juego.');
-      }
-    }, 15000); // 15 segundos para emergency timeout
+    // Desconectar socket existente si está conectado a otra sala
+    if (socketRef.current && currentRoomRef.current !== codigoSala) {
+      console.log('[CLIENT] 🔄 Desconectando de sala anterior:', currentRoomRef.current);
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
 
-    const socket = io('http://localhost:3001', {
-      reconnectionAttempts: 5,
+    const newSocket: Socket = io(SERVER_URL, {
+      query: { codigoSala, token, anonymous },
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: maxReconnectAttempts,
       reconnectionDelay: 1000,
-      timeout: 10000
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+      autoConnect: false, // Control manual de conexión
+      forceNew: true, // Forzar nueva conexión para evitar reutilización de socket
     });
-    socketRef.current = socket;
 
-    // Limpiar timeout de emergencia cuando el estado se actualice
-    const clearEmergencyTimeout = () => {
-      if (emergencyTimeout) {
-        clearTimeout(emergencyTimeout);
-      }
-    };
+    socketRef.current = newSocket;
+    currentRoomRef.current = codigoSala;
+    newSocket.connect();
 
-    // Connection events
-    socket.on('connect', () => {
-      const connectionTime = Date.now() - socketStartTime;
-      console.log('[CLIENT] Socket conectado:', socket.id);
-      setIsLoading(true);
+    // === EVENTOS DE CONEXIÓN ===
+    newSocket.on('connect', () => {
+      console.log(`[CLIENT] ✅ Socket conectado: ${newSocket.id}`);
       
-      // ✅ Track connection time
-      gamePerformanceMonitor.trackConnectionTime(connectionTime);
+      // 🔥 Marcar timestamp de conexión para detectar cleanup inmediato en React Dev Mode
+      (newSocket as any).connectedAt = Date.now();
+      hasConnectedOnceRef.current = true; // Marcar que ya hemos conectado
       
+      isConnectingRef.current = false;
+      setReconnectAttempts(0);
+      setError(null);
+
+      // Autenticar con token
       const token = localStorage.getItem('token');
       if (token) {
-        socket.emit('autenticar_socket', token);
+        newSocket.emit('autenticar_socket', token);
+      }
+
+      // Cargar estado inicial desde localStorage si existe
+      if (codigoSala) {
+        try {
+          const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+          if (savedState) {
+            const storedGameState = JSON.parse(savedState);
+            console.log('[CLIENT] ✅ Estado recuperado de localStorage');
+            setGameState(storedGameState);
+            setIsLoading(false);
+            gamePerformanceMonitor.trackCacheHit('localStorage');
+            // Aún así solicitar estado actualizado del servidor
+            setTimeout(() => requestGameState(), 1000);
+          }
+        } catch (e) {
+          console.error('[CLIENT] Error recuperando estado de localStorage:', e);
+        }
       }
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('[CLIENT] Error de conexión:', error);
+    // === EVENTOS DE AUTENTICACIÓN ===
+    newSocket.on('autenticacion_exitosa', (data) => {
+      console.log('[CLIENT] ✅ Socket autenticado:', data);
+      console.log('[CLIENT] 🔍 Debug - codigoSala al autenticar:', codigoSala);
+      setReconnectAttempts(0);
+      setError(null);
       
-      // ✅ Track network error
-      gamePerformanceMonitor.trackNetworkError('connection_error');
-      
-      // ✅ En caso de error de conexión, verificar localStorage
-      const backupState = loadSavedState();
-      if (backupState) {
-        console.log('[CLIENT] 📦 Usando estado de backup por error de conexión');
-        setGameState(backupState);
-        setError('Modo offline: usando datos guardados. Reintentando conexión...');
-        gamePerformanceMonitor.trackCacheHit('localStorage');
+      if (codigoSala) {
+        console.log('[CLIENT] 📡 Emitiendo unirse_sala_juego con código:', codigoSala);
+        newSocket.emit('unirse_sala_juego', codigoSala);
       } else {
-        setError('Error de conexión al servidor');
+        console.error('[CLIENT] ❌ No se puede unir a sala: codigoSala es undefined/null');
+        setError('Error: Código de sala no disponible para unirse al juego.');
       }
-      
+    });
+
+    newSocket.on('autenticacion_fallida', (error) => {
+      console.error('[CLIENT] ❌ Error de autenticación:', error);
+      isConnectingRef.current = false;
+      setError('Error de autenticación. Por favor, inicia sesión nuevamente.');
       setIsLoading(false);
-      clearEmergencyTimeout();
+      setLoadingTimeoutActive(true);
+      clearTimeouts();
       
-      // Programar reintento de conexión
+      // Reintentar autenticación
       setTimeout(() => {
-        if (socketRef.current?.disconnected) {
-          retryConnection();
-        }
+        setReconnectAttempts(currentAttempts => {
+          if (currentAttempts < maxReconnectAttempts) {
+            console.log('[CLIENT] Reintentando tras fallo de autenticación...');
+            retryConnection();
+          } else {
+            // Redirigir a login si falla múltiples veces
+            navigate('/login');
+          }
+          return currentAttempts;
+        });
       }, 3000);
     });
 
-    // Authentication events
-    socket.on('autenticacion_exitosa', (data) => {
-      console.log('[CLIENT] Socket autenticado:', data);
-      socket.emit('unirse_sala_juego', codigoSala);
-    });
-
-    socket.on('autenticacion_fallida', (error) => {
-      console.error('[CLIENT] Error de autenticación:', error);
-      setError('Error de autenticación. Por favor, inicia sesión nuevamente.');
-      setIsLoading(false);
-      clearEmergencyTimeout();
-    });
-
-    // Room events
-    socket.on('unido_sala_juego', (data) => {
-      console.log('[CLIENT] Unido a sala:', data);
+    // === EVENTOS DE SALA ===
+    newSocket.on('unido_sala_juego', (data) => {
+      console.log('[CLIENT] ✅ Unido a sala:', data);
+      setError(null);
       
-      // ✅ Verificar si ya tenemos estado en localStorage antes de solicitar
-      const existingState = loadSavedState();
-      if (existingState) {
-        console.log('[CLIENT] 📦 Estado encontrado en localStorage, usando como base');
-        setGameState(existingState);
-        setIsLoading(false);
-        setError(null);
-        clearEmergencyTimeout();
-        
-        // Aún así solicitar estado actualizado del servidor
-        setTimeout(() => {
-          requestGameState();
-        }, 500);
-      } else {
-        // Si no hay estado guardado, solicitar inmediatamente
-        setTimeout(() => {
-          requestGameState();
-        }, 500);
-      }
-    });
-
-    // Game events - NEW WebSocket flow
-    socket.on('partida_iniciada', (data) => {
-      console.log('[CLIENT] 🎮 Partida iniciada:', data);
-      gameStateDebugger.logAction('partida_iniciada_received', data);
-      
-      setTimeout(() => {
-        if (socketRef.current?.connected) {
-          console.log('[CLIENT] Solicitando estado inicial...');
-          socketRef.current.emit('solicitar_estado_inicial');
+      // Verificar si ya tenemos estado usando closure
+      setGameState(currentState => {
+        if (!currentState) {
+          console.log('[CLIENT] 📡 Solicitando estado inicial del servidor...');
+          setTimeout(() => requestGameState(), 1000);
         }
-      }, 500);
+        return currentState;
+      });
     });
 
-    // ✅ Mejora: manejar estado del juego y guardarlo en localStorage
-    socket.on('estado_juego_actualizado', (estado) => {
-      console.log('[CLIENT] 🎯 Estado recibido:', estado);
+    newSocket.on('error_unirse_sala', (error) => {
+      console.error('[CLIENT] ❌ Error uniéndose a sala:', error);
+      isConnectingRef.current = false;
+      setError(`Error uniéndose a la sala: ${error.message || error}`);
+      setIsLoading(false);
+      setLoadingTimeoutActive(true);
+      clearTimeouts();
       
-      // ✅ Track performance metrics
+      setTimeout(() => retryConnection(), 3000);
+    });
+
+    // === EVENTOS DE JUEGO ===
+    newSocket.on('partida_iniciada', (estadoInicial) => {
+      console.log('[CLIENT] 🚀 Partida iniciada:', estadoInicial);
+      setGameState(estadoInicial);
+      setIsLoading(false);
+      setError(null);
+      setLoadingTimeoutActive(false);
+      clearTimeouts();
+      
+      // Guardar estado usando closure para evitar dependencias
+      if (codigoSala) {
+        try {
+          localStorage.setItem(`gameState_${codigoSala}`, JSON.stringify(estadoInicial));
+          console.log('[CLIENT] 💾 Estado guardado en localStorage');
+        } catch (e) {
+          console.error('[CLIENT] Error guardando estado:', e);
+        }
+      }
       gamePerformanceMonitor.trackStateReceived();
+    });
+
+    newSocket.on('estado_juego_actualizado', (estado) => {
+      console.log('[CLIENT] 🎯 Estado actualizado:', estado);
       
       setIsLoading(false);
-      setLoadingTimeoutActive(false); // ✅ Resetear timeout al recibir estado
-      clearEmergencyTimeout();
+      setLoadingTimeoutActive(false);
+      clearTimeouts();
       
-      if (estadoTimeoutRef.current) {
-        clearTimeout(estadoTimeoutRef.current);
-        estadoTimeoutRef.current = null;
-      }
-    
       const isValidState = estado && 
                           estado.equipos?.length > 0 && 
                           estado.jugadores?.length > 0;
@@ -435,234 +455,391 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
         const errorMsg = estado.mensajeError || 'Estado de juego incompleto';
         console.error('[CLIENT] ❌ Estado inválido:', errorMsg);
         setError(errorMsg);
-        setLoadingTimeoutActive(true); // ✅ Activar timeout para estado inválido
+        setLoadingTimeoutActive(true);
         gamePerformanceMonitor.trackNetworkError('invalid_game_state');
       } else {
-        console.log('[CLIENT] ✅ Estado válido, actualizando gameState');
+        console.log('[CLIENT] ✅ Estado válido recibido');
         setGameState(estado);
         setError(null);
         setReconnectAttempts(0);
         
-        // ✅ Guardar en localStorage para persistencia
-        saveStateToLocalStorage(estado);
-        gamePerformanceMonitor.trackCacheHit('localStorage');
+        // Guardar estado usando closure
+        if (codigoSala) {
+          try {
+            localStorage.setItem(`gameState_${codigoSala}`, JSON.stringify(estado));
+            console.log('[CLIENT] 💾 Estado actualizado guardado en localStorage');
+          } catch (e) {
+            console.error('[CLIENT] Error guardando estado:', e);
+          }
+        }
+        gamePerformanceMonitor.trackStateReceived();
       }
     });
 
-    socket.on('esperando_inicio_partida', (data) => {
+    newSocket.on('esperando_inicio_partida', (data) => {
       console.log('[CLIENT] ⏳ Esperando inicio:', data);
       setIsLoading(true);
       
-      // Timeout para este estado específico
+      // Timeout específico para espera de inicio
       const waitingTimeout = setTimeout(() => {
         console.warn('[CLIENT] ⚠️ Timeout esperando inicio de partida');
         setIsLoading(false);
         setError('Tiempo de espera agotado. La partida no ha iniciado.');
-      }, 30000); // 30 segundos para esperar inicio
+        setLoadingTimeoutActive(true);
+      }, 30000);
       
       const interval = setInterval(() => {
-        if (socketRef.current?.connected) {
-          socketRef.current.emit('solicitar_estado_juego_ws');
+        if (newSocket.connected) {
+          newSocket.emit('solicitar_estado_juego_ws');
         } else {
           clearInterval(interval);
           clearTimeout(waitingTimeout);
         }
       }, 3000);
       
-      socket.once('estado_juego_actualizado', () => {
+      newSocket.once('estado_juego_actualizado', () => {
         clearInterval(interval);
         clearTimeout(waitingTimeout);
       });
     });
 
-    socket.on('error_estado_juego', (data) => {
-      console.error('[CLIENT] Error de estado:', data);
+    newSocket.on('error_estado_juego', (data) => {
+      console.error('[CLIENT] ❌ Error de estado:', data);
       gameStateDebugger.logError('game_state_error', data);
       setError(data.message);
       setIsLoading(false);
-      clearEmergencyTimeout();
+      setLoadingTimeoutActive(true);
+      clearTimeouts();
     });
 
-    socket.on('disconnect', () => {
-      console.log('[CLIENT] Socket desconectado');
+    // === EVENTOS DE DESCONEXIÓN ===
+    newSocket.on('disconnect', (reason) => {
+      console.log('[CLIENT] 🔌 Socket desconectado:', reason);
+      isConnectingRef.current = false;
       
-      // ✅ Manejo inteligente de desconexión
-      const currentState = gameState || loadSavedState();
-      
-      if (currentState) {
-        // Si tenemos estado (actual o guardado), mantener la UI funcional
-        console.log('[CLIENT] 📦 Manteniendo estado durante desconexión');
-        setError('Desconectado del servidor. Reintentando conexión...');
-        // NO cambiar isLoading a true si ya tenemos estado válido
-        if (!gameState) {
-          setGameState(currentState);
+      // Manejo inteligente de desconexión usando closure
+      setGameState(currentState => {
+        if (currentState) {
+          console.log('[CLIENT] 📦 Manteniendo estado durante desconexión');
+          setError('Desconectado del servidor. Reintentando conexión...');
           setIsLoading(false);
+          return currentState;
+        } else {
+          // Intentar recuperar estado desde localStorage
+          if (codigoSala) {
+            try {
+              const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+              if (savedState) {
+                const backupState = JSON.parse(savedState);
+                console.log('[CLIENT] 📦 Recuperando estado de backup durante desconexión');
+                setError('Desconectado del servidor. Usando datos guardados...');
+                setIsLoading(false);
+                return backupState;
+              }
+            } catch (e) {
+              console.error('[CLIENT] Error recuperando estado de backup:', e);
+            }
+          }
+          
+          setIsLoading(true);
+          setError(`Desconectado: ${reason}. Reconectando...`);
+          return null;
         }
-      } else {
-        // Si no hay estado disponible, mostrar loading
-        setError('Desconectado del servidor. Intentando reconectar...');
-        setIsLoading(true);
+      });
+
+      // Programar reconexión automática si es necesario
+      if (reason !== 'io server disconnect' && reason !== 'transport close') {
+        setTimeout(() => {
+          if (!newSocket.connected) {
+            setReconnectAttempts(currentAttempts => {
+              if (currentAttempts < maxReconnectAttempts) {
+                retryConnection();
+              }
+              return currentAttempts;
+            });
+          }
+        }, 3000);
+      }
+    });
+
+    newSocket.on('connect_error', (err) => {
+      console.error(`[CLIENT] ❌ Error de conexión: ${err.message}`);
+      isConnectingRef.current = false;
+      setError(`Error de conexión: ${err.message}`);
+      
+      // Usar estado de backup si existe
+      if (codigoSala) {
+        try {
+          const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+          if (savedState) {
+            const backupState = JSON.parse(savedState);
+            console.log('[CLIENT] 📦 Usando estado de backup por error de conexión');
+            setGameState(backupState);
+            setError('Modo offline: usando datos guardados. Reintentando conexión...');
+            gamePerformanceMonitor.trackCacheHit('localStorage');
+          }
+        } catch (e) {
+          console.error('[CLIENT] Error recuperando estado de backup:', e);
+        }
       }
       
-      clearEmergencyTimeout();
+      setIsLoading(false);
+      setLoadingTimeoutActive(true);
+      clearTimeouts();
       
-      // Intentar reconexión automática después de un breve delay
+      // Programar reintento de conexión
       setTimeout(() => {
-        if (socketRef.current?.disconnected) {
-          console.log('[CLIENT] 🔄 Iniciando reconexión automática...');
+        if (newSocket.disconnected) {
           retryConnection();
         }
-      }, 2000);
+      }, 3000);
     });
 
-    return () => {
-      socket.off('connect');
-      socket.off('connect_error');
-      socket.off('autenticacion_exitosa');
-      socket.off('autenticacion_fallida');
-      socket.off('unido_sala_juego');
-      socket.off('partida_iniciada');
-      socket.off('estado_juego_actualizado');
-      socket.off('esperando_inicio_partida');
-      socket.off('error_estado_juego');
-      socket.off('disconnect');
-      socket.disconnect();
-    };
-  }, [codigoSala, jugadorId, retryConnection, requestGameState, saveStateToLocalStorage]);
-
-  // ✅ Auto-reconnection interval effect - solicitar estado periódicamente cuando no hay gameState
-  useEffect(() => {
-    if (!codigoSala || !jugadorId) return;
-    
-    // Solo activar auto-reconexión si no tenemos estado válido
-    if (!gameState && socketRef.current?.connected) {
-      console.log('[CLIENT] 🔄 Iniciando auto-reconexión periódica');
+    // Timeout de emergencia para evitar carga infinita
+    emergencyTimeoutRef.current = setTimeout(() => {
+      console.warn('[CLIENT] ⚠️ Timeout de emergencia activado');
+      isConnectingRef.current = false;
       
-      autoReconnectIntervalRef.current = setInterval(() => {
-        if (!gameState && socketRef.current?.connected) {
-          console.log('[CLIENT] 🔄 Auto-reconexión: solicitando estado...');
-          requestGameState();
-        } else if (gameState) {
-          // Si ya tenemos estado, limpiar el intervalo
-          if (autoReconnectIntervalRef.current) {
-            clearInterval(autoReconnectIntervalRef.current);
-            autoReconnectIntervalRef.current = null;
-            console.log('[CLIENT] ✅ Auto-reconexión detenida: estado obtenido');
+      gamePerformanceMonitor.trackLoadingTimeout(initialLoadTimeout);
+      
+      // Intentar usar backup state sin dependencias
+      if (codigoSala) {
+        try {
+          const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+          if (savedState) {
+            const backupState = JSON.parse(savedState);
+            console.log('[CLIENT] 🔄 Usando estado de backup por timeout de emergencia');
+            setGameState(backupState);
+            setIsLoading(false);
+            setError('Usando estado guardado. Conexión lenta detectada.');
+            setLoadingTimeoutActive(false);
+            gamePerformanceMonitor.trackCacheHit('localStorage');
+            gamePerformanceMonitor.trackInfiniteLoadingPrevented();
+            return;
           }
+        } catch (e) {
+          console.error('[CLIENT] Error recuperando estado de backup:', e);
         }
-      }, 5000); // Cada 5 segundos
-    }
-    
-    return () => {
-      if (autoReconnectIntervalRef.current) {
-        clearInterval(autoReconnectIntervalRef.current);
-        autoReconnectIntervalRef.current = null;
       }
-    };
-  }, [codigoSala, jugadorId, gameState, requestGameState]);
+      
+      setIsLoading(false);
+      setLoadingTimeoutActive(true);
+      setError('Tiempo de conexión agotado. No se pudo cargar el juego.');
+    }, initialLoadTimeout);
 
-  // Initialize socket when we have all required data
+    // Cleanup de timeout de emergencia se maneja automáticamente
+    // cuando se actualiza el estado en los event listeners
+
+  }, [codigoSala]); // Solo codigoSala como dependencia clave
+
+  // Determinar el jugador actual basado en el token - sin dependencias problemáticas
   useEffect(() => {
-    if (codigoSala && jugadorId && !socketRef.current) {
-      // ✅ Track game start for performance monitoring
-      gamePerformanceMonitor.trackGameStart();
-      initializeSocket();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('No estás autenticado. Por favor, inicia sesión.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setJugadorId(payload.id);
+      
+      // Intentar cargar estado guardado al inicio
+      if (codigoSala) {
+        try {
+          const savedState = localStorage.getItem(`gameState_${codigoSala}`);
+          if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            console.log('[CLIENT] 🔄 Cargando estado previo desde localStorage');
+            setGameState(parsedState);
+            setIsLoading(false);
+            gamePerformanceMonitor.trackCacheHit('localStorage');
+            gamePerformanceMonitor.trackInfiniteLoadingPrevented();
+          }
+        } catch (e) {
+          console.error('[CLIENT] Error recuperando estado de localStorage:', e);
+        }
+      }
+      
+      gameStateDebugger.logAction('user_identified', { userId: payload.id });
+    } catch (error) {
+      gameStateDebugger.logError('Error al decodificar token', error);
+      setError('Error al identificar usuario. Por favor, inicia sesión nuevamente.');
+      navigate('/login');
+    }
+  }, [codigoSala, navigate]); // Solo dependencias realmente necesarias
+
+  // Inicializar conexión socket cuando esté disponible el código de sala - mejorado
+  useEffect(() => {
+    console.log('[CLIENT] 🔄 useEffect ejecutado con codigoSala:', codigoSala);
+    console.log('[CLIENT] 🔍 isFirstMount:', isFirstMount);
+    
+    // Si es el mismo room y ya tenemos conexión, no hacer nada
+    if (codigoSala && currentRoomRef.current === codigoSala && socketRef.current?.connected) {
+      console.log('[CLIENT] ✅ Ya conectado a esta sala, saltando reconexión');
+      return;
     }
     
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      if (estadoTimeoutRef.current) clearTimeout(estadoTimeoutRef.current);
-      if (autoReconnectIntervalRef.current) clearInterval(autoReconnectIntervalRef.current);
-    };
-  }, [codigoSala, jugadorId, initializeSocket]);
+    // Actualizar room actual
+    currentRoomRef.current = codigoSala;
+    
+    if (codigoSala && !isCleaningUpRef.current) {
+      console.log('[CLIENT] 🚀 Iniciando conexión para sala:', codigoSala);
+      connectSocket();
+    }
 
-  // Game action functions
+    return () => {
+      console.log('[CLIENT] 🧹 Cleanup del hook useGameSocket para sala:', codigoSala);
+      console.log('[CLIENT] 🔍 isFirstMount en cleanup:', isFirstMount);
+      
+      // 🔥 EVITAR CLEANUP EN PRIMER MOUNT (REACT STRICT MODE)
+      if (isFirstMount && import.meta.env.DEV) {
+        console.log('[CLIENT] 🔄 Primer mount en React Dev Mode - evitando cleanup');
+        isFirstMount = false; // Marcar que ya no es el primer mount
+        return;
+      }
+      
+      // 🔥 DEBOUNCE CLEANUP PARA REACT DEV MODE
+      if (cleanupTimeoutId) {
+        console.log('[CLIENT] 🔄 Cleanup anterior cancelado (debounce)');
+        clearTimeout(cleanupTimeoutId);
+        cleanupTimeoutId = null;
+      }
+      
+      const isReactDevMode = import.meta.env.DEV;
+      const now = Date.now();
+      const connectionAge = socketRef.current ? now - (socketRef.current as any).connectedAt : 0;
+      const timeSinceLastCleanup = now - lastCleanupTime;
+      
+      console.log('[CLIENT] 🔍 Cleanup check:', {
+        isReactDevMode,
+        connectionAge,
+        socketConnected: socketRef.current?.connected,
+        currentRoom: currentRoomRef.current,
+        paramRoom: codigoSala,
+        hasConnectedOnce: hasConnectedOnceRef.current,
+        cleanupCount: reactDevModeCleanupCount,
+        timeSinceLastCleanup
+      });
+      
+      // Detectar múltiples cleanups rápidos (típico de React Dev Mode)
+      if (isReactDevMode && timeSinceLastCleanup < 1000) {
+        reactDevModeCleanupCount++;
+        console.log('[CLIENT] 🔄 Múltiples cleanups detectados en Dev Mode, count:', reactDevModeCleanupCount);
+        
+        // Si es el primer cleanup rápido y tenemos conexión activa, usar debounce
+        if (reactDevModeCleanupCount === 1 && socketRef.current?.connected) {
+          console.log('[CLIENT] 🔄 Debouncing cleanup para evitar desconexión inmediata');
+          
+          cleanupTimeoutId = setTimeout(() => {
+            console.log('[CLIENT] ⏰ Ejecutando cleanup después de debounce');
+            performCleanup();
+            cleanupTimeoutId = null;
+          }, 500); // Esperar 500ms antes de cleanup real
+          
+          lastCleanupTime = now;
+          return;
+        }
+      } else {
+        // Reset counter si ha pasado suficiente tiempo
+        reactDevModeCleanupCount = 0;
+      }
+      
+      lastCleanupTime = now;
+      
+      // Solo hacer cleanup si realmente estamos cambiando de sala o desmontando
+      const isRoomChange = currentRoomRef.current !== codigoSala;
+      const shouldCleanup = isRoomChange || !codigoSala;
+      
+      if (shouldCleanup) {
+        console.log('[CLIENT] 🔄 Ejecutando cleanup inmediato');
+        performCleanup();
+      } else {
+        console.log('[CLIENT] ⏭️ Saltando cleanup - misma sala');
+      }
+      
+      function performCleanup() {
+        isCleaningUpRef.current = true;
+        clearTimeouts();
+        
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
+        }
+        
+        isConnectingRef.current = false;
+        currentRoomRef.current = null;
+        hasConnectedOnceRef.current = false;
+        
+        // Reset cleanup flag after a delay
+        setTimeout(() => {
+          isCleaningUpRef.current = false;
+        }, 100);
+      }
+    };
+  }, [codigoSala]); // Solo codigoSala como dependencia
+
+  // === FUNCIONES DE ACCIÓN DEL JUEGO ===
   const jugarCarta = useCallback((carta: Carta) => {
     if (!socketRef.current || esperandoRespuesta) return;
+    
     setEsperandoRespuesta(true);
+    console.log('[CLIENT] 🃏 Jugando carta:', carta);
     socketRef.current.emit('jugar_carta_ws', { carta });
-    setTimeout(() => setEsperandoRespuesta(false), 500);
+    
+    setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);
 
   const cantar = useCallback((tipoCanto: string) => {
     if (!socketRef.current || esperandoRespuesta) return;
+    
     setEsperandoRespuesta(true);
-    socketRef.current.emit('cantar_ws', { tipo_canto: tipoCanto });
-    setTimeout(() => setEsperandoRespuesta(false), 500);
+    console.log('[CLIENT] 🎵 Cantando:', tipoCanto);
+    socketRef.current.emit('cantar_ws', { tipoCanto });
+    
+    setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);
 
   const responderCanto = useCallback((respuesta: string) => {
     if (!socketRef.current || esperandoRespuesta) return;
+    
     setEsperandoRespuesta(true);
-    socketRef.current.emit('responder_canto_ws', { 
-      respuesta, 
-      canto_respondido_tipo: gameState?.rondaActual.envidoInfo.cantado ? 'ENVIDO' : 'TRUCO' 
-    });
-    setTimeout(() => setEsperandoRespuesta(false), 500);
-  }, [esperandoRespuesta, gameState]);
+    console.log('[CLIENT] 💬 Respondiendo canto:', respuesta);
+    socketRef.current.emit('responder_canto_ws', { respuesta });
+    
+    setTimeout(() => setEsperandoRespuesta(false), 1000);
+  }, [esperandoRespuesta]);
 
   const declararPuntosEnvido = useCallback((puntos: number) => {
     if (!socketRef.current || esperandoRespuesta) return;
-    if (isNaN(puntos) || puntos < 0 || puntos > 33) {
-      setError('Puntos de envido inválidos (0-33)');
-      return;
-    }
     
     setEsperandoRespuesta(true);
-    socketRef.current.emit('responder_canto_ws', { 
-      respuesta: puntos,
-      canto_respondido_tipo: 'ENVIDO'
-    });
-    setTimeout(() => setEsperandoRespuesta(false), 500);
+    console.log('[CLIENT] 🔢 Declarando puntos de envido:', puntos);
+    socketRef.current.emit('declarar_puntos_envido_ws', { puntos });
+    
+    setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);
 
   const declararSonBuenas = useCallback(() => {
     if (!socketRef.current || esperandoRespuesta) return;
+    
     setEsperandoRespuesta(true);
-    socketRef.current.emit('responder_canto_ws', { 
-      respuesta: 'SON_BUENAS_ENVIDO',
-      canto_respondido_tipo: 'ENVIDO'
-    });
-    setTimeout(() => setEsperandoRespuesta(false), 500);
+    console.log('[CLIENT] ✅ Declarando "son buenas"');
+    socketRef.current.emit('declarar_son_buenas_ws');
+    
+    setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);
 
   const irseAlMazo = useCallback(() => {
     if (!socketRef.current || esperandoRespuesta) return;
-    if (window.confirm('¿Estás seguro de que quieres irte al mazo?')) {
-      socketRef.current.emit('irse_al_mazo_ws');
-    }
+    
+    setEsperandoRespuesta(true);
+    console.log('[CLIENT] 🏃 Yéndose al mazo');
+    socketRef.current.emit('irse_al_mazo_ws');
+    
+    setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);
-
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      console.log('[CLIENT] 🧹 Limpiando recursos del hook useGameSocket');
-      
-      // Limpiar todos los timeouts
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (estadoTimeoutRef.current) {
-        clearTimeout(estadoTimeoutRef.current);
-      }
-      if (autoReconnectIntervalRef.current) {
-        clearInterval(autoReconnectIntervalRef.current);
-      }
-      
-      // Desconectar socket
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      
-      // Reset states
-      setIsLoading(false);
-      setError(null);
-    };
-  }, []);
 
   return {
     socket: socketRef.current,
@@ -671,7 +848,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     error,
     isLoading,
     reconnectAttempts,
-    loadingTimeoutActive, // ✅ Incluir nuevo estado
+    loadingTimeoutActive,
     jugarCarta,
     cantar,
     responderCanto,
@@ -679,6 +856,6 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     declararSonBuenas,
     irseAlMazo,
     requestGameState,
-    retryConnection
+    retryConnection,
   };
 }

@@ -16,7 +16,8 @@ import './OnlineGamePage.css';
 
 // Componente GamePage refactorizado
 const OnlineGamePage: React.FC = () => {
-  const { codigoSala } = useParams<{ codigoSala: string }>();
+  const { codigo_sala } = useParams<{ codigo_sala: string }>();
+  const codigoSala = codigo_sala; // Convert to camelCase for consistency
   const {
     socket,
     gameState,
@@ -24,6 +25,7 @@ const OnlineGamePage: React.FC = () => {
     error,
     isLoading,
     reconnectAttempts,
+    loadingTimeoutActive,
     jugarCarta,
     cantar,
     responderCanto,
@@ -38,18 +40,22 @@ const OnlineGamePage: React.FC = () => {
   const [showReconnectOption, setShowReconnectOption] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const maxReconnectAttempts = 5;
-  // Nuevo estado para manejar timeout y evitar loading infinito
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Timeout de emergencia para evitar carga infinita
+  // Debug: Log game state changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log('📢 Timeout de emergencia activado - Forzando fin de loading');
-      setLoadingTimeout(true);
-    }, 10000); // 10 segundos máximo de espera
-    
-    return () => clearTimeout(timer);
-  }, []);
+    console.log('[OnlineGamePage] 🎮 Game state updated:', {
+      hasGameState: !!gameState,
+      isLoading,
+      error,
+      gameState: gameState ? {
+        codigoSala: gameState.codigoSala,
+        estadoPartida: gameState.estadoPartida,
+        jugadoresCount: gameState.jugadores?.length,
+        equiposCount: gameState.equipos?.length,
+        jugadorId
+      } : null
+    });
+  }, [gameState, isLoading, error, jugadorId]);
 
   // Actualizar preferencias de skins basado en el estado del juego
   useEffect(() => {
@@ -90,69 +96,125 @@ const OnlineGamePage: React.FC = () => {
 
   // Método para forzar refrescar el estado manualmente
   const forceRefreshState = useCallback(() => {
-    if (!socket || !socket.connected) {
-      console.error('Socket no conectado para refrescar estado');
-      return;
+    console.log('[OnlineGamePage] 🔄 Solicitando estado manualmente');
+    if (socket && socket.connected) {
+      requestGameState();
+    } else {
+      console.log('[OnlineGamePage] Socket no conectado, intentando reconectar...');
+      retryConnection();
     }
-    requestGameState();
-  }, [socket, requestGameState]);
+  }, [socket, requestGameState, retryConnection]);
 
-  // SOLUCIÓN AL PROBLEMA DE LOADING INFINITO
-  // Cambiamos la condición de "isLoading || !gameState" a una lógica más robusta
-  if ((isLoading && !loadingTimeout) && !gameState) {
-    // Pantalla de carga normal, solo mientras carga y no hayamos superado el timeout
+  if (isLoading && !loadingTimeoutActive && !gameState) {
     return (
       <div className="game-container">
         <div className="loading-screen">
           <div className="spinner"></div>
           <p className="loading-message">
-            {error ? 'Reconectando...' : 'Cargando partida...'}
+            {error ? `Reconectando... (${reconnectAttempts}/${maxReconnectAttempts})` : 'Cargando partida...'}
           </p>
           
-          {showReconnectOption && (
-            <GameReconnectOptions 
-              socket={socket} 
-              codigoSala={codigoSala || ''} 
-              attemptCount={reconnectAttempts}
-              maxAttempts={maxReconnectAttempts}
-              onRetry={retryConnection}
-              onRestart={() => window.location.reload()}
-            />
+          {reconnectAttempts > 2 && (
+            <div style={{ marginTop: '20px' }}>
+              <button
+                className="retry-button"
+                onClick={retryConnection}
+                style={{ 
+                  padding: '10px 20px', 
+                  margin: '10px', 
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reintentar Conexión
+              </button>
+              <button
+                className="retry-button"
+                onClick={() => window.location.reload()}
+                style={{ 
+                  padding: '10px 20px', 
+                  margin: '10px', 
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Recargar Página
+              </button>
+            </div>
           )}
         </div>
       </div>
     );
   }
   
-  // Si el timeout se activó pero no tenemos gameState, mostramos pantalla de solicitud manual
+  // 2. Si no hay gameState (timeout o error), mostrar pantalla de recuperación
   if (!gameState) {
     return (
       <div className="game-container">
         <div className="loading-screen">
-          <h2>No se pudo cargar el juego</h2>
-          <p>El servidor no respondió a tiempo o hubo un error de conexión.</p>
-          
-          <button
-            className="retry-button"
-            onClick={forceRefreshState}
-            style={{ 
-              padding: '10px 20px', 
-              margin: '20px 0', 
-              fontSize: '16px',
-              cursor: 'pointer'
-            }}
-          >
-            Solicitar estado del juego
-          </button>
-          
+          <h2>⚠️ No se pudo cargar el juego</h2>
           <p>
-            <small>
-              También puedes intentar <span 
-                style={{textDecoration: 'underline', cursor: 'pointer'}}
-                onClick={() => window.location.reload()}
-              >recargar la página</span>.
-            </small>
+            {error ? error : 'El servidor no respondió a tiempo o hubo un error de conexión.'}
           </p>
+          
+          <div style={{ marginTop: '20px' }}>
+            <button
+              className="retry-button"
+              onClick={forceRefreshState}
+              style={{ 
+                padding: '10px 20px', 
+                margin: '10px', 
+                fontSize: '16px',
+                cursor: 'pointer',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px'
+              }}
+            >
+              🔄 Solicitar Estado del Juego
+            </button>
+            
+            <button
+              className="retry-button"
+              onClick={retryConnection}
+              style={{ 
+                padding: '10px 20px', 
+                margin: '10px', 
+                fontSize: '16px',
+                cursor: 'pointer',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px'
+              }}
+            >
+              🔌 Reconectar Socket
+            </button>
+            
+            <button
+              className="retry-button"
+              onClick={() => window.location.reload()}
+              style={{ 
+                padding: '10px 20px', 
+                margin: '10px', 
+                fontSize: '16px',
+                cursor: 'pointer',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px'
+              }}
+            >
+              🔄 Recargar Página
+            </button>
+          </div>
+          
+          <div style={{ marginTop: '20px', fontSize: '12px', color: '#666' }}>
+            <p>Intentos de reconexión: {reconnectAttempts}/{maxReconnectAttempts}</p>
+            <p>Estado del socket: {socket?.connected ? '🟢 Conectado' : '🔴 Desconectado'}</p>
+            <p>Código de sala: {codigoSala}</p>
+          </div>
         </div>
       </div>
     );
@@ -181,8 +243,6 @@ const OnlineGamePage: React.FC = () => {
     );
   }
 
-  // Si llegamos aquí, significa que tenemos gameState y no hay error
-  // Renderizamos el juego normalmente
   return (
     <div className="game-container">
       {/* Header del juego con puntajes */}

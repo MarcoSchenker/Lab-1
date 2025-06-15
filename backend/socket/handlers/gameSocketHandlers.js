@@ -42,12 +42,18 @@ function setupGameHandlers(socket, io) {
   socket.on('unirse_sala_juego', (codigo_sala) => {
     if (!socket.currentUserId) {
       console.error(`[gameSocketHandlers] Error: Socket ${socket.id} intentó unirse sin autenticar.`);
-      return socket.emit('error_juego', { message: 'Socket no autenticado.' });
+      return socket.emit('error_unirse_sala', { message: 'Socket no autenticado.' });
     }
     
     socket.join(codigo_sala);
     socket.currentRoom = codigo_sala;
     console.log(`[gameSocketHandlers] Socket ${socket.id} (Usuario ${socket.currentUserId}) se unió a la sala de juego: ${codigo_sala}`);
+
+    // ✅ IMPORTANTE: Emitir confirmación de unión exitosa
+    socket.emit('unido_sala_juego', { 
+      codigo_sala: codigo_sala, 
+      mensaje: 'Unido a la sala exitosamente' 
+    });
 
     // ✅ 1. Verificar si tenemos un estado guardado en caché para este jugador
     const estadoCache = obtenerEstadoDesdeCache(codigo_sala, socket.currentUserId);
@@ -69,10 +75,14 @@ function setupGameHandlers(socket, io) {
         enviarEstadoAJugador(socket, codigo_sala, socket.currentUserId, estadoJuego);
       } else {
         console.error(`[gameSocketHandlers] Error: Partida activa encontrada pero no se pudo generar el estado para el jugador ${socket.currentUserId}`);
-        socket.emit('error_juego', { message: 'No se pudo obtener el estado de la partida.' });
+        socket.emit('error_estado_juego', { message: 'No se pudo obtener el estado de la partida.' });
       }
     } else {
-      console.log(`[gameSocketHandlers] Partida para ${codigo_sala} aún no ha sido creada en memoria. El jugador esperará.`);
+      console.log(`[gameSocketHandlers] Partida para ${codigo_sala} aún no ha sido creada en memoria. Emitiendo esperando_inicio_partida.`);
+      socket.emit('esperando_inicio_partida', { 
+        codigo_sala: codigo_sala,
+        mensaje: 'Esperando que inicie la partida...' 
+      });
     }
   });
 

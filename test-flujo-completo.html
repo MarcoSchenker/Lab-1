@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Simple - Crear Sala y Jugar</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .log { font-family: monospace; font-size: 12px; padding: 5px; margin: 2px 0; border-radius: 3px; }
+        .logs { max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Test Simple - Flujo Completo</h1>
+        
+        <div class="section">
+            <h3>1. Crear Usuario</h3>
+            <input type="text" id="username" placeholder="Nombre de usuario" value="TestUser">
+            <input type="password" id="password" placeholder="Contraseña" value="123456">
+            <button class="btn-primary" onclick="crearUsuario()">Crear Usuario</button>
+            <button class="btn-success" onclick="loginUsuario()">Iniciar Sesión</button>
+            <div id="auth-status" class="status info">No autenticado</div>
+        </div>
+        
+        <div class="section">
+            <h3>2. Crear Sala</h3>
+            <select id="tipo-sala">
+                <option value="publica">Pública</option>
+                <option value="privada">Privada</option>
+            </select>
+            <input type="number" id="puntos" placeholder="Puntos victoria" value="15" min="15" max="30">
+            <button class="btn-primary" onclick="crearSala()">Crear Sala</button>
+            <div id="sala-status" class="status info">Sin sala</div>
+        </div>
+        
+        <div class="section">
+            <h3>3. Estado de Conexión</h3>
+            <div id="connection-status" class="status warning">Desconectado</div>
+            <div id="game-status" class="status warning">Sin estado de juego</div>
+            <button class="btn-success" onclick="testConnection()">Test Conexión</button>
+            <button class="btn-danger" onclick="disconnect()">Desconectar</button>
+        </div>
+        
+        <div class="section">
+            <h3>4. Logs</h3>
+            <button class="btn-primary" onclick="clearLogs()">Limpiar Logs</button>
+            <div id="logs" class="logs"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let authToken = null;
+        let currentRoom = null;
+        let socket = null;
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            document.getElementById('logs').appendChild(div);
+            document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+        
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+        
+        async function crearUsuario() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                log('❌ Usuario y contraseña requeridos', 'error');
+                return;
+            }
+            
+            try {
+                log(`🔄 Creando usuario: ${username}`, 'info');
+                
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nombre: username,
+                        password: password,
+                        email: `${username}@test.com`
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Usuario creado exitosamente: ${username}`, 'success');
+                    authToken = data.token;
+                    localStorage.setItem('token', authToken);
+                    updateStatus('auth-status', `Autenticado como: ${username}`, 'success');
+                } else {
+                    log(`❌ Error creando usuario: ${data.error || 'Error desconocido'}`, 'error');
+                    updateStatus('auth-status', 'Error de autenticación', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error de red: ${error.message}`, 'error');
+                updateStatus('auth-status', 'Error de conexión', 'error');
+            }
+        }
+        
+        async function loginUsuario() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                log('❌ Usuario y contraseña requeridos', 'error');
+                return;
+            }
+            
+            try {
+                log(`🔄 Iniciando sesión: ${username}`, 'info');
+                
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nombre: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Sesión iniciada exitosamente: ${username}`, 'success');
+                    authToken = data.token;
+                    localStorage.setItem('token', authToken);
+                    updateStatus('auth-status', `Autenticado como: ${username}`, 'success');
+                } else {
+                    log(`❌ Error en login: ${data.error || 'Error desconocido'}`, 'error');
+                    updateStatus('auth-status', 'Error de autenticación', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error de red: ${error.message}`, 'error');
+                updateStatus('auth-status', 'Error de conexión', 'error');
+            }
+        }
+        
+        async function crearSala() {
+            if (!authToken) {
+                log('❌ Debes estar autenticado para crear una sala', 'error');
+                return;
+            }
+            
+            const tipo = document.getElementById('tipo-sala').value;
+            const puntos = document.getElementById('puntos').value;
+            
+            try {
+                log(`🔄 Creando sala ${tipo} con ${puntos} puntos...`, 'info');
+                
+                const response = await fetch(`${API_BASE}/api/salas/crear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        tipo: tipo,
+                        puntos_victoria: parseInt(puntos),
+                        max_jugadores: 2,
+                        codigo_acceso: ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentRoom = data.codigoSala;
+                    log(`✅ Sala creada: ${currentRoom}`, 'success');
+                    updateStatus('sala-status', `Sala: ${currentRoom}`, 'success');
+                    
+                    // Después de crear la sala, simular la redirección al juego
+                    setTimeout(() => {
+                        log('🎮 Simulando redirección al juego...', 'info');
+                        iniciarJuego(currentRoom);
+                    }, 1000);
+                } else {
+                    log(`❌ Error creando sala: ${data.error || 'Error desconocido'}`, 'error');
+                    updateStatus('sala-status', 'Error creando sala', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error de red: ${error.message}`, 'error');
+                updateStatus('sala-status', 'Error de conexión', 'error');
+            }
+        }
+        
+        function iniciarJuego(codigoSala) {
+            if (!codigoSala) {
+                log('❌ Código de sala no proporcionado', 'error');
+                return;
+            }
+            
+            log(`🎮 Iniciando juego en sala: ${codigoSala}`, 'info');
+            updateStatus('connection-status', 'Conectando...', 'warning');
+            updateStatus('game-status', 'Cargando juego...', 'warning');
+            
+            // Simular el hook useGameSocket
+            connectToGame(codigoSala);
+        }
+        
+        function connectToGame(codigoSala) {
+            if (socket) {
+                log('🔄 Desconectando socket anterior...', 'warning');
+                socket.disconnect();
+            }
+            
+            log(`🔌 Conectando a sala de juego: ${codigoSala}`, 'info');
+            
+            socket = io(API_BASE, {
+                query: { 
+                    codigoSala: codigoSala, 
+                    token: authToken,
+                    anonymous: false 
+                },
+                transports: ['websocket', 'polling'],
+                autoConnect: false,
+                forceNew: true
+            });
+            
+            socket.on('connect', () => {
+                log(`✅ Socket conectado: ${socket.id}`, 'success');
+                updateStatus('connection-status', 'Conectado', 'success');
+                
+                // Autenticar
+                socket.emit('autenticar_socket', authToken);
+            });
+            
+            socket.on('disconnect', (reason) => {
+                log(`❌ Socket desconectado: ${reason}`, 'error');
+                updateStatus('connection-status', 'Desconectado', 'error');
+                updateStatus('game-status', 'Sin conexión', 'error');
+            });
+            
+            socket.on('autenticacion_exitosa', (data) => {
+                log(`✅ Autenticación exitosa: ${JSON.stringify(data)}`, 'success');
+                socket.emit('unirse_sala_juego', codigoSala);
+            });
+            
+            socket.on('autenticacion_fallida', (error) => {
+                log(`❌ Autenticación fallida: ${error}`, 'error');
+                updateStatus('connection-status', 'Error auth', 'error');
+            });
+            
+            socket.on('union_sala_exitosa', (data) => {
+                log(`✅ Unido a sala: ${JSON.stringify(data)}`, 'success');
+                updateStatus('game-status', 'En sala, esperando jugadores...', 'info');
+            });
+            
+            socket.on('partida_iniciada', (estado) => {
+                log(`🚀 Partida iniciada!`, 'success');
+                updateStatus('game-status', 'Partida en curso', 'success');
+            });
+            
+            socket.on('estado_juego_actualizado', (estado) => {
+                log(`🎯 Estado de juego actualizado`, 'success');
+                updateStatus('game-status', 'Juego activo', 'success');
+            });
+            
+            socket.on('error_union_sala', (error) => {
+                log(`❌ Error uniéndose a sala: ${error}`, 'error');
+                updateStatus('game-status', 'Error uniéndose', 'error');
+            });
+            
+            socket.connect();
+        }
+        
+        function testConnection() {
+            if (currentRoom) {
+                log('🔄 Probando conexión a sala actual...', 'info');
+                connectToGame(currentRoom);
+            } else {
+                log('❌ No hay sala actual para probar', 'error');
+            }
+        }
+        
+        function disconnect() {
+            if (socket) {
+                log('❌ Desconectando socket...', 'warning');
+                socket.disconnect();
+                socket = null;
+                updateStatus('connection-status', 'Desconectado', 'warning');
+                updateStatus('game-status', 'Sin conexión', 'warning');
+            } else {
+                log('⚠️ No hay socket para desconectar', 'warning');
+            }
+        }
+        
+        // Auto-load token if exists
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedToken = localStorage.getItem('token');
+            if (savedToken) {
+                authToken = savedToken;
+                updateStatus('auth-status', 'Token encontrado (verifica con login)', 'info');
+                log('🔄 Token encontrado en localStorage', 'info');
+            }
+        });
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+</body>
+</html>
