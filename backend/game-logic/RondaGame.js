@@ -225,23 +225,43 @@ class RondaGame {
             return false;
         }
 
-        // TODO: Implementar lógica de irse al mazo según las reglas
-        // Por ahora, simplemente finalizamos la ronda dando puntos al equipo contrario
-        const equipoContrario = this.equipos.find(e => e.id !== jugador.equipoId);
-        if (equipoContrario) {
-            this.ganadorRondaEquipoId = equipoContrario.id;
-            this.puntosGanadosTruco = 1; // Un punto por irse al mazo
-            
-            this._actualizarEstadoParaNotificar('jugador_se_fue_al_mazo', {
-                jugadorId,
-                equipoGanadorId: equipoContrario.id,
-                puntosGanados: 1
+        // Validar que el jugador puede irse al mazo (debe ser su turno o estar en una situación de respuesta)
+        const puedeIrseAlMazo = this._validarPuedeIrseAlMazo(jugadorId);
+        if (!puedeIrseAlMazo) {
+            this.notificarEstado('error_accion_juego', { 
+                jugadorId, 
+                mensaje: 'No puedes irte al mazo en este momento.' 
             });
-            
-            this._finalizarRondaLogica();
+            return false;
         }
+
+        // Delegar la lógica del mazo al trucoHandler que maneja correctamente los puntos
+        return this.trucoHandler.registrarMazo(jugadorId);
+    }
+
+    /**
+     * Valida si un jugador puede irse al mazo en el momento actual
+     * @param {number} jugadorId - ID del jugador
+     * @returns {boolean} - true si puede irse al mazo
+     */
+    _validarPuedeIrseAlMazo(jugadorId) {
+        // Un jugador puede irse al mazo si:
+        // 1. Es su turno para jugar una carta
+        // 2. Debe responder a un truco
+        // 3. Debe responder a un envido (aunque esto sería raro)
         
-        return true;
+        const esSuTurno = this.turnoHandler.jugadorTurnoActual && 
+                         this.turnoHandler.jugadorTurnoActual.id === jugadorId;
+        
+        const debeResponderTruco = this.trucoHandler.equipoDebeResponderTruco &&
+                                  this.jugadoresEnOrden.find(j => j.id === jugadorId)?.equipoId === 
+                                  this.trucoHandler.equipoDebeResponderTruco.id;
+        
+        const debeResponderEnvido = this.envidoHandler.equipoDebeResponderEnvido &&
+                                   this.jugadoresEnOrden.find(j => j.id === jugadorId)?.equipoId === 
+                                   this.envidoHandler.equipoDebeResponderEnvido.id;
+        
+        return esSuTurno || debeResponderTruco || debeResponderEnvido;
     }
 
     _finalizarRondaLogica() {
@@ -251,24 +271,40 @@ class RondaGame {
             // Si el envido fue querido y resuelto (puntos declarados), y tenemos un ganador.
             // El cálculo de puntos para Falta Envido es especial.
             let puntosFinalesEnvido = 0;
-            const ultimoCantoEnvido = this.envidoHandler.cantos[this.envidoHandler.cantos.length -1];
-            if (ultimoCantoEnvido.tipo === 'FALTA_ENVIDO') {
+            const ultimoCantoEnvido = this.envidoHandler.cantosRealizados[this.envidoHandler.cantosRealizados.length - 1];
+            if (ultimoCantoEnvido && ultimoCantoEnvido.tipoNormalizado && ultimoCantoEnvido.tipoNormalizado.includes('FALTA_ENVIDO')) {
                 const equipoGanador = this.equipos.find(e => e.id === this.envidoHandler.ganadorEnvidoEquipoId);
                 const equipoPerdedor = this.equipos.find(e => e.id !== this.envidoHandler.ganadorEnvidoEquipoId);
                 if (equipoGanador && equipoPerdedor) {
-                    puntosFinalesEnvido = this.ronda.partida.puntosVictoria - equipoPerdedor.puntosPartida;
-                    if (puntosFinalesEnvido <= 0) puntosFinalesEnvido = 1; // Mínimo 1 punto
+                    // Obtener puntos de la partida desde la instancia correcta
+                    const partida = this.partida;
+                    if (partida && partida.puntosVictoria && equipoPerdedor.puntosPartida !== undefined) {
+                        puntosFinalesEnvido = partida.puntosVictoria - equipoPerdedor.puntosPartida;
+                        if (puntosFinalesEnvido <= 0) puntosFinalesEnvido = 1; // Mínimo 1 punto
+                    } else {
+                        puntosFinalesEnvido = 1; // Valor por defecto si no se puede calcular
+                    }
                 }
             } else {
-                puntosFinalesEnvido = this.envidoHandler.puntosEnJuego;
+                puntosFinalesEnvido = this.envidoHandler.puntosEnJuegoCalculados || this.envidoHandler.puntosEnJuego || 0;
             }
             this.puntosGanadosEnvido = puntosFinalesEnvido;
             // Los puntos ya deberían haber sido sumados al equipo por el handler de envido al resolverse.
         } else if (!this.envidoHandler.querido && this.envidoHandler.estadoResolucion === 'resuelto' && this.envidoHandler.ganadorEnvidoEquipoId) {
             // Si no se quiso el envido, los puntos ya se calcularon y sumaron en el handler.
-            this.puntosGanadosEnvido = this.envidoHandler.puntosEnJuego;
+            this.puntosGanadosEnvido = this.envidoHandler.puntosEnJuegoCalculados || 0;
+        } else if (this.envidoHandler.cantado && this.envidoHandler.ganadorEnvidoEquipoId && this.envidoHandler.estadoResolucion === 'resuelto') {
+            // Caso general: envido fue cantado y resuelto
+            this.puntosGanadosEnvido = this.envidoHandler.puntosEnJuegoCalculados || 0;
+        } else {
+            // No hubo envido o no fue resuelto
+            this.puntosGanadosEnvido = 0;
         }
 
+        // Asegurar que puntosGanadosEnvido nunca sea undefined
+        if (this.puntosGanadosEnvido === undefined || this.puntosGanadosEnvido === null) {
+            this.puntosGanadosEnvido = 0;
+        }
 
         // 2. Puntos del truco ya están en this.puntosGanadosTruco (seteados por trucoHandler o turnoHandler)
         // this.puntosGanadosTruco es seteado por el trucoHandler al resolverse o por irse al mazo.
@@ -281,7 +317,6 @@ class RondaGame {
         if(!this.ganadorRondaEquipoId && this.turnoHandler.manosJugadas.length > 0) {
              this.turnoHandler.determinarGanadorRondaPorManos(); // Esto setea this.ganadorRondaEquipoId
         }
-
 
         console.log(`Ronda ${this.numeroRonda} finalizada. Ganador Equipo: ${this.ganadorRondaEquipoId}. Puntos Truco: ${this.puntosGanadosTruco}, Puntos Envido: ${this.puntosGanadosEnvido}`);
         this._actualizarEstadoParaNotificar('ronda_finalizada');

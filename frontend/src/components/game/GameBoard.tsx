@@ -74,24 +74,20 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const renderCartasEnMesa = () => {
-    // Tipo para cartas en la mesa con información adicional
-    interface CartaEnMesaExtendida {
+    // Mostrar cartas de manera más organizada
+    const todasLasCartas: Array<{
       jugadorId: number;
       carta: Carta;
       manoNumero: number;
       ganadorMano: number | null;
       fueParda: boolean;
-      esCartaAnterior: boolean;
+      esCartaActual: boolean;
       equipoId?: number;
       ordenJugada?: number;
-    }
-    
-    // Mostrar tanto las manos anteriores como la mano actual
-    const todasLasCartas: CartaEnMesaExtendida[] = [];
+    }> = [];
     
     // Agregar cartas de manos anteriores
     manosJugadas.forEach((mano) => {
-      // Validar que la mano tenga las propiedades requeridas
       if (!mano.numeroMano || !mano.jugadas) return;
       
       mano.jugadas.forEach((jugada) => {
@@ -103,22 +99,27 @@ const GameBoard: React.FC<GameBoardProps> = ({
           manoNumero: mano.numeroMano,
           ganadorMano: mano.ganadorManoJugadorId,
           fueParda: mano.fueParda || false,
-          esCartaAnterior: true
+          esCartaActual: false
         });
       });
     });
     
-    // Agregar cartas de la mano actual
-    cartasEnMesa.forEach((cartaJugada) => {
-      todasLasCartas.push({
-        jugadorId: cartaJugada.jugadorId,
-        carta: cartaJugada.carta,
-        manoNumero: manoActual + 1,
-        ganadorMano: null, // Aún no determinado
-        fueParda: false,
-        esCartaAnterior: false
+    // Agregar cartas de la mano actual (solo si no están ya en manosJugadas)
+    const manoActualNumero = manoActual + 1;
+    const existeManoActualEnHistorial = manosJugadas.some(m => m.numeroMano === manoActualNumero);
+    
+    if (!existeManoActualEnHistorial) {
+      cartasEnMesa.forEach((cartaJugada) => {
+        todasLasCartas.push({
+          jugadorId: cartaJugada.jugadorId,
+          carta: cartaJugada.carta,
+          manoNumero: manoActualNumero,
+          ganadorMano: null,
+          fueParda: false,
+          esCartaActual: true
+        });
       });
-    });
+    }
 
     if (todasLasCartas.length === 0) {
       return (
@@ -136,14 +137,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
       );
     }
 
-    // Agrupar cartas por mano
+    // Agrupar cartas por mano y evitar duplicados
     const cartasPorMano = todasLasCartas.reduce((acc, carta) => {
+      const key = `${carta.manoNumero}-${carta.jugadorId}-${carta.carta.idUnico}`;
       if (!acc[carta.manoNumero]) {
-        acc[carta.manoNumero] = [];
+        acc[carta.manoNumero] = {};
       }
-      acc[carta.manoNumero].push(carta);
+      if (!acc[carta.manoNumero][key]) {
+        acc[carta.manoNumero][key] = carta;
+      }
       return acc;
-    }, {} as Record<number, CartaEnMesaExtendida[]>);
+    }, {} as Record<number, Record<string, typeof todasLasCartas[0]>>);
 
     return (
       <div className="mesa-con-cartas bg-gradient-to-br from-green-600 via-green-700 to-green-800 rounded-2xl border-4 border-green-900 shadow-inner p-6 min-h-80 w-full relative">
@@ -152,135 +156,85 @@ const GameBoard: React.FC<GameBoardProps> = ({
         <div className="absolute inset-8 border border-green-400 border-opacity-20 rounded-lg"></div>
         
         {/* Mostrar manos organizadas */}
-        <div className="manos-container space-y-8">
-          {Object.entries(cartasPorMano).map(([numeroMano, cartasDeLaMano]) => (
-            <div key={`mano-${numeroMano}`} className="mano-group">
-              <div className="mano-header text-center mb-4">
-                <h3 className="text-white font-bold text-lg">
-                  Mano {numeroMano}
-                  {cartasDeLaMano[0]?.esCartaAnterior && (
-                    <span className="ml-2 text-sm">
-                      {cartasDeLaMano[0]?.fueParda ? 
-                        '(Parda)' : 
-                        cartasDeLaMano[0]?.ganadorMano ? 
-                          `(Ganó: ${obtenerNombreJugador(cartasDeLaMano[0].ganadorMano)})` : 
-                          ''
-                      }
-                    </span>
-                  )}
-                  {!cartasDeLaMano[0]?.esCartaAnterior && (
-                    <span className="ml-2 text-sm text-yellow-300">(En juego)</span>
-                  )}
-                </h3>
-              </div>
-              
-              {/* Disposición mejorada: cartas por jugador, superpuestas individualmente */}
-              <div className="cartas-de-mano-por-jugador flex flex-wrap justify-center items-center gap-8 w-full max-w-4xl mx-auto min-h-[280px]">
-                {(() => {
-                  // Agrupar cartas por jugador
-                  const cartasPorJugador = cartasDeLaMano.reduce((acc, cartaJugada) => {
-                    if (!acc[cartaJugada.jugadorId]) {
-                      acc[cartaJugada.jugadorId] = [];
-                    }
-                    acc[cartaJugada.jugadorId].push(cartaJugada);
-                    return acc;
-                  }, {} as Record<number, CartaEnMesaExtendida[]>);
-
-                  return Object.entries(cartasPorJugador).map(([jugadorIdStr, cartasDelJugador]) => {
-                    const jugadorId = parseInt(jugadorIdStr);
-                    const nombreJugador = obtenerNombreJugador(jugadorId);
-                    const cartasOrdenadas = cartasDelJugador.sort((a, b) => (a.ordenJugada || 0) - (b.ordenJugada || 0));
+        <div className="manos-container space-y-6">
+          {Object.entries(cartasPorMano).map(([numeroMano, cartasDeEsaMano]) => {
+            const cartasArray = Object.values(cartasDeEsaMano);
+            const primeraCartaDeLaMano = cartasArray[0];
+            
+            return (
+              <div key={`mano-${numeroMano}`} className="mano-group">
+                <div className="mano-header text-center mb-3">
+                  <h3 className="text-white font-bold text-base">
+                    Mano {numeroMano}
+                    {!primeraCartaDeLaMano?.esCartaActual && (
+                      <span className="ml-2 text-sm">
+                        {primeraCartaDeLaMano?.fueParda ? 
+                          '(Parda)' : 
+                          primeraCartaDeLaMano?.ganadorMano ? 
+                            `(Ganó: ${obtenerNombreJugador(primeraCartaDeLaMano.ganadorMano)})` : 
+                            ''
+                        }
+                      </span>
+                    )}
+                    {primeraCartaDeLaMano?.esCartaActual && (
+                      <span className="ml-2 text-sm text-yellow-300">(En juego)</span>
+                    )}
+                  </h3>
+                </div>
+                
+                {/* Cartas organizadas horizontalmente */}
+                <div className="cartas-mano flex justify-center items-center gap-4 flex-wrap">
+                  {cartasArray.map((cartaJugada) => {
+                    const nombreJugador = obtenerNombreJugador(cartaJugada.jugadorId);
+                    const skinName = jugadorSkins[cartaJugada.jugadorId] || 'Original';
+                    const isWinningCard = cartaJugada.ganadorMano === cartaJugada.jugadorId;
+                    const isCartaAnterior = !cartaJugada.esCartaActual;
                     
                     return (
-                      <div key={`jugador-${jugadorId}-mano-${numeroMano}`} className="jugador-cartas-group flex flex-col items-center">
+                      <div key={`carta-${cartaJugada.jugadorId}-${cartaJugada.carta.idUnico}-mano-${numeroMano}`} className="carta-con-jugador flex flex-col items-center">
                         {/* Nombre del jugador */}
-                        <div className="jugador-nombre text-white font-bold text-sm mb-3 bg-black bg-opacity-60 px-3 py-1 rounded-lg">
+                        <div className="jugador-nombre text-white font-semibold text-xs mb-2 bg-black bg-opacity-60 px-2 py-1 rounded">
                           {nombreJugador}
                         </div>
                         
-                        {/* Cartas del jugador superpuestas */}
-                        <div className="cartas-jugador-superpuestas relative w-32 h-44 flex justify-center items-center">
-                          {cartasOrdenadas.map((cartaJugada, index) => {
-                            const skinName = jugadorSkins[cartaJugada.jugadorId] || 'Original';
-                            const isWinningCard = cartaJugada.ganadorMano === cartaJugada.jugadorId;
-                            const isCartaAnterior = cartaJugada.esCartaAnterior;
-                            
-                            // Superposición para cartas del mismo jugador
-                            const totalCartasJugador = cartasOrdenadas.length;
-                            let offsetX = 0;
-                            let offsetY = 0;
-                            let zIndex = 10 + index;
-                            
-                            if (totalCartasJugador === 1) {
-                              // Una sola carta: centrada
-                              offsetX = 0;
-                              offsetY = 0;
-                            } else if (totalCartasJugador === 2) {
-                              // Dos cartas: ligera superposición
-                              offsetX = index * 15; // 15px de desplazamiento
-                              offsetY = index * 3;  // Ligero desplazamiento vertical
-                            } else {
-                              // Tres cartas: superposición en abanico
-                              offsetX = index * 10; // 10px de desplazamiento horizontal
-                              offsetY = index * 4;  // 4px de desplazamiento vertical
-                            }
-                            
-                            return (
-                              <CardAnimation
-                                key={`carta-${cartaJugada.jugadorId}-${cartaJugada.carta.idUnico}-mano-${numeroMano}-${index}`}
-                                type="play"
-                                duration={600}
-                                delay={index * 150}
-                              >
-                                <div 
-                                  className="carta-individual absolute"
-                                  style={{ 
-                                    left: `${offsetX}px`,
-                                    top: `${offsetY}px`,
-                                    zIndex
-                                  }}
-                                >
-                                  <GameCard
-                                    carta={cartaJugada.carta}
-                                    skinName={skinName}
-                                    size="medium"
-                                    className={`
-                                      ${isWinningCard ? 'ring-4 ring-yellow-400 ring-opacity-90 shadow-2xl' : 'shadow-xl'} 
-                                      transform transition-all duration-300
-                                      ${isWinningCard ? 'scale-110 rotate-1' : 'hover:scale-105'} 
-                                      border-2 border-white border-opacity-20
-                                      ${isCartaAnterior ? 'grayscale-[0.3]' : ''}
-                                    `}
-                                  />
-                                  {isWinningCard && (
-                                    <div className="carta-ganadora-icon absolute -top-2 -right-2 text-yellow-400 text-xl animate-pulse">
-                                      🏆
-                                    </div>
-                                  )}
-                                </div>
-                              </CardAnimation>
-                            );
-                          })}
+                        {/* Carta */}
+                        <div className="carta-wrapper relative">
+                          <CardAnimation
+                            type="play"
+                            duration={400}
+                            delay={0}
+                          >
+                            <GameCard
+                              carta={cartaJugada.carta}
+                              skinName={skinName}
+                              size="small"
+                              className={`
+                                ${isWinningCard ? 'ring-3 ring-yellow-400 ring-opacity-90 shadow-xl' : 'shadow-lg'} 
+                                transform transition-all duration-300
+                                ${isWinningCard ? 'scale-110' : 'hover:scale-105'} 
+                                border border-white border-opacity-20
+                                ${isCartaAnterior ? 'grayscale-[0.2] opacity-80' : ''}
+                              `}
+                            />
+                          </CardAnimation>
+                          {isWinningCard && (
+                            <div className="carta-ganadora-icon absolute -top-1 -right-1 text-yellow-400 text-lg">
+                              🏆
+                            </div>
+                          )}
                         </div>
-                        
-                        {/* Información adicional del jugador */}
-                        {cartasOrdenadas[0]?.fueParda && (
-                          <div className="parda-indicator text-xs text-gray-300 mt-2">
-                            Parda
-                          </div>
-                        )}
                       </div>
                     );
-                  });
-                })()}
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         
         {/* Información adicional en la mesa */}
-        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-xs">
-          {todasLasCartas.length} carta{todasLasCartas.length !== 1 ? 's' : ''} total
+        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+          {todasLasCartas.length} carta{todasLasCartas.length !== 1 ? 's' : ''}
         </div>
       </div>
     );

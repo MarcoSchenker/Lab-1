@@ -115,6 +115,45 @@ class RondaEnvidoHandler {
         return null;
     }
 
+    /**
+     * Calcula los puntos de envido según las reglas oficiales
+     * @param {string} nivelFinal Nivel final del envido (ej: 'ENVIDO_REAL_ENVIDO')
+     * @param {boolean} fueQuerido Si el envido fue querido o no
+     * @returns {number} Puntos que vale el envido
+     */
+    _calcularPuntosEnvido(nivelFinal, fueQuerido) {
+        // Tabla de puntos según las reglas del truco
+        const tablaPuntos = {
+            // Si se quiere | Si no se quiere
+            'ENVIDO': { querido: 2, noQuerido: 1 },
+            'REAL_ENVIDO': { querido: 3, noQuerido: 1 },
+            'FALTA_ENVIDO': { querido: 'calcular', noQuerido: 1 },
+            'ENVIDO_ENVIDO': { querido: 4, noQuerido: 2 },
+            'ENVIDO_REAL_ENVIDO': { querido: 5, noQuerido: 2 },
+            'ENVIDO_FALTA_ENVIDO': { querido: 'calcular', noQuerido: 2 },
+            'REAL_ENVIDO_FALTA_ENVIDO': { querido: 'calcular', noQuerido: 3 },
+            'ENVIDO_ENVIDO_REAL_ENVIDO': { querido: 7, noQuerido: 4 },
+            'ENVIDO_ENVIDO_FALTA_ENVIDO': { querido: 'calcular', noQuerido: 4 },
+            'ENVIDO_REAL_ENVIDO_FALTA_ENVIDO': { querido: 'calcular', noQuerido: 5 },
+            'ENVIDO_ENVIDO_REAL_ENVIDO_FALTA_ENVIDO': { querido: 'calcular', noQuerido: 7 }
+        };
+
+        const regla = tablaPuntos[nivelFinal];
+        if (!regla) {
+            console.warn(`[ENVIDO] Nivel no reconocido: ${nivelFinal}, usando 1 punto por defecto`);
+            return 1;
+        }
+
+        if (fueQuerido) {
+            if (regla.querido === 'calcular') {
+                return this._calcularPuntosFaltaEnvido();
+            }
+            return regla.querido;
+        } else {
+            return regla.noQuerido;
+        }
+    }
+
     registrarCanto(jugadorId, tipoCantoOriginal) {
         if (!this._puedeJugadorCantarEnvido(jugadorId, tipoCantoOriginal)) return false;
         if (this.ronda.trucoHandler.estaPendienteDeRespuesta()) { this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'Debe responder al truco antes de cantar envido.' }); return false; }
@@ -161,6 +200,9 @@ class RondaEnvidoHandler {
 
         this.estadoResolucion = 'cantado_pendiente_respuesta';
         this.equipoRespondedorCanto = this.ronda.equipos.find(e => e.id !== jugadorCantor.equipoId);
+        
+        // Guardar el turno actual antes de cambiar para responder al envido
+        this.ronda.turnoHandler.guardarTurnoAntesCanto();
         
         if(this.ronda.trucoHandler.estadoResolucion === 'cantado_pendiente_respuesta') this.ronda.trucoPendientePorEnvidoPrimero = true;
 
@@ -217,8 +259,11 @@ class RondaEnvidoHandler {
             this.estadoResolucion = 'resuelto';
             const ultimoCantoInfo = this.cantosRealizados[this.cantosRealizados.length - 1];
             this.ganadorEnvidoEquipoId = ultimoCantoInfo.equipoId; 
-            this.puntosEnJuegoCalculados = ultimoCantoInfo.valorSiNoSeQuiere;
+            
+            // Usar la nueva función de cálculo de puntos
+            this.puntosEnJuegoCalculados = this._calcularPuntosEnvido(this.nivelActual, false);
             this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
+            
             this.ronda.persistirAccion({ tipo_accion: 'RESP_ENV', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.nivelActual } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados });
             this.resolverDependenciaTrucoYRestaurarTurno();
@@ -311,12 +356,9 @@ class RondaEnvidoHandler {
         if (envidoResuelto) {
             this.declaracionEnCurso = false;
             this.estadoResolucion = 'resuelto';
-            const ultimoCantoNormalizado = this.nivelActual;
-            if (ultimoCantoNormalizado === 'FALTA_ENVIDO' || ultimoCantoNormalizado.includes('FALTA_ENVIDO')) {
-                this.puntosEnJuegoCalculados = this._calcularPuntosFaltaEnvido();
-            } else {
-                this.puntosEnJuegoCalculados = VALORES_CANTO_ENVIDO[ultimoCantoNormalizado].querido;
-            }
+            
+            // Usar la nueva función de cálculo de puntos
+            this.puntosEnJuegoCalculados = this._calcularPuntosEnvido(this.nivelActual, true);
             this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
             
             this.ronda.persistirAccion({ tipo_accion: 'DECL_ENV', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId } });
@@ -423,29 +465,37 @@ class RondaEnvidoHandler {
     }
 
     resolverDependenciaTrucoYRestaurarTurno() {
-        // Restaurar turno al jugador que estaba en turno antes del envido, o al ganador de envido si no hay truco pendiente
+        // Restaurar turno al jugador que estaba en turno antes del envido
         if (this.ronda.trucoPendientePorEnvidoPrimero) {
             console.log("Hay un truco pendiente por Envido Primero que debe ser resuelto");
-            // La notificación se maneja en RondaGame -> manejarRespuestaCanto
+            // El turno se mantiene para responder al truco
         } else {
-            // Si no hay truco pendiente, restaurar el turno normal
-            if (this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId) {
-                this.ronda.turnoHandler.setTurnoA(this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId);
-                this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId = null;
-            } else {
-                // Si no hay referencia a un turno anterior, establecer al ganador del envido
-                // o al mano si no hay ganador determinado todavía
-                if (this.ganadorEnvidoEquipoId) {
-                    const jugadorGanadorPrimero = this.ronda.jugadoresEnOrden.find(
-                        j => j.equipoId === this.ganadorEnvidoEquipoId
-                    );
-                    if (jugadorGanadorPrimero) this.ronda.turnoHandler.setTurnoA(jugadorGanadorPrimero.id);
+            // Si no hay truco pendiente, restaurar el turno normal de juego de cartas
+            if (!this.ronda.turnoHandler.restaurarTurnoAntesCanto()) {
+            if (!this.ronda.turnoHandler.restaurarTurnoAntesCanto()) {
+                // Si no hay referencia al turno anterior, usar la lógica de mano
+                console.log("[ENVIDO] No hay turno anterior guardado, determinando turno basado en mano actual");
+                const manoActual = this.ronda.turnoHandler.manoActualNumero;
+                
+                if (manoActual === 1) {
+                    // Primera mano: empieza el que está a la derecha del mano
+                    const indiceMano = this.ronda.jugadoresEnOrden.findIndex(j => j.id === this.ronda.jugadorManoRonda.id);
+                    const indiceSiguiente = (indiceMano + 1) % this.ronda.jugadoresEnOrden.length;
+                    const jugadorInicia = this.ronda.jugadoresEnOrden[indiceSiguiente];
+                    this.ronda.turnoHandler.setTurnoA(jugadorInicia.id);
                 } else {
-                    const manoJugador = this.ronda.jugadorManoRonda;
-                    if (manoJugador) this.ronda.turnoHandler.setTurnoA(manoJugador.id);
+                    // Segunda o tercera mano: empieza el ganador de la mano anterior
+                    const manoAnterior = this.ronda.turnoHandler.manosJugadas[manoActual - 2];
+                    if (manoAnterior && manoAnterior.ganadorManoJugadorId) {
+                        this.ronda.turnoHandler.setTurnoA(manoAnterior.ganadorManoJugadorId);
+                    } else {
+                        // Fallback: el mano
+                        this.ronda.turnoHandler.setTurnoA(this.ronda.jugadorManoRonda.id);
+                    }
                 }
             }
         }
+    }
     }
 
     getEstado() {
@@ -498,18 +548,48 @@ class RondaEnvidoHandler {
         if (!this.cantado) {
             return ['ENVIDO', 'REAL_ENVIDO', 'FALTA_ENVIDO'];
         }
-        
-        const nivelActual = this.nivelActual;
-        const disponibles = [];
-        
-        if (nivelActual === 'ENVIDO') {
-            disponibles.push('ENVIDO', 'REAL_ENVIDO', 'FALTA_ENVIDO');
-        } else if (nivelActual === 'ENVIDO_ENVIDO' || nivelActual === 'REAL_ENVIDO') {
-            disponibles.push('FALTA_ENVIDO');
+
+        // Si ya hay un canto pendiente de respuesta, calcular las opciones de recanto
+        if (this.estadoResolucion === 'cantado_pendiente_respuesta') {
+            const opciones = [];
+            
+            // Analizar la secuencia actual de cantos
+            const secuenciaActual = this.cantosRealizados.map(c => c.tipoOriginal);
+            console.log(`[ENVIDO] Calculando opciones para secuencia: ${secuenciaActual.join(' → ')}`);
+            
+            // Caso 1: Solo se cantó ENVIDO
+            if (secuenciaActual.length === 1 && secuenciaActual[0] === 'ENVIDO') {
+                opciones.push('ENVIDO', 'REAL_ENVIDO', 'FALTA_ENVIDO');
+            }
+            // Caso 2: ENVIDO → ENVIDO (secuencia ENVIDO_ENVIDO)
+            else if (secuenciaActual.length === 2 && secuenciaActual.join('_') === 'ENVIDO_ENVIDO') {
+                opciones.push('REAL_ENVIDO', 'FALTA_ENVIDO');
+            }
+            // Caso 3: ENVIDO → REAL_ENVIDO
+            else if (secuenciaActual.length === 2 && secuenciaActual.join('_') === 'ENVIDO_REAL_ENVIDO') {
+                opciones.push('FALTA_ENVIDO');
+            }
+            // Caso 4: Solo se cantó REAL_ENVIDO
+            else if (secuenciaActual.length === 1 && secuenciaActual[0] === 'REAL_ENVIDO') {
+                opciones.push('FALTA_ENVIDO');
+            }
+            // Caso 5: ENVIDO → ENVIDO → REAL_ENVIDO
+            else if (secuenciaActual.length === 3 && secuenciaActual.join('_') === 'ENVIDO_ENVIDO_REAL_ENVIDO') {
+                opciones.push('FALTA_ENVIDO');
+            }
+            // Si ya se cantó FALTA_ENVIDO, no hay más opciones
+            else if (secuenciaActual.some(c => c === 'FALTA_ENVIDO')) {
+                // No se puede subir más que FALTA_ENVIDO
+                return [];
+            }
+            
+            console.log(`[ENVIDO] Opciones disponibles: ${opciones.join(', ')}`);
+            return opciones;
         }
-        
-        return disponibles;
+
+        return [];
     }
+    
     /**
      * Registra cuando un jugador dice "Son Buenas" en respuesta al envido
      * @param {string} jugadorId ID del jugador que dice Son Buenas
@@ -551,13 +631,8 @@ class RondaEnvidoHandler {
         this.estadoResolucion = 'resuelto';
         this.declaracionEnCurso = false;
 
-        // Calcular puntos
-        const ultimoCantoNormalizado = this.nivelActual;
-        if (ultimoCantoNormalizado === 'FALTA_ENVIDO' || ultimoCantoNormalizado.includes('FALTA_ENVIDO')) {
-            this.puntosEnJuegoCalculados = this._calcularPuntosFaltaEnvido();
-        } else {
-            this.puntosEnJuegoCalculados = VALORES_CANTO_ENVIDO[ultimoCantoNormalizado].querido;
-        }
+        // Calcular puntos usando la nueva función
+        this.puntosEnJuegoCalculados = this._calcularPuntosEnvido(this.nivelActual, true);
         this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
         
         // Persistir la acción

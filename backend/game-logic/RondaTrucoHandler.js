@@ -17,7 +17,6 @@ class RondaTrucoHandler {
         this.respondidoPorJugadorId = null;
         this.estadoResolucion = 'no_cantado'; // 'no_cantado', 'cantado_pendiente_respuesta', 'querido', 'resuelto_no_querido'
         this.equipoDebeResponderTruco = null;
-        this.jugadorTurnoAlMomentoDelCantoId = null; // ID del jugador cuyo turno de JUGAR CARTA era cuando se cantó el truco
     }
 
     /**
@@ -33,7 +32,6 @@ class RondaTrucoHandler {
         this.respondidoPorJugadorId = null;
         this.estadoResolucion = 'no_cantado';
         this.equipoDebeResponderTruco = null;
-        this.jugadorTurnoAlMomentoDelCantoId = null;
     }
     
     /**
@@ -77,15 +75,7 @@ class RondaTrucoHandler {
         }
 
         // Guardar quién tenía el turno de jugar carta en este momento.
-        // this.ronda.turnoHandler.jugadorTurnoActual debería estar siempre definido si es el turno de alguien.
-        if (this.ronda.turnoHandler.jugadorTurnoActual) {
-            this.jugadorTurnoAlMomentoDelCantoId = this.ronda.turnoHandler.jugadorTurnoActual.id;
-        } else {
-            // Esto no debería ocurrir si la lógica de turnos es correcta.
-            console.error("RondaTrucoHandler: No se pudo determinar jugadorTurnoAlMomentoDelCantoId porque turnoHandler.jugadorTurnoActual es null.");
-            this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'Error interno al determinar el turno para el truco.' });
-            return false;
-        }
+        this.ronda.turnoHandler.guardarTurnoAntesCanto();
 
         // Validar si el jugador puede cantar este nivel de truco
         let esValido = false;
@@ -203,13 +193,7 @@ class RondaTrucoHandler {
             });
             
             // El turno vuelve al jugador que estaba en turno cuando se cantó
-            if (this.jugadorTurnoAlMomentoDelCantoId) {
-                this.ronda.turnoHandler.setTurnoA(this.jugadorTurnoAlMomentoDelCantoId);
-            } else {
-                console.error("RondaTrucoHandler: jugadorTurnoAlMomentoDelCantoId es null después de un QUIERO. No se puede restaurar el turno correctamente.");
-                // Considerar un fallback muy defensivo o finalizar la ronda con error si esto ocurre.
-                // Por ahora, no se cambia el turno si no hay información.
-            }
+            this.ronda.turnoHandler.restaurarTurnoAntesCanto();
             
             return true;
         } 
@@ -255,12 +239,11 @@ class RondaTrucoHandler {
         else if ((respuesta === 'RETRUCO' && this.nivelActual === 'TRUCO') || 
                  (respuesta === 'VALE_CUATRO' && this.nivelActual === 'RETRUCO')) {
             // El jugador que responde está subiendo la apuesta.
-            // El turno para cantar ahora es de este jugador.
             // Guardamos el turno actual de RondaTurnoHandler, ya que este jugador está interrumpiendo para cantar.
-            if (this.ronda.turnoHandler.jugadorTurnoActual) {
-                 this.jugadorTurnoAlMomentoDelCantoId = this.ronda.turnoHandler.jugadorTurnoActual.id;
-            } // Si no, se mantiene el anterior this.jugadorTurnoAlMomentoDelCantoId
-            return this.registrarCanto(jugadorId, respuesta);
+            this.ronda.turnoHandler.guardarTurnoAntesCanto();
+            
+            // Procesar el recanto directamente sin validar turno (ya se validó que es el equipo correcto)
+            return this._procesarRecanto(jugadorId, respuesta);
         } 
         else {
             this.ronda.notificarEstado('error_accion_juego', { 
@@ -285,7 +268,7 @@ class RondaTrucoHandler {
             cantadoPorEquipoId: this.cantadoPorEquipoId,
             estadoResolucion: this.estadoResolucion,
             equipoDebeResponderTrucoId: this.equipoDebeResponderTruco ? this.equipoDebeResponderTruco.id : null,
-            jugadorTurnoAlMomentoDelCantoId: this.jugadorTurnoAlMomentoDelCantoId,
+            jugadorTurnoAlMomentoDelCantoId: this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId,
         };
     }
     
@@ -355,21 +338,24 @@ class RondaTrucoHandler {
             return false;
         }
 
-        // Si el truco no fue cantado, el equipo ganador suma 1 punto.
+        // Si el truco no fue cantado, el equipo contrario al que se fue suma 1 punto.
         // Si el truco fue cantado pero no querido, el equipo que cantó gana los puntos del "no quiero".
-        // Si el truco fue querido, el equipo contrario gana los puntos en juego del truco.
+        // Si el truco fue querido, el equipo contrario al que se fue gana los puntos en juego del truco.
         
         let puntosPorMazo = 0;
 
         if (this.estadoResolucion === 'querido') {
+            // Si el truco ya fue querido, el que se va al mazo pierde los puntos del truco querido
             puntosPorMazo = this.puntosEnJuego;
+            this.ronda.ganadorRondaEquipoId = equipoGanador.id;
+            this.ronda.puntosGanadosTruco = puntosPorMazo;
         } else if (this.estadoResolucion === 'cantado_pendiente_respuesta') {
-            // El equipo que cantó (this.cantadoPorEquipoId) gana los puntos que hubiera ganado por un "no quiero".
+            // El equipo que cantó gana los puntos que hubiera ganado por un "no quiero"
             if (this.nivelActual === 'TRUCO') puntosPorMazo = 1;
             else if (this.nivelActual === 'RETRUCO') puntosPorMazo = 2;
             else if (this.nivelActual === 'VALE_CUATRO') puntosPorMazo = 3;
-            // El ganador es el equipo que cantó, no el equipo contrario al que se fue al mazo.
-            // Esto necesita que el equipo ganador sea el que cantó.
+            
+            // El ganador es el equipo que cantó, NO el equipo contrario al que se fue al mazo
             const equipoQueCantoOriginalmente = this.ronda.equipos.find(e => e.id === this.cantadoPorEquipoId);
             if (equipoQueCantoOriginalmente && equipoQueCantoOriginalmente.id !== equipoQueSeFue) {
                  this.ronda.ganadorRondaEquipoId = equipoQueCantoOriginalmente.id;
@@ -401,6 +387,58 @@ class RondaTrucoHandler {
             estadoTruco: this.getEstado()
         });
         this.ronda._finalizarRondaLogica();
+        return true;
+    }
+
+    /**
+     * Procesa un recanto (RETRUCO o VALE_CUATRO) como respuesta
+     * @param {string} jugadorId ID del jugador que hace el recanto
+     * @param {string} tipoCanto Tipo: 'RETRUCO' o 'VALE_CUATRO'
+     * @returns {boolean} true si el recanto fue registrado exitosamente
+     */
+    _procesarRecanto(jugadorId, tipoCanto) {
+        const jugadorCantor = this.ronda.jugadoresEnOrden.find(j => j.id === jugadorId);
+        if (!jugadorCantor) return false;
+
+        // Determinar nuevos puntos y validar
+        let nuevosPuntos = 0;
+        if (tipoCanto === 'RETRUCO' && this.nivelActual === 'TRUCO') {
+            nuevosPuntos = 3;
+        } else if (tipoCanto === 'VALE_CUATRO' && this.nivelActual === 'RETRUCO') {
+            nuevosPuntos = 4;
+        } else {
+            this.ronda.notificarEstado('error_accion_juego', { 
+                jugadorId, 
+                mensaje: 'Recanto no válido para el nivel actual de truco.' 
+            });
+            return false;
+        }
+
+        // Actualizar el estado del truco
+        this.puntosEnJuego = nuevosPuntos;
+        this.nivelActual = tipoCanto;
+        this.cantadoPorJugadorId = jugadorId;
+        this.cantadoPorEquipoId = jugadorCantor.equipoId;
+        this.estadoResolucion = 'cantado_pendiente_respuesta';
+        
+        // Determinar qué equipo debe responder (el contrario al que hizo el recanto)
+        this.equipoDebeResponderTruco = this.ronda.equipos.find(e => e.id !== jugadorCantor.equipoId);
+        
+        // Registrar la acción y notificar
+        this.ronda.persistirAccion({ 
+            tipo_accion: 'CANT_TRU', 
+            usuario_id_accion: jugadorId, 
+            detalle_accion: { tipo_canto: tipoCanto } 
+        });
+        
+        this.ronda._actualizarEstadoParaNotificar('canto_realizado', {
+            jugadorId, 
+            tipo_canto: tipoCanto, 
+            esTruco: true, 
+            estadoTruco: this.getEstado(),
+            equipoDebeResponderTrucoId: this.equipoDebeResponderTruco ? this.equipoDebeResponderTruco.id : null
+        });
+        
         return true;
     }
 }

@@ -236,10 +236,12 @@ class PartidaGame {
 
         if (estadoRondaFinalizada.puntosGanadosEnvido > 0) {
             // Determinar qué equipo ganó los puntos del envido.
-            // Si this.rondaActual.envido.ganadorEnvidoEquipoId está seteado, ese equipo gana.
+            // Si this.rondaActual.envidoHandler.ganadorEnvidoEquipoId está seteado, ese equipo gana.
             // Si fue un "no quiero" al envido, el equipo que cantó el último envido gana.
-            const equipoGanadorEnvido = this.equipos.find(e => e.id === this.rondaActual.envido.ganadorEnvidoEquipoId) || 
-                                      (this.rondaActual.envido.cantos.length > 0 && !this.rondaActual.envido.querido ? this.equipos.find(e => e.id === this.rondaActual.envido.cantos[this.rondaActual.envido.cantos.length -1].equipoId) : null);
+            const ganadorEnvidoId = this.rondaActual.envidoHandler ? this.rondaActual.envidoHandler.ganadorEnvidoEquipoId : null;
+            const equipoGanadorEnvido = this.equipos.find(e => e.id === ganadorEnvidoId) || 
+                                      (this.rondaActual.envidoHandler && this.rondaActual.envidoHandler.cantos && this.rondaActual.envidoHandler.cantos.length > 0 && !this.rondaActual.envidoHandler.querido ? 
+                                       this.equipos.find(e => e.id === this.rondaActual.envidoHandler.cantos[this.rondaActual.envidoHandler.cantos.length -1].equipoId) : null);
             if (equipoGanadorEnvido) {
                 equipoGanadorEnvido.sumarPuntos(estadoRondaFinalizada.puntosGanadosEnvido);
                 puntosEnvido = estadoRondaFinalizada.puntosGanadosEnvido;

@@ -11,6 +11,7 @@ class RondaTurnoHandler {
         this.manoActualNumero = 1;
         this.jugadorTurnoActual = null;
         this.indiceJugadorTurnoActual = 0; // Indice en this.ronda.jugadoresEnOrden
+        this.jugadorTurnoAlMomentoDelCantoId = null; // ✅ Campo unificado para guardar turno antes de cantos
     }
 
     // Safe card serialization to handle both Naipe instances and plain objects
@@ -322,6 +323,33 @@ class RondaTurnoHandler {
         // Devuelve el ID del jugador que debe jugar la próxima carta.
         // Esto es útil para restaurar el turno después de un envido, por ejemplo.
         return this.jugadorTurnoActual ? this.jugadorTurnoActual.id : null;
+    }
+
+    /**
+     * Guarda el turno actual antes de un canto (envido/truco)
+     */
+    guardarTurnoAntesCanto() {
+        if (this.jugadorTurnoActual) {
+            this.jugadorTurnoAlMomentoDelCantoId = this.jugadorTurnoActual.id;
+            console.log(`[TURNO] Guardando turno antes de canto: ${this.jugadorTurnoActual.id}`);
+            return true;
+        }
+        console.warn('[TURNO] No se pudo guardar turno: jugadorTurnoActual es null');
+        return false;
+    }
+
+    /**
+     * Restaura el turno que se había guardado antes de un canto
+     */
+    restaurarTurnoAntesCanto() {
+        if (this.jugadorTurnoAlMomentoDelCantoId) {
+            console.log(`[TURNO] Restaurando turno guardado: ${this.jugadorTurnoAlMomentoDelCantoId}`);
+            this.setTurnoA(this.jugadorTurnoAlMomentoDelCantoId);
+            this.jugadorTurnoAlMomentoDelCantoId = null;
+            return true;
+        }
+        console.warn('[TURNO] No hay turno guardado para restaurar');
+        return false;
     }
 
     getEstado() {

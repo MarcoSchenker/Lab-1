@@ -6,7 +6,7 @@ import { Naipe } from '../game/iaPro/naipe';
 import { Canto, AccionesPosibles, Equipo } from '../game/iaPro/types';
 import { GameCallbacks, LogType } from '../game/game-callbacks';
 import PlayerArea from '../components/PlayerArea';
-import GameBoard from '../components/GameBoard';
+import GameBoard from '../components/GameIABoard';
 import Scoreboard from '../components/ScoreBoard';
 import ActionButtons from '../components/ActionButtons';
 import GameLog from '../components/GameLog';
