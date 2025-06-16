@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const gameLogicHandler = require('../game-logic/gameLogicHandler');
+const Mazo = require('../game-logic/Mazo');
 
 /**
  * Controlador para verificar la conexión a la base de datos
@@ -69,6 +70,42 @@ const obtenerEstadoPrueba = async (req, res) => {
 };
 
 /**
+ * Controlador para probar la creación del mazo
+ */
+const testDeckCreation = (req, res) => {
+  try {
+    console.log('=== PROBANDO CREACIÓN DE MAZO ===');
+    const mazo = new Mazo();
+    const ids = mazo.cartas.map(c => c.idUnico);
+    const uniqueIds = new Set(ids);
+    
+    console.log(`Mazo creado con ${mazo.cantidadCartas} cartas`);
+    console.log(`IDs únicos: ${uniqueIds.size}`);
+    console.log(`Sin duplicados: ${ids.length === uniqueIds.size}`);
+    
+    res.json({
+      totalCards: mazo.cantidadCartas,
+      uniqueIds: uniqueIds.size,
+      noDuplicates: ids.length === uniqueIds.size,
+      sampleCards: mazo.cartas.slice(0, 5).map(c => ({
+        id: c.idUnico,
+        numero: c.numero,
+        palo: c.palo,
+        valorTruco: c.valorTruco,
+        valorEnvido: c.valorEnvido
+      })),
+      duplicates: ids.length !== uniqueIds.size ? ids.filter((id, index) => ids.indexOf(id) !== index) : []
+    });
+  } catch (error) {
+    console.error('Error en prueba de creación de mazo:', error);
+    res.status(500).json({
+      error: 'Deck creation failed',
+      message: error.message
+    });
+  }
+};
+
+/**
  * Endpoint básico para verificar que el servidor está activo
  */
 const serverStatus = (req, res) => {
@@ -79,5 +116,6 @@ module.exports = {
   pingDatabase,
   crearPartidaPrueba,
   obtenerEstadoPrueba,
+  testDeckCreation,
   serverStatus
 };

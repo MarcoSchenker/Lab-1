@@ -8,6 +8,7 @@ class JugadorGame {
         this.id = id; // Corresponde al usuario_id de la DB
         this.nombreUsuario = nombreUsuario;
         this.cartasMano = [];
+        this.cartasOriginalRonda = []; // Original hand for envido counting
         this.cartasJugadasRonda = []; // Cartas que ha jugado en la ronda actual
         this.equipoId = equipoId; // Para saber a qué equipo pertenece
         this.esPie = false; // Si es el último en jugar de su equipo (relevante para 2v2, 3v3)
@@ -17,6 +18,7 @@ class JugadorGame {
 
     recibirCartas(cartas) {
         this.cartasMano = cartas;
+        this.cartasOriginalRonda = [...cartas]; // Create a copy for envido counting
         this.cartasJugadasRonda = []; // Limpiar al recibir nueva mano
     }
 
@@ -37,18 +39,19 @@ class JugadorGame {
 
     limpiarParaNuevaRonda() {
         this.cartasMano = [];
+        this.cartasOriginalRonda = [];
         this.cartasJugadasRonda = [];
     }
 
-    // Podríamos añadir métodos para calcular el envido del jugador aquí
-    // o hacerlo en la clase RondaGame/PartidaGame pasándole las cartas.
+    // Calculate envido using original hand (before any cards were played)
     calcularEnvido() {
-        if (this.cartasMano.length === 0) return 0;
+        const cartasParaEnvido = this.cartasOriginalRonda.length > 0 ? this.cartasOriginalRonda : this.cartasMano;
+        if (cartasParaEnvido.length === 0) return 0;
 
         let envidoMaximo = 0;
         const palos = {};
 
-        this.cartasMano.forEach(carta => {
+        cartasParaEnvido.forEach(carta => {
             if (!palos[carta.palo]) {
                 palos[carta.palo] = [];
             }
@@ -73,9 +76,9 @@ class JugadorGame {
         }
 
         // Si no hay dos cartas del mismo palo, el envido es la carta más alta.
-        if (envidoMaximo === 0 && this.cartasMano.length > 0) {
+        if (envidoMaximo === 0 && cartasParaEnvido.length > 0) {
             let maxValorCartaSola = 0;
-            this.cartasMano.forEach(carta => {
+            cartasParaEnvido.forEach(carta => {
                 if (carta.valorEnvido > maxValorCartaSola) {
                     maxValorCartaSola = carta.valorEnvido;
                 }

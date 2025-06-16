@@ -1,0 +1,182 @@
+/* ActionsPanel.css - Estilos para el panel de acciones */
+
+.actions-panel {
+  @apply bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 shadow-2xl border border-slate-600;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.panel-title {
+  @apply text-center mb-4 text-white font-bold text-lg;
+}
+
+.panel-title span {
+  @apply text-xl;
+}
+
+.envido-actions,
+.response-actions,
+.action-groups {
+  @apply space-y-3;
+}
+
+.envido-form {
+  @apply bg-slate-700 p-4 rounded-lg space-y-3;
+}
+
+.envido-info {
+  @apply text-white text-center space-y-2;
+}
+
+.envido-info p {
+  @apply text-sm;
+}
+
+.envido-info strong {
+  @apply text-yellow-400 font-bold;
+}
+
+/* Estilos para "Envido va primero" */
+.envido-va-primero {
+  background: linear-gradient(135deg, #92400e, #a16207);
+  border-color: #f59e0b;
+  animation: pulse-golden 2s infinite;
+}
+
+@keyframes pulse-golden {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+  }
+}
+
+.envido-va-primero .panel-title {
+  color: #fcd34d;
+}
+
+.envido-va-primero .panel-title span {
+  font-size: 1.5rem;
+}
+
+.truco-pendiente-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.truco-pendiente-actions .btn-action {
+  flex: 1;
+  font-size: 0.75rem;
+}
+
+/* Botones de acción */
+.btn-action {
+  @apply px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 min-w-[120px];
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800;
+}
+
+.btn-declare-points {
+  @apply bg-green-600 hover:bg-green-700 text-white;
+  @apply focus:ring-green-500;
+}
+
+.btn-son-buenas {
+  @apply bg-orange-600 hover:bg-orange-700 text-white;
+  @apply focus:ring-orange-500;
+  @apply border-2 border-orange-400;
+}
+
+.btn-son-buenas:hover {
+  @apply bg-orange-700 border-orange-300 shadow-lg;
+}
+
+.btn-confirm {
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
+  @apply focus:ring-blue-500;
+}
+
+.btn-cancel {
+  @apply bg-gray-600 hover:bg-gray-700 text-white;
+  @apply focus:ring-gray-500;
+}
+
+.btn-quiero {
+  @apply bg-green-600 hover:bg-green-700 text-white;
+  @apply focus:ring-green-500;
+}
+
+.btn-no-quiero {
+  @apply bg-red-600 hover:bg-red-700 text-white;
+  @apply focus:ring-red-500;
+}
+
+.btn-envido {
+  @apply bg-purple-600 hover:bg-purple-700 text-white;
+  @apply focus:ring-purple-500;
+}
+
+.btn-real-envido {
+  @apply bg-purple-700 hover:bg-purple-800 text-white;
+  @apply focus:ring-purple-500;
+}
+
+.btn-falta-envido {
+  @apply bg-purple-800 hover:bg-purple-900 text-white;
+  @apply focus:ring-purple-500;
+}
+
+.btn-truco {
+  @apply bg-red-600 hover:bg-red-700 text-white;
+  @apply focus:ring-red-500;
+}
+
+.btn-retruco {
+  @apply bg-red-700 hover:bg-red-800 text-white;
+  @apply focus:ring-red-500;
+}
+
+.btn-vale-cuatro {
+  @apply bg-red-800 hover:bg-red-900 text-white;
+  @apply focus:ring-red-500;
+}
+
+.btn-mazo {
+  @apply bg-yellow-600 hover:bg-yellow-700 text-white;
+  @apply focus:ring-yellow-500;
+}
+
+/* Grupos de acciones */
+.action-group {
+  @apply bg-slate-700 p-3 rounded-lg;
+}
+
+.group-title {
+  @apply text-white font-semibold text-sm mb-2 block;
+}
+
+.action-buttons {
+  @apply flex flex-wrap gap-2;
+}
+
+.recantos-envido,
+.recantos-truco {
+  @apply flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-600;
+}
+
+/* Responsivo */
+@media (max-width: 640px) {
+  .actions-panel {
+    @apply p-4;
+    min-width: 280px;
+  }
+  
+  .btn-action {
+    @apply px-3 py-2 text-xs min-w-[100px];
+  }
+  
+  .action-buttons {
+    @apply flex-col;
+  }
+}

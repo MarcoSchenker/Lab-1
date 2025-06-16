@@ -24,7 +24,9 @@ class RondaEnvidoHandler {
         this.cantado = false;
         this.querido = null;
         this.puntosEnJuegoCalculados = 0;
-        this.valorTipoCantoActual = null;
+        this.nivelActual = null; // ✅ Renombrado de valorTipoCantoActual para consistencia
+        this.cantadoPorJugadorId = null;
+        this.cantadoPorEquipoId = null;
         this.cantosRealizados = [];
         this.ganadorEnvidoEquipoId = null;
         this.estadoResolucion = 'no_cantado';
@@ -95,7 +97,7 @@ class RondaEnvidoHandler {
         if (!this.cantado) { 
             if (['ENVIDO', 'REAL_ENVIDO', 'FALTA_ENVIDO'].includes(tipoCantoPropuesto)) return tipoCantoPropuesto;
         } else { 
-            const ultimoCantoNormalizado = this.valorTipoCantoActual;
+            const ultimoCantoNormalizado = this.nivelActual;
             if (tipoCantoPropuesto === 'ENVIDO') {
                 if (ultimoCantoNormalizado === 'ENVIDO') return 'ENVIDO_ENVIDO';
             } else if (tipoCantoPropuesto === 'REAL_ENVIDO') {
@@ -123,10 +125,33 @@ class RondaEnvidoHandler {
         const tipoNormalizado = this._normalizarTipoCanto(tipoCantoOriginal);
         if (!tipoNormalizado || !VALORES_CANTO_ENVIDO[tipoNormalizado]) { this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: `Canto de envido ${tipoCantoOriginal} no válido o fuera de secuencia.` }); return false; }
         
-        if (this.cantosRealizados.length > 0 && this.cantosRealizados[this.cantosRealizados.length - 1].equipoId === jugadorCantor.equipoId) { this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'No puedes subir tu propio envido sin respuesta del oponente.' }); return false; }
+        // Solo impedir el recanto si ya ha habido una respuesta del equipo contrario
+        // En caso contrario, permitir el encadenamiento de cantos del mismo equipo
+        if (this.cantosRealizados.length > 0) {
+            const ultimoCanto = this.cantosRealizados[this.cantosRealizados.length - 1];
+            
+            // Si es el mismo equipo, solo permitir si no ha habido respuesta aún
+            if (ultimoCanto.equipoId === jugadorCantor.equipoId) {
+                // Verificar si hubo alguna respuesta entre medias
+                const hubRespuestaIntermedia = this.estadoResolucion === 'querido_pendiente_puntos' || 
+                                              this.estadoResolucion === 'resuelto' ||
+                                              this.querido !== null;
+                
+                if (hubRespuestaIntermedia) {
+                    this.ronda.notificarEstado('error_accion_juego', { 
+                        jugadorId, 
+                        mensaje: 'No puedes subir tu propio envido después de una respuesta del oponente.' 
+                    }); 
+                    return false;
+                }
+                // Si no hubo respuesta, permitir el encadenamiento (Envido → Envido, etc.)
+            }
+        }
 
         this.cantado = true;
-        this.valorTipoCantoActual = tipoNormalizado;
+        this.nivelActual = tipoNormalizado;
+        this.cantadoPorJugadorId = jugadorId;
+        this.cantadoPorEquipoId = jugadorCantor.equipoId;
         const valores = VALORES_CANTO_ENVIDO[tipoNormalizado];
 
         this.cantosRealizados.push({ 
@@ -139,7 +164,7 @@ class RondaEnvidoHandler {
         
         if(this.ronda.trucoHandler.estadoResolucion === 'cantado_pendiente_respuesta') this.ronda.trucoPendientePorEnvidoPrimero = true;
 
-        this.ronda.persistirAccion({ tipo_accion: 'CANTO_ENVIDO', usuario_id_accion: jugadorId, detalle_accion: { tipo_canto: tipoCantoOriginal, normalizado: tipoNormalizado } });
+        this.ronda.persistirAccion({ tipo_accion: 'CANTO_ENV', usuario_id_accion: jugadorId, detalle_accion: { tipo_canto: tipoCantoOriginal, normalizado: tipoNormalizado } });
         this.ronda._actualizarEstadoParaNotificar('canto_realizado', { jugadorId, tipo_canto: tipoCantoOriginal, esEnvido: true, estadoEnvido: this.getEstado() });
         
         this.ronda.turnoHandler.setTurnoA(this.equipoRespondedorCanto.jugadores[0].id); 
@@ -183,7 +208,7 @@ class RondaEnvidoHandler {
                 this.jugadoresOrdenadosPorEquipo[eq.id] = this.ronda.jugadoresEnOrden.filter(j => j.equipoId === eq.id);
             });
             
-            this.ronda.persistirAccion({ tipo_accion: 'RESPUESTA_ENVIDO', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.valorTipoCantoActual } });
+            this.ronda.persistirAccion({ tipo_accion: 'RESP_ENV', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.nivelActual } });
             this.ronda._actualizarEstadoParaNotificar('envido_querido_declarar_puntos', { estadoEnvido: this.getEstado(), turnoDeclararId: this.jugadorTurnoDeclararPuntosId });
             this.ronda.turnoHandler.setTurnoA(this.jugadorTurnoDeclararPuntosId);
 
@@ -194,7 +219,7 @@ class RondaEnvidoHandler {
             this.ganadorEnvidoEquipoId = ultimoCantoInfo.equipoId; 
             this.puntosEnJuegoCalculados = ultimoCantoInfo.valorSiNoSeQuiere;
             this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
-            this.ronda.persistirAccion({ tipo_accion: 'RESPUESTA_ENVIDO', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.valorTipoCantoActual } });
+            this.ronda.persistirAccion({ tipo_accion: 'RESP_ENV', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.nivelActual } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados });
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else { 
@@ -208,6 +233,12 @@ class RondaEnvidoHandler {
     registrarPuntosDeclarados(jugadorId, puntos, esPaso = false, esSonBuenas = false) {
         if (!this.declaracionEnCurso || this.jugadorTurnoDeclararPuntosId !== jugadorId) {
             this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'No es tu turno de declarar puntos del envido o el envido no está en ese estado.' });
+            return false;
+        }
+
+        // PREVENIR MÚLTIPLES DECLARACIONES: Verificar si el jugador ya declaró puntos
+        if (this.jugadoresQueHanDeclarado.has(jugadorId)) {
+            this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'Ya has declarado tus puntos de envido en esta ronda.' });
             return false;
         }
 
@@ -280,7 +311,7 @@ class RondaEnvidoHandler {
         if (envidoResuelto) {
             this.declaracionEnCurso = false;
             this.estadoResolucion = 'resuelto';
-            const ultimoCantoNormalizado = this.valorTipoCantoActual;
+            const ultimoCantoNormalizado = this.nivelActual;
             if (ultimoCantoNormalizado === 'FALTA_ENVIDO' || ultimoCantoNormalizado.includes('FALTA_ENVIDO')) {
                 this.puntosEnJuegoCalculados = this._calcularPuntosFaltaEnvido();
             } else {
@@ -288,19 +319,19 @@ class RondaEnvidoHandler {
             }
             this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
             
-            this.ronda.persistirAccion({ tipo_accion: 'DECLARAR_PUNTOS_ENVIDO', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId } });
+            this.ronda.persistirAccion({ tipo_accion: 'DECL_ENV', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados, puntosDeclarados: this.puntosDeclaradosPorJugador });
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else if (proximoJugadorId) {
             this.jugadorTurnoDeclararPuntosId = proximoJugadorId;
-            this.ronda.persistirAccion({ tipo_accion: 'DECLARAR_PUNTOS_ENVIDO', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas } });
+            this.ronda.persistirAccion({ tipo_accion: 'DECL_ENV', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas } });
             this.ronda._actualizarEstadoParaNotificar('envido_puntos_declarados', { estadoEnvido: this.getEstado(), turnoDeclararId: this.jugadorTurnoDeclararPuntosId, puntosDeclaradosPorJugador: this.puntosDeclaradosPorJugador });
         } else {
             // Should not happen if logic is correct and envidoResuelto is false, implies no next player but not resolved.
             // For safety, resolve with current initiative holder.
             this.ganadorEnvidoEquipoId = this.equipoConLaIniciativaId;
             envidoResuelto = true; // Force resolution
-             this.ronda.persistirAccion({ tipo_accion: 'DECLARAR_PUNTOS_ENVIDO', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId, error: "Forced resolution" } });
+             this.ronda.persistirAccion({ tipo_accion: 'DECL_ENV', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId, error: "Forced resolution" } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados, puntosDeclarados: this.puntosDeclaradosPorJugador });
             this.resolverDependenciaTrucoYRestaurarTurno();
         }
@@ -339,7 +370,9 @@ class RondaEnvidoHandler {
         console.log(`[ENVIDO] Canto normalizado: ${tipoNormalizado}`);
         
         // Actualizar el estado del envido
-        this.valorTipoCantoActual = tipoNormalizado;
+        this.nivelActual = tipoNormalizado;
+        this.cantadoPorJugadorId = jugadorId;
+        this.cantadoPorEquipoId = jugadorCantor.equipoId;
         const valores = VALORES_CANTO_ENVIDO[tipoNormalizado];
         
         // Agregar el nuevo canto a la cadena
@@ -416,11 +449,14 @@ class RondaEnvidoHandler {
     }
 
     getEstado() {
-        return {
+        // Información básica del estado
+        const estado = {
             cantado: this.cantado,
             querido: this.querido,
             puntosEnJuegoCalculados: this.puntosEnJuegoCalculados,
-            valorTipoCantoActual: this.valorTipoCantoActual,
+            nivelActual: this.nivelActual, // ✅ Campo ahora consistente interno/externo
+            cantadoPorJugadorId: this.cantadoPorJugadorId,
+            cantadoPorEquipoId: this.cantadoPorEquipoId,
             cantosRealizados: this.cantosRealizados,
             ganadorEnvidoEquipoId: this.ganadorEnvidoEquipoId,
             estadoResolucion: this.estadoResolucion,
@@ -429,11 +465,50 @@ class RondaEnvidoHandler {
             equipoConLaIniciativaId: this.equipoConLaIniciativaId,
             maxPuntosDeclaradosInfo: this.maxPuntosDeclaradosInfo,
             puntosDeclaradosPorJugador: this.puntosDeclaradosPorJugador,
-            jugadoresQueHanDeclarado: Array.from(this.jugadoresQueHanDeclarado), // For client state if needed
-
+            jugadoresQueHanDeclarado: Array.from(this.jugadoresQueHanDeclarado),
             puedeCantarEnvidoGeneral: this.puedeCantarEnvidoGeneral,
             equipoRespondedorCantoId: this.equipoRespondedorCanto ? this.equipoRespondedorCanto.id : null
         };
+
+        // Información adicional para el frontend
+        // Ayuda a determinar si se puede decir "Son Buenas"
+        estado.puedeDeclararSonBuenas = this.estadoResolucion === 'querido_pendiente_puntos' && 
+                                        this.maxPuntosDeclaradosInfo.puntos > -1;
+        
+        // Información sobre qué equipos han declarado
+        estado.equiposQueHanDeclarado = [];
+        if (this.puntosDeclaradosPorJugador) {
+            Object.values(this.puntosDeclaradosPorJugador).forEach(declaracion => {
+                if (declaracion.jugadorId) {
+                    const jugador = this.ronda.jugadoresEnOrden.find(j => j.id === declaracion.jugadorId);
+                    if (jugador && !estado.equiposQueHanDeclarado.includes(jugador.equipoId)) {
+                        estado.equiposQueHanDeclarado.push(jugador.equipoId);
+                    }
+                }
+            });
+        }
+
+        // Información sobre niveles de canto disponibles
+        estado.nivelesCantoDisponibles = this._obtenerNivelesCantoDisponibles();
+
+        return estado;
+    }
+
+    _obtenerNivelesCantoDisponibles() {
+        if (!this.cantado) {
+            return ['ENVIDO', 'REAL_ENVIDO', 'FALTA_ENVIDO'];
+        }
+        
+        const nivelActual = this.nivelActual;
+        const disponibles = [];
+        
+        if (nivelActual === 'ENVIDO') {
+            disponibles.push('ENVIDO', 'REAL_ENVIDO', 'FALTA_ENVIDO');
+        } else if (nivelActual === 'ENVIDO_ENVIDO' || nivelActual === 'REAL_ENVIDO') {
+            disponibles.push('FALTA_ENVIDO');
+        }
+        
+        return disponibles;
     }
     /**
      * Registra cuando un jugador dice "Son Buenas" en respuesta al envido
@@ -477,7 +552,7 @@ class RondaEnvidoHandler {
         this.declaracionEnCurso = false;
 
         // Calcular puntos
-        const ultimoCantoNormalizado = this.valorTipoCantoActual;
+        const ultimoCantoNormalizado = this.nivelActual;
         if (ultimoCantoNormalizado === 'FALTA_ENVIDO' || ultimoCantoNormalizado.includes('FALTA_ENVIDO')) {
             this.puntosEnJuegoCalculados = this._calcularPuntosFaltaEnvido();
         } else {
@@ -510,6 +585,21 @@ class RondaEnvidoHandler {
         this.resolverDependenciaTrucoYRestaurarTurno();
         
         return true;
+    }
+
+    // Called when a card is played to check if envido can still be sung
+    onCartaJugada() {
+        // If we're in the first hand and all players have played their first card,
+        // envido can no longer be sung
+        if (this.ronda.turnoHandler.manoActualNumero === 1) {
+            const cartasJugadasEnPrimeraMano = this.ronda.turnoHandler.cartasEnMesaManoActual.length;
+            const totalJugadores = this.ronda.jugadoresEnOrden.length;
+            
+            if (cartasJugadasEnPrimeraMano >= totalJugadores) {
+                this.puedeCantarEnvidoGeneral = false;
+                console.log('Primera mano completada - Envido ya no se puede cantar');
+            }
+        }
     }
 }
 

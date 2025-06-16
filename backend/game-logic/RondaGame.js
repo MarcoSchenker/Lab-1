@@ -140,6 +140,110 @@ class RondaGame {
         return this.trucoHandler.registrarMazo(jugadorId);
     }
 
+    /**
+     * Maneja la declaración de puntos de envido por parte de un jugador
+     * @param {number} jugadorId - ID del jugador que declara puntos
+     * @param {number} puntos - Puntos de envido que declara
+     * @returns {boolean} - true si la declaración fue exitosa
+     */
+    manejarDeclaracionPuntosEnvido(jugadorId, puntos) {
+        console.log(`[RONDA] 🔢 Jugador ${jugadorId} declara ${puntos} puntos de envido`);
+        
+        if (!this.envidoHandler.declaracionEnCurso) {
+            console.warn(`[RONDA] ❌ No hay declaración de envido en curso`);
+            this.notificarEstado('error_accion_juego', { 
+                jugadorId, 
+                mensaje: 'No hay una declaración de envido en curso.' 
+            });
+            return false;
+        }
+
+        const resultado = this.envidoHandler.registrarPuntosDeclarados(jugadorId, puntos);
+        
+        // Si el envido se resuelve y hay truco pendiente por "Envido Primero"
+        if (resultado && 
+            this.trucoPendientePorEnvidoPrimero && 
+            this.envidoHandler.estadoResolucion === 'resuelto') {
+            
+            console.log("[RONDA] Envido resuelto, retomando truco pendiente por Envido Primero");
+            this.trucoPendientePorEnvidoPrimero = false;
+            
+            this._actualizarEstadoParaNotificar('retomar_truco_pendiente', {
+                trucoState: this.trucoHandler.getEstado()
+            });
+        }
+        
+        return resultado;
+    }
+
+    /**
+     * Maneja cuando un jugador dice "Son Buenas" en el envido
+     * @param {number} jugadorId - ID del jugador que dice "son buenas"
+     * @returns {boolean} - true si la acción fue exitosa
+     */
+    manejarDeclaracionSonBuenas(jugadorId) {
+        console.log(`[RONDA] ✅ Jugador ${jugadorId} dice "Son Buenas"`);
+        
+        if (!this.envidoHandler.declaracionEnCurso) {
+            console.warn(`[RONDA] ❌ No hay declaración de envido en curso para "Son Buenas"`);
+            this.notificarEstado('error_accion_juego', { 
+                jugadorId, 
+                mensaje: 'No hay una declaración de envido en curso.' 
+            });
+            return false;
+        }
+
+        const resultado = this.envidoHandler.registrarSonBuenas(jugadorId);
+        
+        // Si el envido se resuelve y hay truco pendiente por "Envido Primero"
+        if (resultado && 
+            this.trucoPendientePorEnvidoPrimero && 
+            this.envidoHandler.estadoResolucion === 'resuelto') {
+            
+            console.log("[RONDA] Envido resuelto con 'Son Buenas', retomando truco pendiente por Envido Primero");
+            this.trucoPendientePorEnvidoPrimero = false;
+            
+            this._actualizarEstadoParaNotificar('retomar_truco_pendiente', {
+                trucoState: this.trucoHandler.getEstado()
+            });
+        }
+        
+        return resultado;
+    }
+
+    /**
+     * Maneja cuando un jugador se va al mazo
+     * @param {number} jugadorId - ID del jugador que se va al mazo
+     * @returns {boolean} - true si la acción fue exitosa
+     */
+    manejarIrseAlMazo(jugadorId) {
+        console.log(`[RONDA] 🏃 Jugador ${jugadorId} se va al mazo`);
+        
+        const jugador = this.jugadoresEnOrden.find(j => j.id === jugadorId);
+        if (!jugador) {
+            console.warn(`[RONDA] ❌ Jugador ${jugadorId} no encontrado`);
+            return false;
+        }
+
+        // TODO: Implementar lógica de irse al mazo según las reglas
+        // Por ahora, simplemente finalizamos la ronda dando puntos al equipo contrario
+        const equipoContrario = this.equipos.find(e => e.id !== jugador.equipoId);
+        if (equipoContrario) {
+            this.ganadorRondaEquipoId = equipoContrario.id;
+            this.puntosGanadosTruco = 1; // Un punto por irse al mazo
+            
+            this._actualizarEstadoParaNotificar('jugador_se_fue_al_mazo', {
+                jugadorId,
+                equipoGanadorId: equipoContrario.id,
+                puntosGanados: 1
+            });
+            
+            this._finalizarRondaLogica();
+        }
+        
+        return true;
+    }
+
     _finalizarRondaLogica() {
         // Esta función es llamada por los handlers cuando la ronda realmente termina (por juego o por "no quiero" al truco, o mazo).
         // 1. Calcular puntos finales del envido (si no se hizo ya en el handler)

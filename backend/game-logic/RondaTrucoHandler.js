@@ -92,12 +92,24 @@ class RondaTrucoHandler {
         let nuevosPuntos = 0;
 
         if (this.nivelActual === null) {
+            // Primer canto de truco
             if (tipoCanto === 'TRUCO') { esValido = true; nuevosPuntos = 2; }
-        } else if (this.nivelActual === 'TRUCO' && this.querido) {
-            if (tipoCanto === 'RETRUCO' && this.cantadoPorEquipoId !== jugadorCantor.equipoId) { esValido = true; nuevosPuntos = 3; }
-        } else if (this.nivelActual === 'RETRUCO' && this.querido) {
-            if (tipoCanto === 'VALE_CUATRO' && this.cantadoPorEquipoId !== jugadorCantor.equipoId) { esValido = true; nuevosPuntos = 4; }
+        } else if (this.nivelActual === 'TRUCO') {
+            // Respuesta con recanto
+            if (tipoCanto === 'RETRUCO' && this.cantadoPorEquipoId !== jugadorCantor.equipoId) { 
+                esValido = true; 
+                nuevosPuntos = 3; 
+            }
+        } else if (this.nivelActual === 'RETRUCO') {
+            // Respuesta con recanto final
+            if (tipoCanto === 'VALE_CUATRO' && this.cantadoPorEquipoId !== jugadorCantor.equipoId) { 
+                esValido = true; 
+                nuevosPuntos = 4; 
+            }
         }
+        
+        // Permitir recantos incluso si ya fue querido (esto es correcto según las reglas)
+        // Un equipo puede hacer retruco después de haber aceptado el truco inicial
         
         // No se puede subir el propio truco si el oponente aún no ha respondido
         if (this.cantadoPorEquipoId === jugadorCantor.equipoId && this.estadoResolucion === 'cantado_pendiente_respuesta') {
@@ -132,7 +144,7 @@ class RondaTrucoHandler {
         
         // Registrar la acción y notificar
         this.ronda.persistirAccion({ 
-            tipo_accion: 'CANTO_TRUCO', 
+            tipo_accion: 'CANT_TRU', 
             usuario_id_accion: jugadorId, 
             detalle_accion: { tipo_canto: tipoCanto } 
         });
@@ -145,7 +157,7 @@ class RondaTrucoHandler {
             tipo_canto: tipoCanto, 
             esTruco: true, 
             estadoTruco: this.getEstado(),
-            equipoDebeResponderId: this.equipoDebeResponderTruco ? this.equipoDebeResponderTruco.id : null
+            equipoDebeResponderTrucoId: this.equipoDebeResponderTruco ? this.equipoDebeResponderTruco.id : null // ✅ Normalizado nombre campo
         });
         
         return true;
@@ -178,7 +190,7 @@ class RondaTrucoHandler {
             this.ronda.puntosGanadosTruco = this.puntosEnJuego; 
             
             this.ronda.persistirAccion({ 
-                tipo_accion: 'RESPUESTA_TRUCO', 
+                tipo_accion: 'RESP_TRU', 
                 usuario_id_accion: jugadorId, 
                 detalle_accion: { respuesta } 
             });
@@ -222,7 +234,7 @@ class RondaTrucoHandler {
             }
             
             this.ronda.persistirAccion({ 
-                tipo_accion: 'RESPUESTA_TRUCO', 
+                tipo_accion: 'RESP_TRU', 
                 usuario_id_accion: jugadorId, 
                 detalle_accion: { respuesta } 
             });

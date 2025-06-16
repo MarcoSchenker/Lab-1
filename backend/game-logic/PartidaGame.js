@@ -212,7 +212,7 @@ class PartidaGame {
             ...accion,
             partida_estado_id: this.idEnDB || null, // No undefined, usar null
             ronda_numero: this.numeroRondaActual || null, // No undefined, usar null
-            mano_numero_en_ronda: this.rondaActual?.numeroManoActual || null, // No undefined, usar null
+            mano_numero_en_ronda: this.rondaActual?.turnoHandler?.manoActualNumero || null, // ✅ Corregido campo
             // Asegurar que todos los campos requeridos no sean undefined
             usuario_id_accion: accion.usuario_id_accion || null,
             tipo_accion: accion.tipo_accion || 'ACCION_DESCONOCIDA',
@@ -445,16 +445,24 @@ class PartidaGame {
             
             try {
                 console.log(`[PARTIDA] 3. Obteniendo información envido...`);
-                envidoInfo = this.rondaActual?.envidoHandler?.getEstado() || {
-                    cantado: false,
-                    querido: false,
-                    nivelActual: '',
-                    estadoResolucion: '',
-                    cantadoPorJugadorId: null,
-                    cantadoPorEquipoId: null,
-                    puntosEnJuego: 0,
-                    equipoGanadorId: null,
-                    puntosDeclarados: {}
+                const envidoState = this.rondaActual?.envidoHandler?.getEstado() || {};
+                envidoInfo = {
+                    cantado: envidoState.cantado || false,
+                    querido: envidoState.querido || false,
+                    nivelActual: envidoState.nivelActual || '', // ✅ Corregido: usar nivelActual
+                    estadoResolucion: envidoState.estadoResolucion || '',
+                    cantadoPorJugadorId: envidoState.cantadoPorJugadorId || null,
+                    cantadoPorEquipoId: envidoState.cantadoPorEquipoId || null,
+                    puntosEnJuego: envidoState.puntosEnJuegoCalculados || 0,
+                    equipoGanadorId: envidoState.ganadorEnvidoEquipoId || null,
+                    puntosDeclarados: envidoState.puntosDeclaradosPorJugador || {},
+                    jugadoresQueHanDeclarado: envidoState.jugadoresQueHanDeclarado || [],
+                    maxPuntosDeclaradosInfo: envidoState.maxPuntosDeclaradosInfo || { puntos: -1, jugadorId: null, equipoId: null },
+                    equipoConLaIniciativaId: envidoState.equipoConLaIniciativaId || null,
+                    equipoRespondedorCantoId: envidoState.equipoRespondedorCantoId || null, // ✅ Agregado campo faltante
+                    puedeDeclararSonBuenas: envidoState.puedeDeclararSonBuenas || false,
+                    declaracionEnCurso: envidoState.declaracionEnCurso || false,
+                    jugadorTurnoDeclararPuntosId: envidoState.jugadorTurnoDeclararPuntosId || null
                 };
                 console.log(`[PARTIDA] 3.1 Envido info obtenido`);
             } catch (envidoError) {
@@ -474,16 +482,17 @@ class PartidaGame {
             
             try {
                 console.log(`[PARTIDA] 4. Obteniendo información truco...`);
-                trucoInfo = this.rondaActual?.trucoHandler?.getEstado() || {
-                    cantado: false,
-                    querido: false,
-                    nivelActual: '',
-                    puntosEnJuego: 1,
-                    cantadoPorJugadorId: null,
-                    cantadoPorEquipoId: null,
-                    estadoResolucion: '',
-                    equipoDebeResponderTrucoId: null,
-                    jugadorTurnoAlMomentoDelCantoId: null
+                const trucoState = this.rondaActual?.trucoHandler?.getEstado() || {};
+                trucoInfo = {
+                    cantado: trucoState.cantado || false,
+                    querido: trucoState.querido || false,
+                    nivelActual: trucoState.nivelActual || '',
+                    puntosEnJuego: trucoState.puntosEnJuego || 1,
+                    cantadoPorJugadorId: trucoState.cantadoPorJugadorId || null,
+                    cantadoPorEquipoId: trucoState.cantadoPorEquipoId || null,
+                    estadoResolucion: trucoState.estadoResolucion || '',
+                    equipoDebeResponderTrucoId: trucoState.equipoDebeResponderTrucoId || null,
+                    jugadorTurnoAlMomentoDelCantoId: trucoState.jugadorTurnoAlMomentoDelCantoId || null
                 };
                 console.log(`[PARTIDA] 4.1 Truco info obtenido`);
             } catch (trucoError) {

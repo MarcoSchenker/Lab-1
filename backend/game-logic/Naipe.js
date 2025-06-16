@@ -1,4 +1,3 @@
-
 class Naipe {
     /**
      * @param {string} palo El palo de la carta (e.g., 'espada', 'basto', 'oro', 'copa').
@@ -17,6 +16,16 @@ class Naipe {
 
     toString() {
         return `${this.numero} de ${this.palo}`;
+    }
+
+    toJSON() {
+        return {
+            palo: this.palo,
+            numero: this.numero,
+            valorTruco: this.valorTruco,
+            valorEnvido: this.valorEnvido,
+            idUnico: this.idUnico
+        };
     }
 }
 

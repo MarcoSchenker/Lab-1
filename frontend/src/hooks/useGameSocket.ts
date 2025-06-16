@@ -42,6 +42,17 @@ interface EstadoEnvido {
   puntosEnJuego: number;
   equipoGanadorId: number | null;
   puntosDeclarados: Record<number, number>;
+  jugadoresQueHanDeclarado?: number[]; // ✅ Agregado
+  maxPuntosDeclaradosInfo?: { // ✅ Agregado
+    puntos: number;
+    jugadorId: number | null;
+    equipoId: number | null;
+  };
+  equipoConLaIniciativaId?: number | null; // ✅ Agregado
+  equipoRespondedorCantoId?: number | null; // ✅ Agregado
+  puedeDeclararSonBuenas?: boolean; // ✅ Agregado
+  declaracionEnCurso?: boolean; // ✅ Agregado
+  jugadorTurnoDeclararPuntosId?: number | null; // ✅ Agregado
 }
 
 interface EstadoTruco {
@@ -478,29 +489,39 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
 
     newSocket.on('esperando_inicio_partida', (data) => {
       console.log('[CLIENT] ⏳ Esperando inicio:', data);
-      setIsLoading(true);
+      setGameState(null);
+      setError(null);
+    });
+
+    // Manejar "Envido va primero" - retomar truco pendiente
+    newSocket.on('retomar_truco_pendiente', (data) => {
+      console.log('[CLIENT] 🎯 Retomando truco pendiente por "Envido va primero":', data);
       
-      // Timeout específico para espera de inicio
-      const waitingTimeout = setTimeout(() => {
-        console.warn('[CLIENT] ⚠️ Timeout esperando inicio de partida');
-        setIsLoading(false);
-        setError('Tiempo de espera agotado. La partida no ha iniciado.');
-        setLoadingTimeoutActive(true);
-      }, 30000);
+      // Mostrar notificación temporal
+      const mensaje = 'Envido resuelto. Ahora debes responder al truco pendiente.';
       
-      const interval = setInterval(() => {
-        if (newSocket.connected) {
-          newSocket.emit('solicitar_estado_juego_ws');
-        } else {
-          clearInterval(interval);
-          clearTimeout(waitingTimeout);
-        }
-      }, 3000);
+      // Podrías agregar aquí una notificación visual específica
+      // Por ahora, solo actualizamos el estado del juego
+      if (data.trucoState) {
+        setGameState(prevState => {
+          if (!prevState || !prevState.rondaActual) return prevState;
+          
+          return {
+            ...prevState,
+            rondaActual: {
+              ...prevState.rondaActual,
+              trucoPendientePorEnvidoPrimero: false,
+              trucoInfo: {
+                ...prevState.rondaActual.trucoInfo,
+                ...data.trucoState
+              }
+            }
+          };
+        });
+      }
       
-      newSocket.once('estado_juego_actualizado', () => {
-        clearInterval(interval);
-        clearTimeout(waitingTimeout);
-      });
+      // También podrías emitir un evento de notificación personalizada aquí
+      console.log('[CLIENT] ✨ Mensaje: ' + mensaje);
     });
 
     newSocket.on('error_estado_juego', (data) => {

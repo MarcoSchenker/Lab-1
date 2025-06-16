@@ -13,6 +13,30 @@ class RondaTurnoHandler {
         this.indiceJugadorTurnoActual = 0; // Indice en this.ronda.jugadoresEnOrden
     }
 
+    // Safe card serialization to handle both Naipe instances and plain objects
+    _serializeCarta(carta) {
+        if (!carta) return null;
+        
+        // If it's a Naipe instance with toJSON method
+        if (typeof carta.toJSON === 'function') {
+            return carta.toJSON();
+        }
+        
+        // If it's already a plain object with card properties
+        if (carta.palo && carta.numero && carta.idUnico) {
+            return {
+                palo: carta.palo,
+                numero: carta.numero,
+                valorTruco: carta.valorTruco || 0,
+                valorEnvido: carta.valorEnvido || 0,
+                idUnico: carta.idUnico
+            };
+        }
+        
+        console.error('Invalid card object:', carta);
+        return null;
+    }
+
     repartirCartas() {
         this.ronda.mazo.mezclar();
         this.ronda.jugadoresEnOrden.forEach(jugador => {
@@ -94,14 +118,14 @@ class RondaTurnoHandler {
         });
         
         // Notificar al envido handler si es relevante (ej. para bloquear envido después de ciertas jugadas)
-        this.ronda.envidoHandler.onCartaJugada(jugadorId, this.cartasEnMesaManoActual.length); 
+        this.ronda.envidoHandler.onCartaJugada(); 
 
         this.ronda.persistirAccion({
             tipo_accion: 'JUGAR_CARTA',
             usuario_id_accion: jugadorId,
-            detalle_accion: { carta_jugada: cartaJugada.toJSON(), mano_numero: this.manoActualNumero }
+            detalle_accion: { carta_jugada: this._serializeCarta(cartaJugada), mano_numero: this.manoActualNumero }
         });
-        this.ronda._actualizarEstadoParaNotificar('carta_jugada', { jugadorId, carta: cartaJugada.toJSON(), jugadorTurnoActualId: this.jugadorTurnoActual.id });
+        this.ronda._actualizarEstadoParaNotificar('carta_jugada', { jugadorId, carta: this._serializeCarta(cartaJugada), jugadorTurnoActualId: this.jugadorTurnoActual.id });
 
         if (this.cartasEnMesaManoActual.length === this.ronda.jugadoresEnOrden.length) {
             this.finalizarManoActual();
@@ -157,7 +181,7 @@ class RondaTurnoHandler {
 
         this.manosJugadas.push({
             numeroMano: this.manoActualNumero,
-            jugadas: this.cartasEnMesaManoActual.map(j => ({...j, carta: j.carta.toJSON()})), // Guardar copia
+            jugadas: this.cartasEnMesaManoActual.map(j => ({...j, carta: this._serializeCarta(j.carta)})), // Guardar copia
             ganadorManoEquipoId: ganadorManoEquipoId,
             ganadorManoJugadorId: ganadorManoJugador ? ganadorManoJugador.id : null,
             fueParda: fueParda,
@@ -167,12 +191,18 @@ class RondaTurnoHandler {
         if (ganadorManoEquipoId) console.log(`Ganador de la mano ${this.manoActualNumero}: Equipo ${ganadorManoEquipoId} (Jugador: ${ganadorManoJugador ? ganadorManoJugador.nombreUsuario : 'N/A'})`);
         else if (fueParda) console.log(`Mano ${this.manoActualNumero} fue parda.`);
         
+        // ✅ IMPORTANTE: Notificar al handler de envido que la primera mano terminó
+        if (this.manoActualNumero === 1) {
+            this.ronda.envidoHandler.onPrimeraManoTerminada();
+            console.log('Primera mano terminada - Envido ya no se puede cantar');
+        }
+        
         this.ronda._actualizarEstadoParaNotificar('mano_finalizada', { 
             numeroMano: this.manoActualNumero, 
             ganadorManoEquipoId, 
             ganadorManoJugadorId: ganadorManoJugador ? ganadorManoJugador.id : null,
             fueParda, 
-            jugadas: this.cartasEnMesaManoActual.map(j => ({...j, carta: j.carta.toJSON()}))
+            jugadas: this.cartasEnMesaManoActual.map(j => ({...j, carta: this._serializeCarta(j.carta)}))
         });
 
         if (this.verificarFinDeRonda()) {
@@ -211,6 +241,7 @@ class RondaTurnoHandler {
         for (const mano of this.manosJugadas) {
             if (mano.ganadorManoEquipoId && !mano.fueParda) {
                 conteoVictoriasPorEquipo[mano.ganadorManoEquipoId]++;
+                // Si un equipo gana 2 manos, termina la ronda inmediatamente
                 if (conteoVictoriasPorEquipo[mano.ganadorManoEquipoId] === 2) {
                     this.ronda.ganadorRondaEquipoId = mano.ganadorManoEquipoId;
                     console.log(`Ronda finalizada. Ganador por 2 manos: Equipo ${this.ronda.ganadorRondaEquipoId}`);
@@ -219,11 +250,12 @@ class RondaTurnoHandler {
             }
         }
 
+        // Casos especiales de manos pardas después de verificar victorias directas
         if (this.manosJugadas.length === 2) {
             const [mano1, mano2] = this.manosJugadas;
             if (mano1.fueParda && mano2.ganadorManoEquipoId) {
                 this.ronda.ganadorRondaEquipoId = mano2.ganadorManoEquipoId;
-                 console.log(`Ronda finalizada. Ganador por parda en 1ra, gana 2da: Equipo ${this.ronda.ganadorRondaEquipoId}`);
+                console.log(`Ronda finalizada. Ganador por parda en 1ra, gana 2da: Equipo ${this.ronda.ganadorRondaEquipoId}`);
                 return true;
             }
             if (mano1.ganadorManoEquipoId && mano2.fueParda) { // Gana el que ganó la primera si la segunda es parda
@@ -233,6 +265,7 @@ class RondaTurnoHandler {
             }
         }
         
+        // Solo llegamos a 3 manos si hubo empate en las primeras 2 (1-1 o pardas)
         if (this.manosJugadas.length === 3) {
             this.determinarGanadorRondaPorManos(); // Esto setea this.ronda.ganadorRondaEquipoId
             console.log(`Ronda finalizada después de 3 manos. Ganador: Equipo ${this.ronda.ganadorRondaEquipoId}`);
@@ -300,7 +333,7 @@ class RondaTurnoHandler {
         });
         
         return {
-            cartasEnMesaManoActual: this.cartasEnMesaManoActual.map(j => ({ ...j, carta: j.carta.toJSON() })),
+            cartasEnMesaManoActual: this.cartasEnMesaManoActual.map(j => ({ ...j, carta: this._serializeCarta(j.carta) })),
             manosJugadas: this.manosJugadas.map(m => ({
                 ...m, 
                 jugadas: m.jugadas // Ya están en formato JSON si vienen de this.manosJugadas

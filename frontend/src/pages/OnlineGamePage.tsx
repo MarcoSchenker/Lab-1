@@ -105,6 +105,25 @@ const OnlineGamePage: React.FC = () => {
     }
   }, [socket, requestGameState, retryConnection]);
 
+  // Función para transformar datos del backend a formato esperado por GameBoard
+  const transformManosJugadas = (manosFromBackend: any[]): any[] => {
+    if (!Array.isArray(manosFromBackend)) return [];
+    
+    return manosFromBackend.map(mano => ({
+      numeroMano: mano.numeroMano || 0,
+      jugadas: Array.isArray(mano.jugadas) ? mano.jugadas.map((jugada: any) => ({
+        jugadorId: jugada.jugadorId,
+        carta: jugada.carta,
+        equipoId: jugada.equipoId || 0,
+        ordenJugada: jugada.ordenJugada || 0
+      })) : [],
+      ganadorManoEquipoId: mano.ganadorManoEquipoId || null,
+      ganadorManoJugadorId: mano.ganadorManoJugadorId || null,
+      fueParda: mano.fueParda || false,
+      jugadorQueInicioManoId: mano.jugadorQueInicioManoId || null
+    }));
+  };
+
   if (isLoading && !loadingTimeoutActive && !gameState) {
     return (
       <div className="game-container">
@@ -262,7 +281,9 @@ const OnlineGamePage: React.FC = () => {
             jugadorActualId={jugadorId}
             jugadorEnTurnoId={gameState.rondaActual.turnoInfo.jugadorTurnoActualId}
             cartasEnMesa={gameState.rondaActual.turnoInfo.cartasEnMesaManoActual}
+            manosJugadas={transformManosJugadas(gameState.rondaActual.turnoInfo.manosJugadas)}
             jugadorSkins={jugadorSkins}
+            manoActual={gameState.rondaActual.turnoInfo.manoActualNumero - 1}
           />
 
           {/* Panel de acciones */}
@@ -273,6 +294,8 @@ const OnlineGamePage: React.FC = () => {
             trucoInfo={gameState.rondaActual.trucoInfo}
             esMiTurno={esMiTurno()}
             trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
+            manoActual={gameState.rondaActual.turnoInfo.manoActualNumero}
+            cartasJugador={gameState.jugadores.find(j => j.id === jugadorId)?.cartasMano || []}
             onCantar={cantar}
             onResponderCanto={responderCanto}
             onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
