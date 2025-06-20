@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('./config/db');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('./middleware/authMiddleware');
+const gameLogicHandler = require('./game-logic/gameLogicHandler'); // Importar gameLogicHandler
 
 // Middleware de diagnóstico para ver todas las solicitudes
 router.use((req, res, next) => {
@@ -25,7 +26,7 @@ router.get('/', authenticateToken, async (req, res) => {
         COUNT(jp.id) as jugadores_actuales
       FROM partidas p
       LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
-      WHERE p.estado = 'en curso'
+      WHERE p.estado = 'en_juego'
     `;
 
     if (filtro === 'publicas') {
@@ -73,11 +74,11 @@ router.post('/crear', authenticateToken, async (req, res) => {
     const usuarioNombre = req.user.nombre_usuario;
     const codigoSala = uuidv4().substring(0, 8);
 
-    // Tiempo de expiración para TODAS las salas (5 minutos)
+    // Tiempo de expiración para TODAS las salas (30 minutos)
     const ahora = new Date();
-    const expiracion = new Date(ahora.getTime() + (3 * 60 * 1000));
+    const expiracion = new Date(ahora.getTime() + (30 * 60 * 1000));
     function toMySQLDatetime(date) {
-  const pad = (n) => n < 10 ? '0' + n : n;
+      const pad = (n) => n < 10 ? '0' + n : n;
       return date.getFullYear() + '-' +
         pad(date.getMonth() + 1) + '-' +
         pad(date.getDate()) + ' ' +
@@ -104,7 +105,7 @@ router.post('/crear', authenticateToken, async (req, res) => {
     await connection.query(
       `INSERT INTO partidas 
        (codigo_sala, tipo, puntos_victoria, max_jugadores, codigo_acceso, tiempo_expiracion, estado, fecha_inicio, creador) 
-       VALUES (?, ?, ?, ?, ?, ?, 'en curso', ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, 'en_juego', ?, ?)`,
       [codigoSala, tipo, puntosVictoria, maxJugadores, codigo_acceso, tiempoExpiracion, fechaInicio, usuarioNombre]
     );
 
@@ -133,42 +134,39 @@ router.post('/crear', authenticateToken, async (req, res) => {
   }
 });
 
-
 // Unirse a una sala pública
 router.post('/unirse', authenticateToken, async (req, res) => {
   let connection;
   try {
-    console.log('Intentando unirse a sala con datos:', req.body);
+    console.log('Intentando unir usuario a sala:', req.body);
+    const { codigo_sala } = req.body;
+    const usuarioId = req.user.id;
     
     connection = await pool.getConnection();
     await connection.beginTransaction();
     
-    const { codigo_sala } = req.body;
-    const usuarioId = req.user.id;
-    
-    // Verificar si la sala existe y está disponible
+    // Verificar si la sala existe
     const [salas] = await connection.query(
-      `SELECT p.*, COUNT(jp.id) as jugadores_actuales 
-       FROM partidas p 
-       LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id 
-       WHERE p.codigo_sala = ? AND p.estado = 'en curso'
-       GROUP BY p.codigo_sala`,
+      `SELECT s.*, 
+              (SELECT COUNT(*) FROM jugadores_partidas jp WHERE jp.partida_id = s.codigo_sala) AS jugadores_actuales
+       FROM partidas s 
+       WHERE s.codigo_sala = ?`,
       [codigo_sala]
     );
-
+    
     if (salas.length === 0) {
       await connection.rollback();
-      return res.status(404).json({ error: 'Sala no encontrada o finalizada' });
+      return res.status(404).json({ error: 'Sala no encontrada' });
     }
-
+    
     const sala = salas[0];
     
-    // Verificar si el usuario ya está en la sala
+    // Verificar si el jugador ya está en la sala
     const [jugadorExistente] = await connection.query(
       `SELECT * FROM jugadores_partidas WHERE partida_id = ? AND usuario_id = ?`,
       [codigo_sala, usuarioId]
     );
-
+    
     if (jugadorExistente.length > 0) {
       await connection.commit();
       return res.status(200).json({ mensaje: 'Ya estás en esta sala' });
@@ -191,19 +189,93 @@ router.post('/unirse', authenticateToken, async (req, res) => {
       `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, false)`,
       [codigo_sala, usuarioId]
     );
-
-    await connection.commit();
-    res.status(200).json({ mensaje: 'Te has unido a la sala con éxito' });
+    
+    // Verificar si ahora la sala está llena para iniciar la partida
+    const nuevaCantidadJugadores = sala.jugadores_actuales + 1;
+    if (nuevaCantidadJugadores === sala.max_jugadores) {
+      console.log(`[salasRoute] La sala ${codigo_sala} está llena. Iniciando la partida...`);
+      
+      // Cambiar estado de la sala a 'en_juego'
+      await connection.query(
+        `UPDATE partidas SET estado = 'en_juego' WHERE codigo_sala = ?`,
+        [codigo_sala]
+      );
+      
+      // Obtener todos los jugadores de la sala
+      const [jugadores] = await connection.query(
+        `SELECT jp.usuario_id, u.nombre_usuario 
+         FROM jugadores_partidas jp 
+         JOIN usuarios u ON jp.usuario_id = u.id 
+         WHERE jp.partida_id = ?`,
+        [codigo_sala]
+      );
+      
+      await connection.commit();
+      
+      // Crear jugadoresInfo para gameLogicHandler
+      const jugadoresInfo = jugadores.map(j => ({
+        id: j.usuario_id,
+        nombre_usuario: j.nombre_usuario
+      }));
+      
+      // Iniciar la partida con gameLogicHandler
+      const tipoPartida = sala.max_jugadores === 2 ? '1v1' : 
+                          sala.max_jugadores === 4 ? '2v2' : '3v3';
+      
+      console.log(`[salasRoute] Creando instancia de partida para sala ${codigo_sala}`);
+      console.log('[salasRoute] Datos para gameLogicHandler:', {
+        codigo_sala,
+        jugadoresInfo,
+        tipoPartida,
+        puntos_victoria: sala.puntos_victoria || 15
+      });
+      
+      try {
+        // 1. Crear la instancia de la partida en el backend
+        const partidaCreada = await gameLogicHandler.crearNuevaPartida(
+          codigo_sala, 
+          jugadoresInfo, 
+          tipoPartida, 
+          sala.puntos_victoria || 15
+        );
+        
+        if (partidaCreada) {
+          console.log(`[salasRoute] ✅ Partida creada exitosamente para sala ${codigo_sala}`);
+          
+          // 2. Notificar a TODOS los sockets en esa sala de lobby para que se redirijan
+          const io = req.app.get('io');
+          if (io) {
+            console.log(`[salasRoute] Emitiendo 'iniciar_redireccion_juego' a la sala ${codigo_sala}`);
+            // ✅ Small delay to ensure frontend sockets have joined the lobby room
+            setTimeout(() => {
+              io.to(codigo_sala).emit('iniciar_redireccion_juego', { codigoSala: codigo_sala });
+            }, 100);
+          }
+          
+          return res.status(200).json({ 
+            message: 'Te has unido a la sala exitosamente.',
+            codigo_sala,
+            juego_iniciado: true  // Flag para indicar que el juego fue iniciado
+          });
+        } else {
+          console.log(`[salasRoute] ❌ Error: partida no pudo ser creada para sala ${codigo_sala}`);
+          return res.status(500).json({ error: 'Error al crear la partida' });
+        }
+      } catch (error) {
+        console.error('[salasRoute] Error al iniciar la partida:', error);
+        return res.status(500).json({ error: 'Error al iniciar la partida' });
+      }
+    } else {
+      await connection.commit();
+      return res.status(200).json({ message: 'Te has unido a la sala exitosamente.', codigo_sala });
+    }
+    
   } catch (error) {
-    console.error('Error al unirse a la sala:', error);
-    if (connection) {
-      await connection.rollback();
-    }
-    return res.status(500).json({ error: 'Error al unirse a la sala', detalle: error.message });
+    console.error('Error detallado al unirse a sala:', error);
+    if (connection) await connection.rollback();
+    return res.status(500).json({ error: 'Error al unirse a la sala' });
   } finally {
-    if (connection) {
-      connection.release();
-    }
+    if (connection) connection.release();
   }
 });
 
@@ -228,7 +300,7 @@ router.post('/unirse-privada', authenticateToken, async (req, res) => {
       `SELECT p.*, COUNT(jp.id) as jugadores_actuales 
        FROM partidas p 
        LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id 
-       WHERE p.codigo_acceso = ? AND p.estado = 'en curso' AND p.tipo = 'privada'
+       WHERE p.codigo_acceso = ? AND p.estado = 'en_juego' AND p.tipo = 'privada'
        GROUP BY p.codigo_sala`,
       [codigo_acceso]
     );

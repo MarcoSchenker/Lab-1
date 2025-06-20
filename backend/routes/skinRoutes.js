@@ -196,4 +196,30 @@ router.get('/usuarios/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Obtener preferencias de skin para cada jugador en una sala
+router.get('/api/game/:codigo_sala/skins', authenticateToken, async (req, res) => {
+  try {
+    const { codigo_sala } = req.params;
+    
+    // Obtener todos los jugadores en esta sala
+    const jugadores = await obtenerJugadoresSala(codigo_sala);
+    
+    // Obtener preferencias de skin para cada jugador
+    const preferencias = {};
+    for (const jugador of jugadores) {
+      const [rows] = await pool.query('SELECT skin_id FROM usuario_skins WHERE usuario_id = ? AND activa = 1', 
+        [jugador.usuario_id]);
+      const skinId = rows.length > 0 ? rows[0].skin_id : 1; // Default a 1 si no hay selección
+      
+      const [skinInfo] = await pool.query('SELECT nombre FROM skins WHERE id = ?', [skinId]);
+      preferencias[jugador.usuario_id] = skinInfo.length > 0 ? skinInfo[0].nombre : 'Original';
+    }
+    
+    res.json(preferencias);
+  } catch (error) {
+    console.error('Error al obtener preferencias de skins:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
 module.exports = router;

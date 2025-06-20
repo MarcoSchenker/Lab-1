@@ -1,0 +1,332 @@
+/* GameBoard Table/Mesa Styles - Optimized */
+
+/* ===== GAME BOARD MEJORADO ===== */
+.game-board-mejorado {
+  position: relative;
+  width: 100%;
+  height: 750px;
+  background: var(--game-bg-gradient);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  padding: 120px 0;
+}
+
+/* ===== JUGADORES CON PERSPECTIVA ===== */
+.jugadores-perspectiva {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Posiciones principales - TOP */
+.jugadores-top {
+  position: absolute;
+  top: -90px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  z-index: var(--z-avatars-top, 25);
+}
+
+/* Posiciones principales - BOTTOM */
+.jugadores-bottom {
+  position: absolute;
+  bottom: -90px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  z-index: var(--z-avatars-bottom, 85);
+}
+
+/* ===== AVATARES HORIZONTALES - OPTIMIZADO ===== */
+.avatar-horizontal {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 10px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  min-width: 200px;
+  position: relative;
+}
+
+/* Estados de avatar */
+.avatar-horizontal.current-player {
+  border-color: #4a90e2;
+  background: rgba(74, 144, 226, 0.15);
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
+}
+
+.avatar-horizontal.opponent-player {
+  border-color: #8b1538;
+  background: rgba(139, 21, 56, 0.2);
+  box-shadow: 0 0 20px rgba(139, 21, 56, 0.3);
+}
+
+.avatar-horizontal.teammate-player {
+  border-color: #2e7d32;
+  background: rgba(46, 125, 50, 0.15);
+  box-shadow: 0 0 20px rgba(46, 125, 50, 0.3);
+}
+
+.avatar-horizontal.on-turn {
+  border-color: var(--game-accent-color);
+  background: rgba(247, 183, 51, 0.15);
+  box-shadow: 0 0 25px rgba(247, 183, 51, 0.4);
+  animation: pulse-turn 2s infinite;
+}
+
+/* Contenido del avatar */
+.avatar-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.avatar-image-horizontal {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
+  color: white;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.avatar-image-horizontal.team-1 {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border-color: #4a90e2;
+}
+
+.avatar-image-horizontal.team-2 {
+  background: linear-gradient(135deg, #d0021b 0%, #a8001a 100%);
+  border-color: #d0021b;
+}
+
+.avatar-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-name-horizontal {
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connection-dot.conectado {
+  background: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+}
+
+.connection-dot.desconectado {
+  background: #f44336;
+  box-shadow: 0 0 6px rgba(244, 67, 54, 0.6);
+}
+
+/* ===== MESA CONTAINER ===== */
+.mesa-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mesa-juego-mejorada {
+  width: 100%;
+  max-width: 1200px;
+  height: 600px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.superficie-mesa {
+  flex: 1;
+  background: 
+    radial-gradient(ellipse at center, rgba(34, 139, 34, 0.8) 0%, rgba(0, 100, 0, 0.9) 100%);
+  border: 3px solid #228b22;
+  border-radius: 20px;
+  box-shadow: 
+    inset 0 0 50px rgba(0, 0, 0, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== DISTRIBUCIÓN 2x2 - OPTIMIZADA ===== */
+.jugadores-perspectiva.cuatro-jugadores-2x2 {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.jugadores-top.cuatro-jugadores-2x2,
+.jugadores-bottom.cuatro-jugadores-2x2 {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15%;
+}
+
+.jugadores-top.cuatro-jugadores-2x2 {
+  top: -90px;
+  z-index: var(--z-avatars-top, 25);
+}
+
+.jugadores-bottom.cuatro-jugadores-2x2 {
+  bottom: -90px;
+  z-index: var(--z-avatars-bottom, 85);
+}
+
+.posicion-top-left,
+.posicion-top-right,
+.posicion-bottom-left,
+.posicion-bottom-right {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 250px;
+  flex: 1;
+  max-width: 300px;
+}
+
+/* ===== CARTAS POSICIONADAS ===== */
+.cartas-posicionadas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.cartas-jugador-posicionadas {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  z-index: var(--z-cards-on-table, 30);
+}
+
+/* Posiciones específicas de cartas para 2v2 */
+.cartas-jugador-posicionadas.posicion-top-left {
+  position: absolute;
+  top: 15%;
+  left: 22%;
+  transform: translateX(-50%);
+}
+
+.cartas-jugador-posicionadas.posicion-top-right {
+  position: absolute;
+  top: 15%;
+  right: 22%;
+  transform: translateX(50%);
+}
+
+.cartas-jugador-posicionadas.posicion-bottom-left {
+  position: absolute;
+  bottom: 20%;
+  left: 22%;
+  transform: translateX(-50%);
+}
+
+.cartas-jugador-posicionadas.posicion-bottom-right {
+  position: absolute;
+  bottom: 20%;
+  right: 22%;
+  transform: translateX(50%);
+}
+
+/* ===== CARTAS SOLAPADAS ===== */
+.cartas-solapadas {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 120px;
+  gap: 5px;
+}
+
+.carta-solapada {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.carta-solapada:not(:first-child) {
+  margin-left: -15px;
+}
+
+/* ===== ANIMACIONES OPTIMIZADAS ===== */
+@keyframes pulse-turn {
+  0%, 100% { 
+    box-shadow: 0 0 25px rgba(247, 183, 51, 0.4);
+  }
+  50% { 
+    box-shadow: 0 0 35px rgba(247, 183, 51, 0.7);
+  }
+}
+
+/* ===== 3v3 DISTRIBUCIÓN ===== */
+.jugadores-top.seis-jugadores {
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.jugadores-bottom.seis-jugadores {
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.jugadores-perspectiva.seis-jugadores .avatar-horizontal {
+  min-width: 180px;
+  padding: 8px 12px;
+}
+
+.jugadores-perspectiva.seis-jugadores .avatar-image-horizontal {
+  width: 45px;
+  height: 45px;
+  font-size: 14px;
+}

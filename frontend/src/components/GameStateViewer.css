@@ -1,0 +1,141 @@
+.game-state-viewer {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.viewer-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.tabs button {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.tabs button:hover {
+  color: #333;
+}
+
+.tabs button.active {
+  color: #1a73e8;
+  border-bottom-color: #1a73e8;
+}
+
+.tab-content {
+  padding: 10px 0;
+}
+
+.refresh-button {
+  padding: 8px 16px;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.refresh-button:hover {
+  background-color: #0d62cb;
+}
+
+.state-section {
+  margin-bottom: 20px;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.state-section h4 {
+  margin: 0;
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  user-select: none;
+}
+
+.section-details {
+  padding: 10px 15px;
+}
+
+.section-details p {
+  margin: 5px 0;
+}
+
+.error-state {
+  text-align: center;
+  padding: 20px;
+}
+
+.error-analysis .error-item {
+  color: #d32f2f;
+  margin: 5px 0;
+}
+
+.error-analysis .ok-item {
+  color: #43a047;
+  margin: 5px 0;
+}
+
+.players-list,
+.teams-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.player-card,
+.team-card {
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.player-card h4,
+.team-card h4 {
+  margin-top: 0;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 8px;
+}
+
+.envido-section,
+.truco-section {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.round-info h4 {
+  margin: 10px 0 5px;
+}

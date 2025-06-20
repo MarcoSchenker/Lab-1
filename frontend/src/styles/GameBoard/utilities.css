@@ -1,0 +1,227 @@
+/* GameBoard Utilities and Indicators */
+
+/* ===== MESA INFO ===== */
+.mesa-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.mesa-info-content {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(247, 183, 51, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
+  min-width: 200px;
+}
+
+.mesa-title {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #f7b733;
+  margin-bottom: 10px;
+}
+
+.mesa-status {
+  font-size: 0.9em;
+  color: #ccc;
+}
+
+/* ===== INDICADOR "TÚ" ===== */
+.you-indicator {
+  position: absolute;
+  top: -12px;
+  left: -8px;
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 15px;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: bounce-you 2s infinite;
+  box-shadow: 0 3px 12px rgba(76, 175, 80, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.you-pulse {
+  animation: pulse-you 2s infinite;
+}
+
+@keyframes bounce-you {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.05); }
+}
+
+@keyframes pulse-you {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ===== DISTRIBUCIÓN PARA 3v3 ===== */
+.jugadores-top.seis-jugadores {
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.jugadores-bottom.seis-jugadores {
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+/* Avatares más compactos para 3v3 */
+.jugadores-perspectiva.seis-jugadores .avatar-horizontal {
+  min-width: 180px;
+  padding: 8px 12px;
+}
+
+.jugadores-perspectiva.seis-jugadores .avatar-image-horizontal {
+  width: 45px;
+  height: 45px;
+  font-size: 14px;
+}
+
+.jugadores-perspectiva.seis-jugadores .player-name-horizontal {
+  font-size: 13px;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes float-card {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(247, 183, 51, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(247, 183, 51, 0.6); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  display: block !important;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.scale-hover:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+.glow-border {
+  box-shadow: 0 0 15px rgba(247, 183, 51, 0.4);
+  border: 2px solid rgba(247, 183, 51, 0.6);
+}
+
+.pulse-glow {
+  animation: glow 2s infinite;
+}
+
+/* ===== TEXT UTILITIES ===== */
+.text-primary {
+  color: #f7b733;
+}
+
+.text-secondary {
+  color: #ccc;
+}
+
+.text-success {
+  color: #4caf50;
+}
+
+.text-error {
+  color: #f44336;
+}
+
+.text-warning {
+  color: #ff9800;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-uppercase {
+  text-transform: uppercase;
+}
+
+.font-bold {
+  font-weight: bold;
+}
+
+/* ===== SPACING UTILITIES ===== */
+.m-0 { margin: 0; }
+.m-1 { margin: 4px; }
+.m-2 { margin: 8px; }
+.m-3 { margin: 12px; }
+.m-4 { margin: 16px; }
+.m-5 { margin: 20px; }
+
+.p-0 { padding: 0; }
+.p-1 { padding: 4px; }
+.p-2 { padding: 8px; }
+.p-3 { padding: 12px; }
+.p-4 { padding: 16px; }
+.p-5 { padding: 20px; }
+
+/* ===== FLEX UTILITIES ===== */
+.d-flex {
+  display: flex;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+}

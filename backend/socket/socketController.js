@@ -1,6 +1,6 @@
 const { setupAuthHandlers } = require('./socketMiddleware');
 const { setupGameHandlers } = require('./handlers/gameSocketHandlers');
-const gameLogicHandler = require('../game_logic/gameLogicHandler');
+const gameLogicHandler = require('../../game-logic/gameLogicHandler');
 
 /**
  * Configura los manejadores de eventos de Socket.IO

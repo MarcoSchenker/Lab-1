@@ -1,0 +1,362 @@
+/* Enhanced Animation CSS for Truco Game */
+/* File: /frontend/src/components/animations/CardAnimations.css */
+
+/* ===== CARD ANIMATIONS ===== */
+.card-animation-wrapper {
+  transition: all 0.3s ease;
+}
+
+/* Card Deal Animation */
+.card-deal-animation {
+  opacity: 0;
+  transform: translateY(-100px) rotateY(180deg);
+  animation: cardDeal 0.6s ease-out forwards;
+}
+
+@keyframes cardDeal {
+  0% {
+    opacity: 0;
+    transform: translateY(-100px) rotateY(180deg) scale(0.8);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-20px) rotateY(90deg) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateY(0deg) scale(1);
+  }
+}
+
+/* Card Play Animation */
+.card-play-animation {
+  animation: cardPlay 0.4s ease-out forwards;
+}
+
+@keyframes cardPlay {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-30px) scale(1.1);
+  }
+  100% {
+    transform: translateY(-50px) scale(1);
+  }
+}
+
+/* Card Win Animation */
+.card-win-animation {
+  animation: cardWin 1s ease-in-out infinite;
+}
+
+@keyframes cardWin {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.05) rotate(2deg);
+    box-shadow: 0 8px 16px rgba(255, 215, 0, 0.6);
+  }
+}
+
+/* Card Flip Animation */
+.card-flip-animation {
+  animation: cardFlip 0.6s ease-in-out;
+}
+
+@keyframes cardFlip {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(90deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+/* ===== VICTORY CELEBRATION ===== */
+.victory-celebration-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.9), rgba(255, 140, 0, 0.9));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: victoryFadeIn 0.5s ease-out;
+}
+
+@keyframes victoryFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
+}
+
+.victory-content {
+  text-align: center;
+  position: relative;
+  animation: victoryBounce 0.8s ease-out;
+}
+
+@keyframes victoryBounce {
+  0% {
+    transform: scale(0.3) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(-10deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.victory-title {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 3px 3px 0px #ff6b35, 6px 6px 0px #ff8c42;
+  margin: 0;
+  animation: victoryPulse 1s ease-in-out infinite;
+}
+
+@keyframes victoryPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* ===== FIREWORKS ===== */
+.victory-fireworks {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 200px;
+}
+
+.firework {
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  animation: firework 1.5s ease-out infinite;
+}
+
+.firework:nth-child(1) {
+  left: 20%;
+  animation-delay: 0s;
+  background: #ff6b35;
+}
+
+.firework:nth-child(2) {
+  left: 50%;
+  animation-delay: 0.5s;
+  background: #4ecdc4;
+}
+
+.firework:nth-child(3) {
+  left: 80%;
+  animation-delay: 1s;
+  background: #ff8c42;
+}
+
+@keyframes firework {
+  0% {
+    transform: translateY(100px) scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-50px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ===== CONFETTI ===== */
+.victory-confetti {
+  position: absolute;
+  top: -50px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  animation: confetti 3s ease-out infinite;
+}
+
+.confetti-0 { background: #ff6b35; left: 10%; animation-delay: 0s; }
+.confetti-1 { background: #4ecdc4; left: 30%; animation-delay: 0.2s; }
+.confetti-2 { background: #ff8c42; left: 50%; animation-delay: 0.4s; }
+.confetti-3 { background: #95e1d3; left: 70%; animation-delay: 0.6s; }
+.confetti-4 { background: #f38ba8; left: 90%; animation-delay: 0.8s; }
+
+@keyframes confetti {
+  0% {
+    transform: translateY(-100px) rotateZ(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotateZ(720deg);
+    opacity: 0;
+  }
+}
+
+/* ===== TURN INDICATOR ===== */
+.turn-indicator {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-weight: bold;
+  text-align: center;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  animation: turnSlideIn 0.5s ease-out;
+}
+
+.turn-indicator.my-turn {
+  background: linear-gradient(45deg, #4ecdc4, #44a08d);
+  color: white;
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+}
+
+.turn-indicator.other-turn {
+  background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+  color: white;
+  box-shadow: 0 4px 15px rgba(149, 165, 166, 0.4);
+}
+
+@keyframes turnSlideIn {
+  from {
+    transform: translateX(-50%) translateY(-100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.turn-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 25px;
+  background: inherit;
+  animation: turnPulse 2s ease-in-out infinite;
+}
+
+@keyframes turnPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+}
+
+.turn-text {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== CARD HOVER EFFECTS ===== */
+.card-hover-enhancement {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.card-hover-enhancement:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.card-hover-enhancement:hover::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #4ecdc4, #44a08d, #ff6b35, #ff8c42);
+  border-radius: inherit;
+  z-index: -1;
+  animation: borderGlow 2s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .victory-title {
+    font-size: 2.5rem;
+  }
+  
+  .turn-indicator {
+    top: 10px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+  
+  .card-hover-enhancement:hover {
+    transform: translateY(-5px) scale(1.02);
+  }
+}
+
+@media (max-width: 480px) {
+  .victory-title {
+    font-size: 2rem;
+  }
+  
+  .confetti {
+    width: 6px;
+    height: 6px;
+  }
+}

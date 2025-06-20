@@ -68,7 +68,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS partidas_estado (
         id INT AUTO_INCREMENT PRIMARY KEY,
         codigo_sala VARCHAR(255) NOT NULL UNIQUE,
-        estado_partida ENUM('esperando_configuracion', 'en_curso', 'pausada', 'finalizada') DEFAULT 'esperando_configuracion',
+        estado_partida ENUM('esperando_configuracion', 'en_juego', 'pausada', 'finalizada') DEFAULT 'esperando_configuracion',
         tipo_partida ENUM('1v1', '2v2', '3v3') NOT NULL,
         jugadores_configurados INT NOT NULL,
         puntaje_objetivo INT DEFAULT 15,
@@ -143,7 +143,7 @@ async function initializeDatabase() {
         ronda_numero INT NOT NULL,
         mano_numero_en_ronda INT NULL,
         usuario_id_accion INT NOT NULL,
-        tipo_accion ENUM('JUGAR_CARTA', 'CANTO_ENVIDO', 'CANTO_TRUCO', 'RESPUESTA_CANTO', 'IRSE_AL_MAZO', 'DECLARAR_PUNTOS_ENVIDO', 'SON_BUENAS_ENVIDO') NOT NULL,
+        tipo_accion ENUM('JUGAR_CARTA', 'CANTO_ENV', 'CANTO_ENVIDO_ENCADENADO', 'CANT_TRU', 'RESP_ENV', 'RESP_TRU', 'DECL_ENV', 'SON_BUENAS_ENVIDO', 'IRSE_AL_MAZO', 'ACCION_DESCONOCIDA') NOT NULL,
         detalle_accion JSON NULL, 
         timestamp_accion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (partida_estado_id) REFERENCES partidas_estado(id) ON DELETE CASCADE,

@@ -60,7 +60,7 @@ const SkinPage: React.FC = () => {
       setError(null);
 
       // Obtener todas las skins
-      const allSkinsResponse = await api.get('/skins');
+      const allSkinsResponse = await api.get('/api/skins');
       
       if (Array.isArray(allSkinsResponse.data)) {
         setAllSkins(allSkinsResponse.data);
@@ -69,7 +69,7 @@ const SkinPage: React.FC = () => {
       }
 
       // Obtener skins desbloqueadas por el usuario
-      const userSkinsResponse = await api.get('/skins/user', axiosConfig());
+      const userSkinsResponse = await api.get('/api/skins/user', axiosConfig());
       if (Array.isArray(userSkinsResponse.data)) {
         setUserSkins(userSkinsResponse.data);
       } else {
@@ -95,7 +95,7 @@ const SkinPage: React.FC = () => {
   const handleSelectSkin = async (skinId: number) => {
     try {
       setLoading(true);
-      const response = await api.post(`/skins/select/${skinId}`, {}, axiosConfig());
+      const response = await api.post(`/api/skins/select/${skinId}`, {}, axiosConfig());
       setSelectedSkin(allSkins.find((skin) => skin.id === skinId) || null);
       setSuccessMessage(response.data.message || 'Skin seleccionada correctamente');
       
@@ -121,7 +121,7 @@ const SkinPage: React.FC = () => {
       }
 
       setLoading(true);
-      const response = await api.post(`/skins/unlock/${skinId}`, {}, axiosConfig());
+      const response = await api.post(`/api/skins/unlock/${skinId}`, {}, axiosConfig());
       setUserCoins(response.data.newBalance);
       const unlockedSkin = allSkins.find((skin) => skin.id === skinId);
       if (unlockedSkin) {

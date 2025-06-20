@@ -1,0 +1,56 @@
+/* Variables CSS para GameBoard */
+:root {
+  /* Colores principales */
+  --game-bg-primary: #0f2027;
+  --game-bg-secondary: #203a43;
+  --game-bg-tertiary: #2c5364;
+  --game-accent-color: #f7b733;
+  
+  /* Gradientes */
+  --game-bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+  --loading-bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  --error-bg-gradient: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
+  --mesa-radial-gradient: radial-gradient(circle, rgba(15, 32, 39, 0.8) 0%, rgba(44, 83, 100, 0.4) 100%);
+  
+  /* Espaciado */
+  --game-padding: 20px;
+  --game-board-height: 70vh;
+  --game-board-max-height: 800px;
+  
+  /* Avatares */
+  --avatar-size: 80px;
+  --avatar-border-width: 3px;
+  --avatar-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  
+  /* Mesa */
+  --mesa-width: 700px;
+  --mesa-height: 700px;
+  --mesa-border-color: rgba(247, 183, 51, 0.3);
+  
+  /* Cartas */
+  --carta-width: 65px;
+  --carta-height: 95px;
+  --carta-border-radius: 8px;
+  --carta-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  
+  /* Transiciones */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* Z-index layers */
+  --z-loading: 9999;
+  --z-player-hand: 150;
+  --z-header: 100;
+  --z-actions: 90;
+  --z-avatars-bottom: 85;
+  --z-avatars-top: 25;
+  --z-cards-on-table: 30;
+  --z-avatars: 20;
+  --z-mesa: 5;
+  --z-background: 1;
+  
+  /* Separación específica para 2v2 */
+  --avatar-2v2-gap: 40px;
+  --card-2v2-separation: 25px;
+}

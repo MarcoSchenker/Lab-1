@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken } = require('../middleware/authMiddleware');
-const gameLogicHandler = require('../game_logic/gameLogicHandler');
+const gameLogicHandler = require('../game-logic/gameLogicHandler');
 
 /**
  * @route   POST /api/game/:codigo_sala/iniciar
