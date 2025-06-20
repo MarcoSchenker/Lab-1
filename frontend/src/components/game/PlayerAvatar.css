@@ -127,3 +127,30 @@
     font-size: 7px;
   }
 }
+
+/* ===== HORIZONTAL AVATAR LAYOUT OPTIMIZATIONS ===== */
+.player-avatar.scale-75 {
+  transform: scale(0.75);
+  padding: 6px;
+  min-width: 70px;
+  max-width: 80px;
+}
+
+.player-avatar.scale-75 .avatar-image {
+  width: 35px;
+  height: 35px;
+  font-size: 12px;
+}
+
+.player-avatar.scale-75 .player-name {
+  font-size: 10px;
+  max-width: 70px;
+}
+
+.player-avatar.scale-75 .player-role {
+  font-size: 8px;
+}
+
+.player-avatar.scale-75 .player-connection-status {
+  font-size: 7px;
+}

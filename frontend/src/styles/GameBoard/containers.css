@@ -1,0 +1,48 @@
+/* Contenedores base del GameBoard */
+
+.game-container {
+  min-height: 100vh;
+  background: var(--game-bg-gradient);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.game-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: var(--game-padding);
+}
+
+.game-board-container {
+  position: relative;
+  width: 100%;
+  height: var(--game-board-height);
+  max-height: var(--game-board-max-height);
+  margin-bottom: 5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-avatars-container {
+  position: relative;
+  width: var(--mesa-width);
+  height: var(--mesa-height);
+  border-radius: 50%;
+  border: 3px solid var(--mesa-border-color);
+  background: var(--mesa-radial-gradient);
+  box-shadow: 
+    inset 0 0 50px rgba(247, 183, 51, 0.1),
+    0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+.player-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: var(--transition-normal);
+  z-index: var(--z-avatars);
+}

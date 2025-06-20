@@ -1,0 +1,110 @@
+/* GameBoard 2v2 Mode Specific Styles - Clean Version */
+
+/* ===== CONFIGURACIÓN ESPECÍFICA PARA 2v2 ===== */
+
+/* Asegurar posicionamiento correcto de avatares TOP */
+.jugadores-top.cuatro-jugadores-2x2 {
+  top: -100px !important;
+  z-index: 25 !important;
+  padding: 0 15%;
+  gap: 40px;
+}
+
+/* Asegurar posicionamiento correcto de avatares BOTTOM */
+.jugadores-bottom.cuatro-jugadores-2x2 {
+  bottom: -100px !important;
+  z-index: 85 !important;
+  padding: 0 15%;
+  gap: 40px;
+}
+
+/* Mano del jugador con separación adecuada */
+.player-hand {
+  bottom: 160px !important;
+  z-index: 150 !important;
+  max-width: 700px;
+}
+
+/* Posiciones específicas para cartas en 2v2 */
+.cartas-jugador-posicionadas.posicion-top-left {
+  top: 18% !important;
+  left: 25% !important;
+  transform: translateX(-50%);
+  z-index: 30;
+}
+
+.cartas-jugador-posicionadas.posicion-top-right {
+  top: 18% !important;
+  right: 25% !important;
+  transform: translateX(50%);
+  z-index: 30;
+}
+
+.cartas-jugador-posicionadas.posicion-bottom-left {
+  bottom: 25% !important;
+  left: 25% !important;
+  transform: translateX(-50%);
+  z-index: 30;
+}
+
+.cartas-jugador-posicionadas.posicion-bottom-right {
+  bottom: 25% !important;
+  right: 25% !important;
+  transform: translateX(50%);
+  z-index: 30;
+}
+
+/* Mejorar visibilidad de avatares */
+.avatar-horizontal {
+  min-width: 200px !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Separación optimizada entre cartas */
+.cartas-solapadas {
+  gap: 8px !important;
+  padding: 5px;
+  border-radius: 5px;
+  min-height: 120px;
+}
+
+.carta-solapada:not(:first-child) {
+  margin-left: -10px !important;
+}
+
+/* Responsive para 2v2 */
+@media (max-width: 768px) {
+  .jugadores-top.cuatro-jugadores-2x2,
+  .jugadores-bottom.cuatro-jugadores-2x2 {
+    padding: 0 10%;
+    gap: 25px;
+  }
+  
+  .player-hand {
+    bottom: 140px !important;
+  }
+  
+  .cartas-jugador-posicionadas.posicion-bottom-left,
+  .cartas-jugador-posicionadas.posicion-bottom-right {
+    bottom: 30% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .jugadores-top.cuatro-jugadores-2x2,
+  .jugadores-bottom.cuatro-jugadores-2x2 {
+    padding: 0 5%;
+    gap: 15px;
+  }
+  
+  .player-hand {
+    bottom: 120px !important;
+  }
+  
+  .avatar-horizontal {
+    min-width: 160px !important;
+    padding: 8px 10px !important;
+  }
+}

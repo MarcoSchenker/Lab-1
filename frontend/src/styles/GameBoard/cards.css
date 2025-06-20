@@ -1,0 +1,54 @@
+/* Estilos para cartas en la mesa */
+
+.played-cards-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 400px;
+  z-index: var(--z-mesa);
+}
+
+.played-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
+  transition: var(--transition-normal);
+}
+
+.played-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.played-card img {
+  width: 90px;
+  height: auto;
+  border-radius: var(--carta-border-radius);
+  box-shadow: var(--carta-shadow);
+  transition: var(--transition-fast);
+}
+
+.played-card img:hover {
+  transform: scale(1.05);
+}
+
+.played-card-player {
+  font-size: 0.8em;
+  background-color: rgba(247, 183, 51, 0.8);
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #1a1a1a;
+  font-weight: 600;
+  text-shadow: none;
+}

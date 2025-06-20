@@ -11,7 +11,7 @@ import GameReconnectOptions from '../components/GameReconnectOptions';
 import GameStateViewer from '../components/GameStateViewer';
 
 // Importar estilos
-import '../styles/GameBoard.css';
+import '../styles/GameBoard/index.css';
 import './OnlineGamePage.css';
 
 // Componente GamePage refactorizado

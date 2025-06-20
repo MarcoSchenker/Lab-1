@@ -1,0 +1,64 @@
+/* Posiciones de jugadores en la mesa */
+
+/* ===== POSICIONES PARA 2 JUGADORES (1v1) ===== */
+.player-count-2 .player-slot-0 { 
+  top: 85%; 
+  left: 50%; 
+}
+
+.player-count-2 .player-slot-1 { 
+  top: 15%; 
+  left: 50%; 
+}
+
+/* ===== POSICIONES PARA 4 JUGADORES (2v2) ===== */
+.player-count-4 .player-slot-0 { 
+  top: 85%; 
+  left: 50%; 
+}
+
+.player-count-4 .player-slot-1 { 
+  top: 50%; 
+  left: 15%; 
+}
+
+.player-count-4 .player-slot-2 { 
+  top: 15%; 
+  left: 50%; 
+}
+
+.player-count-4 .player-slot-3 { 
+  top: 50%; 
+  left: 85%; 
+}
+
+/* ===== POSICIONES PARA 6 JUGADORES (3v3) ===== */
+.player-count-6 .player-slot-0 { 
+  top: 85%; 
+  left: 50%; 
+}
+
+.player-count-6 .player-slot-1 { 
+  top: 75%; 
+  left: 15%; 
+}
+
+.player-count-6 .player-slot-2 { 
+  top: 25%; 
+  left: 15%; 
+}
+
+.player-count-6 .player-slot-3 { 
+  top: 15%; 
+  left: 50%; 
+}
+
+.player-count-6 .player-slot-4 { 
+  top: 25%; 
+  left: 85%; 
+}
+
+.player-count-6 .player-slot-5 { 
+  top: 75%; 
+  left: 85%; 
+}

@@ -1,0 +1,280 @@
+/* GameBoard 2v2 Mode Specific Styles */
+
+/* ===== DEBUG MODE (change to false for production) ===== */
+:root {
+  --debug-2v2: true; /* Set to false to disable debug styles */
+}
+
+/* ===== LAYOUT PRINCIPAL PARA 2v2 ===== */
+
+/* Avatares TOP para 2v2 - posicionados en la parte superior */
+.jugadores-top.cuatro-jugadores-2x2 {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0 15% !important;
+  z-index: var(--z-avatars-top) !important;
+  min-height: 80px;
+  margin-bottom: 20px;
+}
+
+/* Avatares BOTTOM para 2v2 - posicionados DEBAJO de la mesa y contenido */
+.jugadores-bottom.cuatro-jugadores-2x2 {
+  position: fixed !important; /* Fixed para asegurar posición en viewport */
+  bottom: 120px !important; /* Suficiente espacio para la mano del jugador */
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0 15% !important;
+  z-index: var(--z-avatars-bottom) !important;
+  min-height: 80px;
+  margin-top: 20px;
+}
+
+/* Mesa container para 2v2 - centrada entre los avatares */
+.jugadores-perspectiva.cuatro-jugadores-2x2 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 400px; /* Altura mínima para acomodar la mesa */
+  justify-content: flex-start; /* Avatares top primero */
+}
+
+/* Asegurar que la mano del jugador no interfiera con los avatares bottom */
+.player-hand {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: var(--z-player-hand) !important;
+  padding: 10px 0;
+}
+
+/* ===== POSICIONES ESPECÍFICAS DE AVATARES ===== */
+
+/* Posiciones generales para todos los avatares */
+.posicion-top-left,
+.posicion-top-right,
+.posicion-bottom-left,
+.posicion-bottom-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  min-width: 200px !important;
+  flex: 1 !important;
+  max-width: 280px !important;
+  min-height: 80px !important;
+}
+
+/* Posiciones específicas top */
+.posicion-top-left,
+.posicion-top-right {
+  justify-content: center;
+}
+
+/* Posiciones específicas bottom */
+.posicion-bottom-left,
+.posicion-bottom-right {
+  justify-content: center;
+}
+
+/* ===== DEBUG STYLES (controlled by --debug-2v2 variable) ===== */
+
+/* Debug styles for containers - only when debugging */
+body.debug-2v2 .jugadores-top.cuatro-jugadores-2x2 {
+  background: rgba(0, 255, 0, 0.2) !important;
+  border: 2px dashed rgba(0, 255, 0, 0.8) !important;
+}
+
+body.debug-2v2 .jugadores-bottom.cuatro-jugadores-2x2 {
+  background: rgba(255, 0, 0, 0.2) !important;
+  border: 2px dashed rgba(255, 0, 0, 0.8) !important;
+}
+
+body.debug-2v2 .player-hand {
+  background: rgba(0, 0, 255, 0.1) !important;
+  border: 2px dashed rgba(0, 0, 255, 0.5) !important;
+}
+
+/* Debug styles for individual positions */
+body.debug-2v2 .posicion-top-left,
+body.debug-2v2 .posicion-top-right,
+body.debug-2v2 .posicion-bottom-left,
+body.debug-2v2 .posicion-bottom-right {
+  background: rgba(255, 255, 0, 0.15) !important;
+  border: 2px solid rgba(255, 255, 0, 0.6) !important;
+}
+
+/* Debug styles for avatars */
+body.debug-2v2 .posicion-bottom-left .avatar-horizontal,
+body.debug-2v2 .posicion-bottom-right .avatar-horizontal {
+  border: 2px solid rgba(255, 0, 0, 0.8) !important;
+  background: rgba(255, 0, 0, 0.1) !important;
+}
+
+body.debug-2v2 .posicion-top-left .avatar-horizontal,
+body.debug-2v2 .posicion-top-right .avatar-horizontal {
+  border: 2px solid rgba(0, 255, 0, 0.8) !important;
+  background: rgba(0, 255, 0, 0.1) !important;
+}
+
+/* Debug styles for cards on table */
+body.debug-2v2 .cartas-jugador-posicionadas.posicion-top-left,
+body.debug-2v2 .cartas-jugador-posicionadas.posicion-top-right {
+  background: rgba(255, 255, 0, 0.15);
+  border: 1px dashed rgba(255, 255, 0, 0.5);
+}
+
+body.debug-2v2 .cartas-jugador-posicionadas.posicion-bottom-left,
+body.debug-2v2 .cartas-jugador-posicionadas.posicion-bottom-right {
+  background: rgba(255, 0, 255, 0.15);
+  border: 1px dashed rgba(255, 0, 255, 0.5);
+}
+
+/* Debug labels */
+body.debug-2v2 .posicion-bottom-left::before {
+  content: "BOTTOM LEFT";
+  position: absolute;
+  top: -25px;
+  left: 0;
+  background: red;
+  color: white;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 3px;
+}
+
+body.debug-2v2 .posicion-bottom-right::before {
+  content: "BOTTOM RIGHT";
+  position: absolute;
+  top: -25px;
+  right: 0;
+  background: red;
+  color: white;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 3px;
+}
+
+body.debug-2v2 .posicion-top-left::before {
+  content: "TOP LEFT";
+  position: absolute;
+  top: -25px;
+  left: 0;
+  background: green;
+  color: white;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 3px;
+}
+
+body.debug-2v2 .posicion-top-right::before {
+  content: "TOP RIGHT";
+  position: absolute;
+  top: -25px;
+  right: 0;
+  background: green;
+  color: white;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 3px;
+}
+
+/* ===== POSICIONAMIENTO DE CARTAS EN MESA ===== */
+
+/* Cartas en la mesa para cada posición en 2v2 */
+.cartas-jugador-posicionadas.posicion-top-left {
+  position: absolute;
+  top: 15%;
+  left: 20%;
+}
+
+.cartas-jugador-posicionadas.posicion-top-right {
+  position: absolute;
+  top: 15%;
+  right: 20%;
+}
+
+.cartas-jugador-posicionadas.posicion-bottom-left {
+  position: absolute;
+  bottom: 20%;
+  left: 20%;
+}
+
+.cartas-jugador-posicionadas.posicion-bottom-right {
+  position: absolute;
+  bottom: 20%;
+  right: 20%;
+}
+
+/* ===== AVATARES VISIBLES ===== */
+
+/* Todos los avatares horizontales bien visibles */
+.avatar-horizontal {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  position: relative !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  min-height: 60px !important;
+  min-width: 180px !important;
+  z-index: inherit !important;
+  margin: 5px 0;
+}
+
+/* ===== RESPONSIVE PARA 2v2 ===== */
+
+@media (max-width: 768px) {
+  .jugadores-perspectiva.cuatro-jugadores-2x2 {
+    min-height: 350px;
+    gap: 15px;
+  }
+  
+  .jugadores-top.cuatro-jugadores-2x2,
+  .jugadores-bottom.cuatro-jugadores-2x2 {
+    padding: 0 10% !important;
+  }
+  
+  .jugadores-bottom.cuatro-jugadores-2x2 {
+    bottom: 100px !important; /* Ajustar para pantallas pequeñas */
+  }
+  
+  .avatar-horizontal {
+    min-width: 150px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .jugadores-perspectiva.cuatro-jugadores-2x2 {
+    min-height: 300px;
+    gap: 10px;
+  }
+  
+  .jugadores-top.cuatro-jugadores-2x2,
+  .jugadores-bottom.cuatro-jugadores-2x2 {
+    padding: 0 5% !important;
+  }
+  
+  .jugadores-bottom.cuatro-jugadores-2x2 {
+    bottom: 80px !important; /* Ajustar para pantallas muy pequeñas */
+  }
+  
+  .avatar-horizontal {
+    min-width: 130px !important;
+    min-height: 50px !important;
+  }
+}
