@@ -49,6 +49,12 @@ interface GameBoardProps {
   jugadorSkins?: Record<number, string>;
   ganadorRonda?: number | null;
   manoActual?: number;
+  // ✅ NUEVO: Orden lógico de jugadores del backend
+  ordenJugadoresRonda?: Array<{
+    id: number;
+    nombreUsuario: string;
+    equipoId: number;
+  }>;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ 
@@ -59,7 +65,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
   manosJugadas = [],
   jugadorSkins = {},
   ganadorRonda = null,
-  manoActual = 0
+  manoActual = 0,
+  ordenJugadoresRonda = []
 }) => {
   // Log mano actual para debug si es necesario
   console.log(`GameBoard - Mano actual: ${manoActual + 1}`);
@@ -122,35 +129,119 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 // Determinar posición: calcular según la distribución 2x2
                 let positionClass = '';
                 
-                if (jugadores.length === 4) {
-                  // 2v2: Posicionamiento fijo según la distribución actual
-                  const jugadoresOrdenados = [...jugadores].sort((a, b) => a.id - b.id);
-                  const posicionJugadorActual = jugadoresOrdenados.findIndex(j => j.id === jugadorActualId);
-                  const posicionEsteJugador = jugadoresOrdenados.findIndex(j => j.id === jugadorId);
+                if (jugadores.length === 2) {
+                  // 1v1: Cartas posicionadas en el centro de la mesa
+                  // Usar rotación visual para que el jugador actual esté siempre abajo
                   
-                  // Posiciones fijas originales (sin rotación)
-                  const posicionesFijas = [
-                    'posicion-top-left',     // J1A (posición 0)
-                    'posicion-bottom-left',  // J2B (posición 1)
-                    'posicion-bottom-right', // J3A (posición 2)
-                    'posicion-top-right'     // J4B (posición 3)
-                  ];
+                  // Usar el orden del backend si está disponible, sino fallback al orden por ID
+                  let jugadoresEnOrdenLogico: Jugador[];
                   
-                  // Aplicar rotación solo si es necesario (jugadores de arriba)
-                  const necesitaRotacion = posicionJugadorActual === 0 || posicionJugadorActual === 3; // J1A o J4B
-                  
-                  let posicionFinal = posicionesFijas[posicionEsteJugador];
-                  
-                  if (necesitaRotacion) {
-                    // Rotar 180° las posiciones
-                    const rotacionMap: { [key: string]: string } = {
-                      'posicion-top-left': 'posicion-bottom-right',
-                      'posicion-top-right': 'posicion-bottom-left',
-                      'posicion-bottom-left': 'posicion-top-right',
-                      'posicion-bottom-right': 'posicion-top-left'
-                    };
-                    posicionFinal = rotacionMap[posicionFinal] || posicionFinal;
+                  if (ordenJugadoresRonda && ordenJugadoresRonda.length === 2) {
+                    // ✅ USAR ORDEN DEL BACKEND - orden lógico del truco para esta ronda
+                    jugadoresEnOrdenLogico = ordenJugadoresRonda.map(orden => 
+                      jugadores.find(j => j.id === orden.id)
+                    ).filter(Boolean) as Jugador[];
+                    
+                    console.log('🎯 Usando orden del backend para cartas 1v1:', 
+                      jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+                  } else {
+                    // Fallback: orden por ID (determinista)
+                    jugadoresEnOrdenLogico = [...jugadores].sort((a, b) => a.id - b.id);
+                    console.log('⚠️ Fallback: usando orden por ID para cartas 1v1:', 
+                      jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
                   }
+                  
+                  // 🎭 ROTACIÓN DE PERSPECTIVA VISUAL PARA 1v1:
+                  // Encontrar la posición del jugador actual en el orden lógico
+                  const indexJugadorActual = jugadoresEnOrdenLogico.findIndex(j => j.id === jugadorActualId);
+                  
+                  // Aplicar rotación para que el jugador actual esté siempre abajo
+                  let posicionesVisuales1v1: Jugador[];
+                  
+                  if (indexJugadorActual === -1) {
+                    // Si no se encuentra el jugador actual, usar orden lógico sin rotación
+                    posicionesVisuales1v1 = [...jugadoresEnOrdenLogico];
+                    console.log('⚠️ Jugador actual no encontrado para cartas 1v1, usando orden lógico sin rotación');
+                  } else {
+                    // Calcular rotación para que el jugador actual esté en posición bottom-center
+                    const rotacion = (2 - indexJugadorActual) % 2;
+                    posicionesVisuales1v1 = [
+                      ...jugadoresEnOrdenLogico.slice(rotacion),
+                      ...jugadoresEnOrdenLogico.slice(0, rotacion)
+                    ];
+                    
+                    console.log(`🎭 Rotación de perspectiva para cartas 1v1: ${rotacion} posiciones`);
+                  }
+                  
+                  // DISTRIBUCIÓN VISUAL DE CARTAS 1v1 (después de rotación):
+                  // Posición [0] = BOTTOM-CENTER (jugador actual)
+                  // Posición [1] = TOP-CENTER (oponente)
+                  
+                  const bottomCenter = posicionesVisuales1v1[0];  // Jugador actual (después de rotación)
+                  const topCenter = posicionesVisuales1v1[1];     // Oponente
+                  
+                  // Determinar posición de este jugador específico
+                  let posicionFinal = 'posicion-bottom-center'; // default
+                  
+                  if (jugadorId === topCenter.id) {
+                    posicionFinal = 'posicion-top-center';
+                  } else if (jugadorId === bottomCenter.id) {
+                    posicionFinal = 'posicion-bottom-center';
+                  }
+                  
+                  positionClass = `${isCurrentPlayer ? 'jugador-actual-cartas' : 'oponente-cartas'} ${posicionFinal}`;
+                } else if (jugadores.length === 4) {
+                  // 2v2: MESA FIJA SIN ROTACIÓN DE PERSPECTIVA
+                  // La disposición visual es SIEMPRE la misma para todos los jugadores
+                  // Equipos intercalados en diagonal según el orden lógico del backend
+                  
+                  let jugadoresEnOrdenLogico: Jugador[];
+                  
+                  if (ordenJugadoresRonda && ordenJugadoresRonda.length === 4) {
+                    // ✅ USAR ORDEN DEL BACKEND - orden lógico del truco para esta ronda
+                    jugadoresEnOrdenLogico = ordenJugadoresRonda.map(orden => 
+                      jugadores.find(j => j.id === orden.id)
+                    ).filter(Boolean) as Jugador[];
+                    
+                    console.log('🎯 Usando orden del backend para cartas 2v2:', 
+                      jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+                  } else {
+                    // Fallback: orden por ID (determinista)
+                    jugadoresEnOrdenLogico = [...jugadores].sort((a, b) => a.id - b.id);
+                    console.log('⚠️ Fallback: usando orden por ID para cartas 2v2:', 
+                      jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+                  }
+                  
+                  // DISPOSICIÓN VISUAL FIJA PARA TODOS LOS JUGADORES:
+                  // Mesa siempre se ve así (equipos intercalados en diagonal):
+                  //    J1(A)  J4(B)
+                  //    J2(B)  J3(A)
+                  // 
+                  // Posiciones fijas según el orden lógico:
+                  // [0] = top-left (J1)
+                  // [1] = bottom-left (J2) 
+                  // [2] = bottom-right (J3)
+                  // [3] = top-right (J4)
+                  
+                  const j1 = jugadoresEnOrdenLogico[0];  // top-left
+                  const j2 = jugadoresEnOrdenLogico[1];  // bottom-left
+                  const j3 = jugadoresEnOrdenLogico[2];  // bottom-right
+                  const j4 = jugadoresEnOrdenLogico[3];  // top-right
+                  
+                  // Determinar posición fija de este jugador específico
+                  let posicionFinal = '';
+                  
+                  if (jugadorId === j1.id) {
+                    posicionFinal = 'posicion-top-left';
+                  } else if (jugadorId === j2.id) {
+                    posicionFinal = 'posicion-bottom-left';
+                  } else if (jugadorId === j3.id) {
+                    posicionFinal = 'posicion-bottom-right';
+                  } else if (jugadorId === j4.id) {
+                    posicionFinal = 'posicion-top-right';
+                  }
+                  
+                  console.log(`📍 Mesa fija 2v2: ${jugador.nombreUsuario}(${jugadorId}) siempre en ${posicionFinal}`);
                   
                   positionClass = `${isCurrentPlayer ? 'jugador-actual-cartas' : 'oponente-cartas'} ${posicionFinal}`;
                 } else if (jugadores.length === 6) {
@@ -282,102 +373,138 @@ const GameBoard: React.FC<GameBoardProps> = ({
     };
 
     if (numJugadores === 2) {
-      // 1v1: Jugador actual abajo, oponente arriba
+      // 1v1: Aplicar rotación visual para que el jugador actual esté siempre abajo
+      
+      // Usar el orden del backend si está disponible, sino fallback al orden por ID
+      let jugadoresEnOrdenLogico: Jugador[];
+      
+      if (ordenJugadoresRonda && ordenJugadoresRonda.length === 2) {
+        // ✅ USAR ORDEN DEL BACKEND - orden lógico del truco para esta ronda
+        jugadoresEnOrdenLogico = ordenJugadoresRonda.map(orden => 
+          jugadores.find(j => j.id === orden.id)
+        ).filter(Boolean) as Jugador[];
+        
+        console.log('🎯 Usando orden del backend para avatares 1v1:', 
+          jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+      } else {  
+        // Fallback: orden por ID (determinista)
+        jugadoresEnOrdenLogico = [...jugadores].sort((a, b) => a.id - b.id);
+        console.log('⚠️ Fallback: usando orden por ID para avatares 1v1:', 
+          jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+      }
+      
+      // 🎭 ROTACIÓN DE PERSPECTIVA VISUAL PARA AVATARES 1v1:
+      // Encontrar la posición del jugador actual en el orden lógico
+      const indexJugadorActual = jugadoresEnOrdenLogico.findIndex(j => j.id === jugadorActual.id);
+      
+      // Aplicar rotación para que el jugador actual esté siempre abajo
+      let posicionesVisuales1v1: Jugador[];
+      
+      if (indexJugadorActual === -1) {
+        // Si no se encuentra el jugador actual, usar orden lógico sin rotación
+        posicionesVisuales1v1 = [...jugadoresEnOrdenLogico];
+        console.log('⚠️ Jugador actual no encontrado para avatares 1v1, usando orden lógico sin rotación');
+      } else {
+        // Calcular rotación para que el jugador actual esté en posición bottom
+        const rotacion = (2 - indexJugadorActual) % 2;
+        posicionesVisuales1v1 = [
+          ...jugadoresEnOrdenLogico.slice(rotacion),
+          ...jugadoresEnOrdenLogico.slice(0, rotacion)
+        ];
+        
+        console.log(`🎭 Rotación de perspectiva para avatares 1v1: ${rotacion} posiciones`);
+        console.log(`Orden visual resultante:`, posicionesVisuales1v1.map(j => `${j.nombreUsuario}(${j.id})`));
+      }
+      
+      const bottomPlayer = posicionesVisuales1v1[0];  // Jugador actual (después de rotación)
+      const topPlayer = posicionesVisuales1v1[1];     // Oponente (después de rotación)
+      
+      // Debug: mostrar distribución visual con perspectiva
+      console.log('=== DISTRIBUCIÓN 1v1 CON PERSPECTIVA VISUAL ===');
+      console.log('ORDEN LÓGICO (backend):', jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+      console.log('ORDEN VISUAL (rotado):', posicionesVisuales1v1.map(j => `${j.nombreUsuario}(${j.id})`));
+      console.log('TOP (visual):', topPlayer.nombreUsuario, 'ID:', topPlayer.id);
+      console.log('BOTTOM (visual):', bottomPlayer.nombreUsuario, 'ID:', bottomPlayer.id);
+      console.log('Jugador actual está en BOTTOM:', bottomPlayer.id === jugadorActual.id);
+      
       return (
-        <div className="jugadores-perspectiva">
-          <div className="jugadores-top">
-            {otrosJugadores.map(jugador => renderAvatarHorizontal(jugador, 'top'))}
+        <div className="jugadores-perspectiva dos-jugadores-1v1">
+          <div className="jugadores-top dos-jugadores-1v1">
+            {renderAvatarHorizontal(topPlayer, 'top')}
           </div>
-          <div className="jugadores-bottom">
-            {renderAvatarHorizontal(jugadorActual, 'bottom')}
+          <div className="jugadores-bottom dos-jugadores-1v1">
+            {renderAvatarHorizontal(bottomPlayer, 'bottom')}
           </div>
         </div>
       );
     } else if (numJugadores === 4) {
-      // 2v2: Distribución fija 2x2 con perspectiva correcta
-      // Mesa original (vista de J2B y J3A que están abajo):
-      // J1A    J4B  ← Arriba
-      // J2B    J3A  ← Abajo
+      // 2v2: MESA FIJA CON PERSPECTIVA VISUAL PARA AVATARES
+      // La mesa tiene posiciones fijas que no cambian entre rondas
+      // Pero cada jugador ve la mesa rotada según su perspectiva
       
-      const jugadoresOrdenados = [...jugadores].sort((a, b) => a.id - b.id);
+      // Usar el orden del backend si está disponible, sino fallback al orden por ID  
+      let jugadoresEnOrdenLogico: Jugador[];
       
-      // Asignar posiciones fijas basadas en el ID original
-      const posicionesFijas = [
-        { fila: 'top', columna: 'left' },     // J1A (arriba-izquierda)
-        { fila: 'bottom', columna: 'left' },  // J2B (abajo-izquierda)  
-        { fila: 'bottom', columna: 'right' }, // J3A (abajo-derecha)
-        { fila: 'top', columna: 'right' }     // J4B (arriba-derecha)
-      ];
-      
-      // Encontrar la posición del jugador actual
-      const posicionJugadorActual = jugadoresOrdenados.findIndex(j => j.id === jugadorActual.id);
-      
-      // Crear mapeo con perspectiva correcta
-      interface JugadorConPosicion {
-        jugador: Jugador;
-        fila: string;
-        columna: string;
+      if (ordenJugadoresRonda && ordenJugadoresRonda.length === 4) {
+        // ✅ USAR ORDEN DEL BACKEND - orden lógico del truco para esta ronda
+        jugadoresEnOrdenLogico = ordenJugadoresRonda.map(orden => 
+          jugadores.find(j => j.id === orden.id)
+        ).filter(Boolean) as Jugador[];
+        
+        console.log('🎯 Usando orden del backend para avatares 2v2:', 
+          jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id}, Equipo:${j.equipoId})`));
+      } else {  
+        // Fallback: orden por ID (determinista)
+        jugadoresEnOrdenLogico = [...jugadores].sort((a, b) => a.id - b.id);
+        console.log('⚠️ Fallback: usando orden por ID para avatares 2v2:', 
+          jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id}, Equipo:${j.equipoId})`));
       }
       
-      const jugadoresConPosicion: JugadorConPosicion[] = [];
+      // DISPOSICIÓN VISUAL FIJA PARA TODOS LOS JUGADORES:
+      // Mesa siempre se ve así (equipos intercalados en diagonal):
+      //    J1(A)  J4(B)
+      //    J2(B)  J3(A)
+      // 
+      // Posiciones fijas según el orden lógico:
+      // [0] = top-left (J1)
+      // [1] = bottom-left (J2) 
+      // [2] = bottom-right (J3)
+      // [3] = top-right (J4)
       
-      // Si el jugador actual está en la fila inferior (J2B o J3A), NO rotar (vista original)
-      // Si el jugador actual está en la fila superior (J1A o J4B), rotar la vista 180°
-      const necesitaRotacion = posicionJugadorActual === 0 || posicionJugadorActual === 3; // J1A o J4B
+      const j1 = jugadoresEnOrdenLogico[0];  // top-left
+      const j2 = jugadoresEnOrdenLogico[1];  // bottom-left
+      const j3 = jugadoresEnOrdenLogico[2];  // bottom-right
+      const j4 = jugadoresEnOrdenLogico[3];  // top-right
       
-      for (let i = 0; i < 4; i++) {
-        const jugador = jugadoresOrdenados[i];
-        let posicion = posicionesFijas[i];
-        
-        if (necesitaRotacion) {
-          // Rotar 180° para que J1A y J4B vean la mesa desde su perspectiva
-          posicion = {
-            fila: posicion.fila === 'top' ? 'bottom' : 'top',
-            columna: posicion.columna === 'left' ? 'right' : 'left'
-          };
-        }
-        
-        jugadoresConPosicion.push({
-          jugador,
-          fila: posicion.fila,
-          columna: posicion.columna
-        });
-      }
-      
-      // Separar en filas
-      const jugadoresTop = jugadoresConPosicion.filter(jp => jp.fila === 'top');
-      const jugadoresBottom = jugadoresConPosicion.filter(jp => jp.fila === 'bottom');
-      
-      // Debug: mostrar distribución
-      console.log('=== DISTRIBUCIÓN 2x2 ===');
-      console.log('Jugador actual:', jugadorActual.nombreUsuario, 'ID:', jugadorActual.id, 'Posición:', posicionJugadorActual);
-      console.log('Necesita rotación:', necesitaRotacion);
-      console.log('Jugadores TOP:', jugadoresTop.map(jp => `${jp.jugador.nombreUsuario} (${jp.columna})`));
-      console.log('Jugadores BOTTOM:', jugadoresBottom.map(jp => `${jp.jugador.nombreUsuario} (${jp.columna})`));
-      
-      // Ordenar por columna (left primero, luego right)
-      jugadoresTop.sort((a, _b) => a.columna === 'left' ? -1 : 1);
-      jugadoresBottom.sort((a, _b) => a.columna === 'left' ? -1 : 1);
+      // Debug: mostrar distribución visual FIJA
+      console.log('=== DISTRIBUCIÓN 2x2 FIJA SIN PERSPECTIVA VISUAL ===');
+      console.log('ORDEN LÓGICO (backend):', jugadoresEnOrdenLogico.map(j => `${j.nombreUsuario}(${j.id})`));
+      console.log('POSICIONES FIJAS PARA TODOS:');
+      console.log(`  TOP-LEFT: ${j1.nombreUsuario}(${j1.id}) - Equipo ${j1.equipoId}`);
+      console.log(`  TOP-RIGHT: ${j4.nombreUsuario}(${j4.id}) - Equipo ${j4.equipoId}`);
+      console.log(`  BOTTOM-LEFT: ${j2.nombreUsuario}(${j2.id}) - Equipo ${j2.equipoId}`);
+      console.log(`  BOTTOM-RIGHT: ${j3.nombreUsuario}(${j3.id}) - Equipo ${j3.equipoId}`);
+      console.log('La mesa se ve IGUAL para todos los jugadores');
       
       return (
         <div className="jugadores-perspectiva cuatro-jugadores-2x2">
           {/* Fila superior */}
           <div className="jugadores-top cuatro-jugadores-2x2">
             <div className="posicion-top-left">
-              {jugadoresTop[0] && renderAvatarHorizontal(jugadoresTop[0].jugador, 'top')}
+              {renderAvatarHorizontal(j1, 'top')}
             </div>
             <div className="posicion-top-right">
-              {jugadoresTop[1] && renderAvatarHorizontal(jugadoresTop[1].jugador, 'top')}
+              {renderAvatarHorizontal(j4, 'top')}
             </div>
           </div>
           
           {/* Fila inferior */}
           <div className="jugadores-bottom cuatro-jugadores-2x2">
             <div className="posicion-bottom-left">
-              {jugadoresBottom[0] && renderAvatarHorizontal(jugadoresBottom[0].jugador, 'bottom')}
+              {renderAvatarHorizontal(j2, 'bottom')}
             </div>
             <div className="posicion-bottom-right">
-              {jugadoresBottom[1] && renderAvatarHorizontal(jugadoresBottom[1].jugador, 'bottom')}
+              {renderAvatarHorizontal(j3, 'bottom')}
             </div>
           </div>
         </div>

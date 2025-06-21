@@ -1,3 +1,15 @@
+html, body {
+  background: #161623;
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, rgba(22, 22, 35, 1) 0%, rgba(38, 38, 60, 1) 100%);
+  background-attachment: fixed;
+}
+
 .salas-container {
   display: flex;
   flex-direction: column;
@@ -8,17 +20,20 @@
   color: #fff;
   position: relative;
   font-family: 'Poppins', 'Segoe UI', sans-serif;
+  /* Asegurar que el fondo cubra toda la página incluso al scrollear */
+  background-attachment: fixed;
 }
   
 .salas-container::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, rgba(22, 22, 35, 0.85) 0%, rgba(38, 38, 60, 0.9) 100%);
   z-index: 0;
+  /* Asegurar que el overlay cubra toda la pantalla al scrollear */
 }
   
 .salas-content {
@@ -29,6 +44,8 @@
   margin: 0 auto;
   padding: 20px;
   padding-top: 24vh;
+  /* Asegurar suficiente padding inferior para scrolleo */
+  padding-bottom: 40px;
 }
 .salas-header {
   display: flex;
@@ -259,6 +276,11 @@ button.bg-black:hover {
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
 }
   
 .sala-jugadores, .sala-puntos {
@@ -617,26 +639,206 @@ button.bg-black:hover {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .salas-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-    
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-    
-  .salas-list {
-    grid-template-columns: 1fr;
-  }
+/* Sala actions container */
+.sala-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
 
-  .modal-content {
-    width: 90%;
-    margin: 0 20px;
+.sala-actions .unirse-button {
+  flex: 1;
+}
+
+.generar-link-button {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.generar-link-button:hover {
+  background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+  box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Modal para enlaces */
+.enlace-modal {
+  max-width: 500px;
+}
+
+.enlace-content {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.enlace-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #f8f9fa;
+  color: #495057;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.copy-link-button {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #17a2b8 0%, #6c757d 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.copy-link-button:hover {
+  background: linear-gradient(135deg, #138496 0%, #5a6268 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(23, 162, 184, 0.3);
+}
+
+.enlace-modal p {
+  color: #6c757d;
+  font-size: 14px;
+  margin: 15px 0;
+  text-align: center;
+}
+
+/* Paginación */
+.paginacion {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.paginacion-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  text-align: center;
+}
+
+.paginacion-controles {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.paginacion-btn {
+  padding: 10px 16px;
+  background: rgba(40, 40, 60, 0.8);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.paginacion-btn:hover:not(:disabled) {
+  background: rgba(74, 144, 226, 0.8);
+  border-color: rgba(74, 144, 226, 0.5);
+  transform: translateY(-2px);
+}
+
+.paginacion-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.paginacion-numeros {
+  display: flex;
+  gap: 5px;
+}
+
+.paginacion-numero {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(40, 40, 60, 0.6);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.paginacion-numero:hover {
+  background: rgba(74, 144, 226, 0.6);
+  border-color: rgba(74, 144, 226, 0.5);
+  transform: translateY(-2px);
+}
+
+.paginacion-numero.activa {
+  background: linear-gradient(135deg, #4a90e2 0%, #357ABD 100%);
+  border-color: #4a90e2;
+  color: white;
+  font-weight: 700;
+}
+
+/* Responsive para acciones de sala */
+@media (max-width: 768px) {
+  .sala-actions {
+    flex-direction: column;
+  }
+  
+  .sala-actions .unirse-button,
+  .generar-link-button {
+    flex: none;
+    width: 100%;
+  }
+  
+  .enlace-modal {
+    min-width: auto;
+    max-width: 90vw;
+  }
+  
+  .enlace-content {
+    flex-direction: column;
+  }
+  
+  .enlace-input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Responsive para paginación */
+@media (max-width: 768px) {
+  .paginacion-controles {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .paginacion-numeros {
+    order: 2;
+  }
+  
+  .paginacion-btn {
+    min-width: 120px;
   }
 }
 

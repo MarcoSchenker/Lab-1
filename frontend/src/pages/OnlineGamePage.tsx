@@ -80,7 +80,7 @@ const OnlineGamePage: React.FC = () => {
 
   // Verificar si es el turno del jugador actual
   const esMiTurno = useCallback((): boolean => {
-    if (!gameState || !jugadorId) return false;
+    if (!gameState || !jugadorId || !gameState.rondaActual?.turnoInfo) return false;
     return gameState.rondaActual.turnoInfo.jugadorTurnoActualId === jugadorId;
   }, [gameState, jugadorId]);
 
@@ -279,11 +279,12 @@ const OnlineGamePage: React.FC = () => {
           <GameBoard 
             jugadores={gameState.jugadores} 
             jugadorActualId={jugadorId}
-            jugadorEnTurnoId={gameState.rondaActual.turnoInfo.jugadorTurnoActualId}
-            cartasEnMesa={gameState.rondaActual.turnoInfo.cartasEnMesaManoActual}
-            manosJugadas={transformManosJugadas(gameState.rondaActual.turnoInfo.manosJugadas)}
+            jugadorEnTurnoId={gameState.rondaActual?.turnoInfo?.jugadorTurnoActualId}
+            cartasEnMesa={gameState.rondaActual?.turnoInfo?.cartasEnMesaManoActual || []}
+            manosJugadas={transformManosJugadas(gameState.rondaActual?.turnoInfo?.manosJugadas || [])}
             jugadorSkins={jugadorSkins}
-            manoActual={gameState.rondaActual.turnoInfo.manoActualNumero - 1}
+            manoActual={(gameState.rondaActual?.turnoInfo?.manoActualNumero || 1) - 1}
+            ordenJugadoresRonda={gameState.rondaActual?.ordenJugadoresRonda || []}
           />
 
           {/* Panel de acciones */}
@@ -313,11 +314,6 @@ const OnlineGamePage: React.FC = () => {
         esMiTurno={esMiTurno()}
         onJugarCarta={jugarCarta}
       />
-      
-      {/* Botón de depuración (opcional) */}
-      <div className="debug-floating-button" onClick={toggleDebugPanel}>
-        <span>🔍</span>
-      </div>
       
       {/* Panel de depuración */}
       {showDebugPanel && (

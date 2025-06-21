@@ -17,6 +17,7 @@ import SkinPage from './pages/SkinPage';
 import StorePageMp from './pages/StorePageMp';
 import StorePage from './pages/StorePage';
 import OnlineGamePage from './pages/OnlineGamePage';
+import UnirseInvitadoPage from './pages/UnirseInvitadoPage';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Route path="/eliminar-perfil" element={<AuthRoute><DeleteProfile /></AuthRoute>} />
         <Route path="/salas" element={<AuthRoute><SalasPage /></AuthRoute>} />
         <Route path="/online-game-page/:codigo_sala" element={<AuthRoute><OnlineGamePage /></AuthRoute>} />
+        <Route path="/unirse-invitado/:codigo_sala" element={<UnirseInvitadoPage />} />
         <Route path="/skins" element={<AuthRoute><SkinPage /></AuthRoute>} />
         <Route path="/store-mp" element={<AuthRoute><StorePageMp /></AuthRoute>} />
         <Route path="/store" element={<AuthRoute><StorePage /></AuthRoute>} />

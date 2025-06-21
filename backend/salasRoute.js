@@ -2,18 +2,92 @@ const express = require('express');
 const router = express.Router();
 const pool = require('./config/db');
 const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
 const { authenticateToken } = require('./middleware/authMiddleware');
 const gameLogicHandler = require('./game-logic/gameLogicHandler'); // Importar gameLogicHandler
 
 // Middleware de diagnóstico para ver todas las solicitudes
 router.use((req, res, next) => {
+  console.log(`[salasRoute] ${req.method} ${req.path} - Query:`, req.query);
   next();
+});
+
+// Obtener todas las salas disponibles con filtros (RUTA PÚBLICA para invitados)
+router.get('/publicas', async (req, res) => {
+  console.log('[salasRoute] 🌐 Accediendo a ruta pública /publicas');
+  try {
+    const { filtro = 'publicas', pagina = 1, limite = 6, excluir_llenas = 'true' } = req.query;
+    console.log('[salasRoute] Parámetros recibidos:', { filtro, pagina, limite, excluir_llenas });
+    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+    
+    let query = `
+      SELECT 
+        p.codigo_sala, 
+        p.tipo, 
+        p.puntos_victoria, 
+        p.max_jugadores, 
+        p.tiempo_expiracion,
+        p.fecha_inicio,
+        COUNT(jp.id) as jugadores_actuales
+      FROM partidas p
+      LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
+      WHERE p.estado = 'en_juego' AND p.tipo = 'publica'
+      GROUP BY p.codigo_sala, p.tipo, p.puntos_victoria, p.max_jugadores, p.tiempo_expiracion, p.fecha_inicio
+    `;
+
+    // Filtrar salas llenas si se requiere
+    if (excluir_llenas === 'true') {
+      query += ` HAVING COUNT(jp.id) < p.max_jugadores`;
+    }
+
+    query += `
+      ORDER BY p.fecha_inicio DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const [salas] = await pool.query(query, [parseInt(limite), offset]);
+
+    // Consulta simplificada para contar el total de salas públicas
+    let countQuery = `
+      SELECT COUNT(*) as total FROM (
+        SELECT p.codigo_sala
+        FROM partidas p
+        LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
+        WHERE p.estado = 'en_juego' AND p.tipo = 'publica'
+        GROUP BY p.codigo_sala, p.max_jugadores
+    `;
+
+    if (excluir_llenas === 'true') {
+      countQuery += ` HAVING COUNT(jp.id) < p.max_jugadores`;
+    }
+
+    countQuery += `) as subconsulta`;
+
+    const [countResult] = await pool.query(countQuery);
+    const totalSalas = countResult[0]?.total || 0;
+    const totalPaginas = Math.ceil(totalSalas / parseInt(limite));
+
+    res.json({
+      salas,
+      paginacion: {
+        pagina_actual: parseInt(pagina),
+        total_paginas: totalPaginas,
+        total_salas: totalSalas,
+        limite: parseInt(limite)
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener salas públicas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
 
 // Obtener todas las salas disponibles con filtros
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { filtro = 'todas' } = req.query;
+    const { filtro = 'todas', pagina = 1, limite = 12, excluir_llenas = 'true' } = req.query;
+    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+    
     let query = `
       SELECT 
         p.codigo_sala, 
@@ -37,10 +111,41 @@ router.get('/', authenticateToken, async (req, res) => {
 
     query += `
       GROUP BY p.codigo_sala
-      ORDER BY p.fecha_inicio DESC
     `;
 
-    const [salas] = await pool.query(query);
+    // Filtrar salas llenas si se requiere
+    if (excluir_llenas === 'true') {
+      query += ` HAVING COUNT(jp.id) < p.max_jugadores`;
+    }
+
+    query += `
+      ORDER BY p.fecha_inicio DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const [salas] = await pool.query(query, [parseInt(limite), offset]);
+
+    // Consulta para contar el total de salas (para paginación)
+    let countQuery = `
+      SELECT COUNT(DISTINCT p.codigo_sala) as total
+      FROM partidas p
+      LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
+      WHERE p.estado = 'en_juego'
+    `;
+
+    if (filtro === 'publicas') {
+      countQuery += ` AND p.tipo = 'publica'`;
+    } else if (filtro === 'privadas') {
+      countQuery += ` AND p.tipo = 'privada'`;
+    }
+
+    if (excluir_llenas === 'true') {
+      countQuery += ` AND (SELECT COUNT(*) FROM jugadores_partidas WHERE partida_id = p.codigo_sala) < p.max_jugadores`;
+    }
+
+    const [countResult] = await pool.query(countQuery);
+    const totalSalas = countResult[0].total;
+    const totalPaginas = Math.ceil(totalSalas / parseInt(limite));
 
     // Eliminar salas expiradas
     const ahora = new Date();
@@ -52,8 +157,17 @@ router.get('/', authenticateToken, async (req, res) => {
       return true;
     });
 
-    res.json(salasActualizadas);
+    res.json({
+      salas: salasActualizadas,
+      paginacion: {
+        pagina_actual: parseInt(pagina),
+        total_paginas: totalPaginas,
+        total_salas: totalSalas,
+        limite: parseInt(limite)
+      }
+    });
   } catch (error) {
+    console.error('Error al obtener salas:', error);
     res.status(500).json({ error: 'Error al obtener salas', detalle: error.message });
   }
 });
@@ -179,9 +293,17 @@ router.post('/unirse', authenticateToken, async (req, res) => {
     }
     
     // Verificar si la sala es privada (solo se puede acceder con código)
-    if (sala.tipo === 'privada' && !req.body.codigo_acceso) {
-      await connection.rollback();
-      return res.status(403).json({ error: 'Esta es una sala privada, necesitas un código de acceso' });
+    if (sala.tipo === 'privada') {
+      if (!req.body.codigo_acceso) {
+        await connection.rollback();
+        return res.status(403).json({ error: 'Esta es una sala privada, necesitas un código de acceso' });
+      }
+      
+      // Validar que el código de acceso sea correcto
+      if (req.body.codigo_acceso !== sala.codigo_acceso) {
+        await connection.rollback();
+        return res.status(403).json({ error: 'Código de acceso incorrecto' });
+      }
     }
     
     // Insertar al usuario como jugador de la sala
@@ -366,6 +488,172 @@ router.post('/unirse-privada', authenticateToken, async (req, res) => {
   }
 });
 
+// Unirse a una sala como invitado mediante link (sin autenticación)
+router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    
+    const { codigo_sala } = req.params;
+    const { nombre_invitado } = req.body;
+    
+    // Validar nombre de invitado
+    if (!nombre_invitado || nombre_invitado.trim() === '') {
+      await connection.rollback();
+      return res.status(400).json({ error: 'El nombre de invitado es requerido' });
+    }
+    
+    // Verificar si la sala existe
+    const [salas] = await connection.query(
+      `SELECT s.*, 
+              (SELECT COUNT(*) FROM jugadores_partidas jp WHERE jp.partida_id = s.codigo_sala) AS jugadores_actuales
+       FROM partidas s 
+       WHERE s.codigo_sala = ? AND s.estado = 'en_juego'`,
+      [codigo_sala]
+    );
+    
+    if (salas.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Sala no encontrada' });
+    }
+    
+    const sala = salas[0];
+    
+    // Verificar si la sala ha expirado
+    if (sala.tiempo_expiracion) {
+      const ahora = new Date();
+      const expiracion = new Date(sala.tiempo_expiracion);
+      if (expiracion <= ahora) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Esta sala ha expirado' });
+      }
+    }
+    
+    // Verificar si la sala está llena
+    if (sala.jugadores_actuales >= sala.max_jugadores) {
+      await connection.rollback();
+      return res.status(400).json({ error: 'La sala está llena' });
+    }
+    
+    // Crear usuario anónimo temporal
+    const nombreUsuarioUnico = `Invitado_${nombre_invitado}_${Date.now()}`;
+    const emailTemporal = `${nombreUsuarioUnico}@temp.com`;
+    const contraseñaTemporal = 'temp_password';
+    const fechaExpiracion = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 horas
+    
+    const [usuarioResult] = await connection.query(
+      `INSERT INTO usuarios (nombre_usuario, email, contraseña, es_anonimo, fecha_expiracion) 
+       VALUES (?, ?, ?, true, ?)`,
+      [nombreUsuarioUnico, emailTemporal, contraseñaTemporal, fechaExpiracion]
+    );
+    
+    const usuarioId = usuarioResult.insertId;
+    
+    // Insertar al usuario como jugador de la sala
+    await connection.query(
+      `INSERT INTO jugadores_partidas (partida_id, usuario_id, es_anfitrion) VALUES (?, ?, false)`,
+      [codigo_sala, usuarioId]
+    );
+    
+    // Verificar si ahora la sala está llena para iniciar la partida
+    const nuevaCantidadJugadores = sala.jugadores_actuales + 1;
+    if (nuevaCantidadJugadores === sala.max_jugadores) {
+      // Iniciar la partida (código similar al existente)
+      await connection.query(
+        `UPDATE partidas SET estado = 'en_juego' WHERE codigo_sala = ?`,
+        [codigo_sala]
+      );
+      
+      // Obtener todos los jugadores de la sala
+      const [jugadores] = await connection.query(
+        `SELECT jp.usuario_id, u.nombre_usuario 
+         FROM jugadores_partidas jp 
+         JOIN usuarios u ON jp.usuario_id = u.id 
+         WHERE jp.partida_id = ?`,
+        [codigo_sala]
+      );
+      
+      await connection.commit();
+      
+      // Crear jugadoresInfo para gameLogicHandler
+      const jugadoresInfo = jugadores.map(j => ({
+        id: j.usuario_id,
+        nombre_usuario: j.nombre_usuario
+      }));
+      
+      // Iniciar la partida con gameLogicHandler
+      const tipoPartida = sala.max_jugadores === 2 ? '1v1' : 
+                          sala.max_jugadores === 4 ? '2v2' : '3v3';
+      
+      try {
+        const partidaCreada = await gameLogicHandler.crearNuevaPartida(
+          codigo_sala, 
+          jugadoresInfo, 
+          tipoPartida, 
+          sala.puntos_victoria || 15
+        );
+        
+        if (partidaCreada) {
+          // Crear token temporal para el invitado
+          const jwt = require('jsonwebtoken');
+          const tokenTemporal = jwt.sign(
+            { 
+              id: usuarioId, 
+              nombre_usuario: nombreUsuarioUnico,
+              isAnonymous: true 
+            },
+            process.env.JWT_SECRET || 'tu_clave_secreta',
+            { expiresIn: '24h' }
+          );
+          
+          return res.status(200).json({ 
+            mensaje: 'Te has unido como invitado exitosamente',
+            codigo_sala,
+            usuario_id: usuarioId,
+            nombre_usuario: nombreUsuarioUnico,
+            token: tokenTemporal,
+            juego_iniciado: true
+          });
+        }
+      } catch (error) {
+        console.error('[salasRoute] Error al iniciar la partida para invitado:', error);
+        return res.status(500).json({ error: 'Error al iniciar la partida' });
+      }
+    } else {
+      await connection.commit();
+      
+      // Crear token temporal para el invitado
+      const jwt = require('jsonwebtoken');
+      const tokenTemporal = jwt.sign(
+        { 
+          id: usuarioId, 
+          nombre_usuario: nombreUsuarioUnico,
+          isAnonymous: true 
+        },
+        process.env.JWT_SECRET || 'tu_clave_secreta',
+        { expiresIn: '24h' }
+      );
+      
+      return res.status(200).json({ 
+        mensaje: 'Te has unido como invitado exitosamente',
+        codigo_sala,
+        usuario_id: usuarioId,
+        nombre_usuario: nombreUsuarioUnico,
+        token: tokenTemporal,
+        juego_iniciado: false
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error al unirse como invitado:', error);
+    if (connection) await connection.rollback();
+    return res.status(500).json({ error: 'Error al unirse como invitado' });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 // Abandonar una sala
 router.post('/abandonar', authenticateToken, async (req, res) => {
   let connection;
@@ -430,6 +718,92 @@ router.post('/abandonar', authenticateToken, async (req, res) => {
     if (connection) {
       connection.release();
     }
+  }
+});
+
+// Generar enlace de invitación para una sala
+router.get('/generar-link/:codigo_sala', authenticateToken, async (req, res) => {
+  try {
+    const { codigo_sala } = req.params;
+    const usuarioId = req.user.id;
+    
+    // Verificar que el usuario sea el creador de la sala
+    const [salas] = await pool.query(
+      `SELECT * FROM partidas WHERE codigo_sala = ? AND estado = 'en_juego'`,
+      [codigo_sala]
+    );
+    
+    if (salas.length === 0) {
+      return res.status(404).json({ error: 'Sala no encontrada' });
+    }
+    
+    const sala = salas[0];
+    
+    // Verificar que el usuario esté en la sala
+    const [jugadores] = await pool.query(
+      `SELECT * FROM jugadores_partidas WHERE partida_id = ? AND usuario_id = ?`,
+      [codigo_sala, usuarioId]
+    );
+    
+    if (jugadores.length === 0) {
+      return res.status(403).json({ error: 'No tienes acceso a esta sala' });
+    }
+    
+    // Generar el enlace de invitación
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5175';
+    const enlaceInvitacion = `${baseUrl}/unirse-invitado/${codigo_sala}`;
+    
+    res.json({
+      enlace_invitacion: enlaceInvitacion,
+      codigo_sala: codigo_sala,
+      valido_hasta: sala.tiempo_expiracion
+    });
+    
+  } catch (error) {
+    console.error('Error al generar enlace de invitación:', error);
+    res.status(500).json({ error: 'Error al generar enlace de invitación' });
+  }
+});
+
+// Obtener información básica de una sala (público, para invitados)
+router.get('/info/:codigo_sala', async (req, res) => {
+  try {
+    const { codigo_sala } = req.params;
+    
+    const [salas] = await pool.query(
+      `SELECT 
+        p.codigo_sala, 
+        p.max_jugadores, 
+        p.puntos_victoria,
+        p.tiempo_expiracion,
+        p.creador,
+        COUNT(jp.id) as jugadores_actuales
+      FROM partidas p
+      LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
+      WHERE p.codigo_sala = ? AND p.estado = 'en_juego'
+      GROUP BY p.codigo_sala`,
+      [codigo_sala]
+    );
+
+    if (salas.length === 0) {
+      return res.status(404).json({ error: 'Sala no encontrada' });
+    }
+
+    const sala = salas[0];
+    
+    // Verificar si la sala ha expirado
+    if (sala.tiempo_expiracion) {
+      const ahora = new Date();
+      const expiracion = new Date(sala.tiempo_expiracion);
+      if (expiracion <= ahora) {
+        return res.status(400).json({ error: 'Esta sala ha expirado' });
+      }
+    }
+
+    res.json(sala);
+  } catch (error) {
+    console.error('Error al obtener información de sala:', error);
+    res.status(500).json({ error: 'Error al obtener información de la sala' });
   }
 });
 
