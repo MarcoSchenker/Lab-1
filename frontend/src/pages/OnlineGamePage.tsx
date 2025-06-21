@@ -314,11 +314,6 @@ const OnlineGamePage: React.FC = () => {
         onJugarCarta={jugarCarta}
       />
       
-      {/* Botón de depuración (opcional) */}
-      <div className="debug-floating-button" onClick={toggleDebugPanel}>
-        <span>🔍</span>
-      </div>
-      
       {/* Panel de depuración */}
       {showDebugPanel && (
         <div className="debug-panel">

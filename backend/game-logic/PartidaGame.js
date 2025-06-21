@@ -110,8 +110,6 @@ class PartidaGame {
     }
 
     _asignarJugadoresAEquipos() {
-        // Lógica para crear equipos y distribuir jugadores.
-        // Ejemplo para 2 equipos:
         const equipo1 = new EquipoGame('equipo_1', 'Equipo 1');
         const equipo2 = new EquipoGame('equipo_2', 'Equipo 2');
         this.equipos.push(equipo1, equipo2);
@@ -560,6 +558,12 @@ class PartidaGame {
                     numeroRonda: this.numeroRondaActual,
                     jugadorManoId: this.rondaActual?.jugadorManoRonda?.id || null,
                     ganadorRondaEquipoId: this.rondaActual?.ganadorRondaEquipoId || null,
+                    // ✅ ORDEN LÓGICO DE JUGADORES PARA LA RONDA
+                    ordenJugadoresRonda: this.ordenJugadoresRonda?.map(j => ({
+                        id: j.id,
+                        nombreUsuario: j.nombreUsuario,
+                        equipoId: j.equipoId
+                    })) || [],
                     turnoInfo: turnoInfo,
                     envidoInfo: envidoInfo,
                     trucoInfo: trucoInfo,

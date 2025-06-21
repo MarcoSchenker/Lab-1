@@ -25,32 +25,6 @@
   z-index: 10;
 }
 
-/* Posiciones principales - TOP */
-.jugadores-top {
-  position: absolute;
-  top: -90px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  flex-wrap: wrap;
-  z-index: var(--z-avatars-top, 25);
-}
-
-/* Posiciones principales - BOTTOM */
-.jugadores-bottom {
-  position: absolute;
-  bottom: -90px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  flex-wrap: wrap;
-  z-index: var(--z-avatars-bottom, 85);
-}
-
 /* ===== AVATARES HORIZONTALES - OPTIMIZADO ===== */
 .avatar-horizontal {
   pointer-events: auto;
@@ -114,13 +88,19 @@
 }
 
 .avatar-image-horizontal.team-1 {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  border-color: #4a90e2;
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 50%, #2c5aa0 100%);
+  border: 3px solid #4a90e2;
+  box-shadow: 
+    0 0 15px rgba(74, 144, 226, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
 .avatar-image-horizontal.team-2 {
-  background: linear-gradient(135deg, #d0021b 0%, #a8001a 100%);
-  border-color: #d0021b;
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 50%, #8b0000 100%);
+  border: 3px solid #d32f2f;
+  box-shadow: 
+    0 0 15px rgba(211, 47, 47, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
 .avatar-info {
@@ -142,22 +122,40 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.status-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.cards-count {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
 }
 
 .connection-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  animation: pulse-connection 2s infinite;
+}
+
+@keyframes pulse-connection {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .connection-dot.conectado {
   background: #4caf50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
 }
 
 .connection-dot.desconectado {
   background: #f44336;
-  box-shadow: 0 0 6px rgba(244, 67, 54, 0.6);
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
 }
 
 /* ===== MESA CONTAINER ===== */
@@ -171,8 +169,8 @@
 
 .mesa-juego-mejorada {
   width: 100%;
-  max-width: 1200px;
-  height: 600px;
+  max-width: 2000px; /* Mesa aún más ancha */
+  height: 500px; /* Altura reducida para no tapar avatares */
   position: relative;
   display: flex;
   flex-direction: column;
@@ -253,14 +251,14 @@
 /* Posiciones específicas de cartas para 2v2 */
 .cartas-jugador-posicionadas.posicion-top-left {
   position: absolute;
-  top: 15%;
+  top: 20%;
   left: 22%;
   transform: translateX(-50%);
 }
 
 .cartas-jugador-posicionadas.posicion-top-right {
   position: absolute;
-  top: 15%;
+  top: 20%;
   right: 22%;
   transform: translateX(50%);
 }
@@ -279,22 +277,50 @@
   transform: translateX(50%);
 }
 
-/* ===== CARTAS SOLAPADAS ===== */
+/* ===== CARTAS SOLAPADAS CON EFECTOS MEJORADOS ===== */
 .cartas-solapadas {
   position: relative;
   display: flex;
   align-items: flex-end;
   height: 120px;
   gap: 5px;
+  transition: all 0.3s ease;
+}
+
+.cartas-solapadas:hover {
+  gap: 15px; /* Separar cartas al hacer hover */
 }
 
 .carta-solapada {
   position: relative;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center bottom;
 }
 
 .carta-solapada:not(:first-child) {
   margin-left: -15px;
+}
+
+.cartas-solapadas:hover .carta-solapada {
+  margin-left: 0; /* Remover solapamiento en hover */
+  transform: translateY(-5px); /* Levantar ligeramente */
+}
+
+.cartas-solapadas:hover .carta-solapada:nth-child(1) {
+  transform: translateY(-5px) rotate(-3deg);
+}
+
+.cartas-solapadas:hover .carta-solapada:nth-child(2) {
+  transform: translateY(-8px) rotate(0deg);
+}
+
+.cartas-solapadas:hover .carta-solapada:nth-child(3) {
+  transform: translateY(-5px) rotate(3deg);
+}
+
+.carta-solapada:hover {
+  transform: translateY(-10px) scale(1.05) !important;
+  z-index: 10;
 }
 
 /* ===== ANIMACIONES OPTIMIZADAS ===== */
@@ -307,26 +333,46 @@
   }
 }
 
-/* ===== 3v3 DISTRIBUCIÓN ===== */
-.jugadores-top.seis-jugadores {
-  gap: 15px;
-  flex-wrap: wrap;
-  justify-content: space-evenly;
+/* ===== INDICADORES VISUALES ADICIONALES ===== */
+
+/* Indicador de turno que pulsa */
+.turn-indicator-horizontal {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, var(--game-accent-color), #f39c12);
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: bold;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: pulse-indicator 1.5s infinite;
 }
 
-.jugadores-bottom.seis-jugadores {
-  gap: 15px;
-  flex-wrap: wrap;
-  justify-content: space-evenly;
+.turn-pulse {
+  font-size: 12px;
 }
 
-.jugadores-perspectiva.seis-jugadores .avatar-horizontal {
-  min-width: 180px;
-  padding: 8px 12px;
+@keyframes pulse-indicator {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  }
+  50% { 
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(247, 183, 51, 0.6);
+  }
 }
 
-.jugadores-perspectiva.seis-jugadores .avatar-image-horizontal {
-  width: 45px;
-  height: 45px;
-  font-size: 14px;
+/* Estados de conexión más visibles */
+.avatar-horizontal .connection-dot.conectado + .status-text {
+  color: #00ff11;
+}
+
+.avatar-horizontal .connection-dot.desconectado + .status-text {
+  color: #ccbfbe;
 }
