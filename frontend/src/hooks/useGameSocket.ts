@@ -71,6 +71,11 @@ interface EstadoRonda {
   numeroRonda: number;
   jugadorManoId: number | null;
   ganadorRondaEquipoId: number | null;
+  ordenJugadoresRonda: Array<{
+    id: number;
+    nombreUsuario: string;
+    equipoId: number;
+  }>;
   turnoInfo: {
     jugadorTurnoActualId: number | null;
     manoActualNumero: number;

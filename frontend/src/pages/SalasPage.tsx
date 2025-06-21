@@ -21,10 +21,16 @@ const SalasPage: React.FC = () => {
   const navigate = useNavigate();
   const socketRef = useRef<Socket | null>(null);
   const [salas, setSalas] = useState<Sala[]>([]);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalSalas, setTotalSalas] = useState(0);
+  const salasPerPage = 6;
   const [showModal, setShowModal] = useState(false);
   const [showJoinPrivateModal, setShowJoinPrivateModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [codigoPrivado, setCodigoPrivado] = useState('');
   const [salaSeleccionada, setSalaSeleccionada] = useState<string | null>(null);
+  const [enlaceInvitacion, setEnlaceInvitacion] = useState<string>('');
   const [filtro, setFiltro] = useState<'todas' | 'publicas' | 'privadas'>('todas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +49,10 @@ const SalasPage: React.FC = () => {
   // Cargar salas desde el servidor
   useEffect(() => {
     fetchSalas();
-    // Actualizar salas cada 10 segundos
-    const intervalId = setInterval(fetchSalas, 10000);
+    // Actualizar salas cada 30 segundos (menos frecuente para mejor UX con paginación)
+    const intervalId = setInterval(fetchSalas, 30000);
     return () => clearInterval(intervalId);
-  }, [filtro]);
+  }, [filtro, paginaActual]);
 
   // ✅ SOCKET SETUP FOR REDIRECTION EVENT
   useEffect(() => {
@@ -93,12 +99,26 @@ const SalasPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      // Agregar el filtro como query param
-      const response = await fetch(`/api/salas?filtro=${filtro}`, {
+      const isGuest = isAnonymous || !token;
+      
+      // Agregar parámetros de paginación y filtro de salas llenas
+      const params = new URLSearchParams({
+        filtro: isGuest ? 'publicas' : filtro,
+        pagina: paginaActual.toString(),
+        limite: salasPerPage.toString(),
+        excluir_llenas: 'true'
+      });
+      
+      // Usar ruta pública para invitados o ruta privada para usuarios registrados
+      const endpoint = isGuest ? `/api/salas/publicas?${params}` : `/api/salas?${params}`;
+      const headers: Record<string, string> = {};
+      if (!isGuest && token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(endpoint, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: headers,
       });
 
       if (!response.ok) {
@@ -106,10 +126,15 @@ const SalasPage: React.FC = () => {
       }
 
       const data = await response.json();
-      setSalas(data);
+      setSalas(data.salas || []);
+      if (data.paginacion) {
+        setTotalPaginas(data.paginacion.total_paginas);
+        setTotalSalas(data.paginacion.total_salas);
+      }
     } catch (error) {
       console.error('Error al obtener salas:', error);
       setError('No se pudieron cargar las salas. Inténtalo más tarde.');
+      setSalas([]);
     } finally {
       setLoading(false);
     }
@@ -389,6 +414,59 @@ const SalasPage: React.FC = () => {
     });
   };
 
+  // Generar enlace de invitación
+  const generarEnlaceInvitacion = async (codigoSala: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/salas/generar-link/${codigoSala}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEnlaceInvitacion(data.enlace_invitacion);
+        setShowLinkModal(true);
+      } else {
+        const error = await response.json();
+        setError(error.error || 'Error al generar enlace');
+      }
+    } catch (error) {
+      console.error('Error al generar enlace:', error);
+      setError('Error al generar enlace de invitación');
+    }
+  };
+
+  // Copiar enlace al portapapeles
+  const copiarEnlace = async () => {
+    try {
+      await navigator.clipboard.writeText(enlaceInvitacion);
+      // Mostrar confirmación temporal
+      const originalText = enlaceInvitacion;
+      setEnlaceInvitacion('¡Enlace copiado!');
+      setTimeout(() => {
+        setEnlaceInvitacion(originalText);
+      }, 2000);
+    } catch (error) {
+      console.error('Error al copiar enlace:', error);
+      // Fallback para navegadores que no soportan clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = enlaceInvitacion;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      const originalText = enlaceInvitacion;
+      setEnlaceInvitacion('¡Enlace copiado!');
+      setTimeout(() => {
+        setEnlaceInvitacion(originalText);
+      }, 2000);
+    }
+  };
+
   // Formatear tiempo restante
   const formatearTiempoRestante = (tiempoExpiracion: string | null) => {
     if (!tiempoExpiracion) return 'Sin límite';
@@ -416,6 +494,24 @@ const SalasPage: React.FC = () => {
     const indiceActual = filtros.indexOf(filtro);
     const siguienteFiltro = filtros[(indiceActual + 1) % filtros.length];
     setFiltro(siguienteFiltro);
+    setPaginaActual(1); // Resetear a la primera página al cambiar filtro
+  };
+
+  // Funciones de paginación
+  const irAPagina = (numeroPagina: number) => {
+    setPaginaActual(numeroPagina);
+  };
+
+  const paginaAnterior = () => {
+    if (paginaActual > 1) {
+      setPaginaActual(paginaActual - 1);
+    }
+  };
+
+  const paginaSiguiente = () => {
+    if (paginaActual < totalPaginas) {
+      setPaginaActual(paginaActual + 1);
+    }
   };
 
   const abrirModalUnirseConCodigo = () => {
@@ -431,27 +527,40 @@ const SalasPage: React.FC = () => {
         <div className="salas-header">
           <h1>Salas Disponibles</h1>
           <div className="header-actions">
-            <button 
-              className="filter-button"
-              onClick={cambiarFiltro}
-              title={`Filtro actual: ${filtro === 'todas' ? 'Todas' : filtro === 'publicas' ? 'Públicas' : 'Privadas'}`}
-            >
-              <IoFilterOutline />
-              {filtro === 'todas' ? 'Todas' : filtro === 'publicas' ? 'Públicas' : 'Privadas'}
-            </button>
-            <button 
-              className="bg-black"
-              onClick={fetchSalas}
-              title="Actualizar lista de salas"
-            >
-              <IoRefreshOutline />
-            </button>
-            <button 
-              className="create-room-button"
-              onClick={() => setShowModal(true)}
-            >
-              <IoAddCircleOutline /> Crear Sala
-            </button>
+            {!isAnonymous && (
+              <>
+                <button 
+                  className="filter-button"
+                  onClick={cambiarFiltro}
+                  title={`Filtro actual: ${filtro === 'todas' ? 'Todas' : filtro === 'publicas' ? 'Públicas' : 'Privadas'}`}
+                >
+                  <IoFilterOutline />
+                  {filtro === 'todas' ? 'Todas' : filtro === 'publicas' ? 'Públicas' : 'Privadas'}
+                </button>
+                <button 
+                  className="bg-black"
+                  onClick={fetchSalas}
+                  title="Actualizar lista de salas"
+                >
+                  <IoRefreshOutline />
+                </button>
+                <button 
+                  className="create-room-button"
+                  onClick={() => setShowModal(true)}
+                >
+                  <IoAddCircleOutline /> Crear Sala
+                </button>
+              </>
+            )}
+            {isAnonymous && (
+              <button 
+                className="bg-black"
+                onClick={fetchSalas}
+                title="Actualizar lista de salas"
+              >
+                <IoRefreshOutline />
+              </button>
+            )}
           </div>
         </div>
         
@@ -520,13 +629,23 @@ const SalasPage: React.FC = () => {
                   )}
                 </div>
                 
-                <button 
-                  className="unirse-button"
-                  onClick={() => unirseASala(sala)}
-                  disabled={salaEstaLlena(sala)}
-                >
-                  {salaEstaLlena(sala) ? 'Sala Llena' : sala.tipo === 'privada' ? 'Ingresar código' : 'Unirse'}
-                </button>
+                <div className="sala-actions">
+                  <button 
+                    className="unirse-button"
+                    onClick={() => unirseASala(sala)}
+                    disabled={salaEstaLlena(sala)}
+                  >
+                    {salaEstaLlena(sala) ? 'Sala Llena' : sala.tipo === 'privada' ? 'Ingresar código' : 'Unirse'}
+                  </button>
+                  
+                  <button 
+                    className="generar-link-button"
+                    onClick={() => generarEnlaceInvitacion(sala.codigo_sala)}
+                    title="Generar enlace para invitar amigos"
+                  >
+                    🔗 Enlace
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -535,10 +654,61 @@ const SalasPage: React.FC = () => {
             No hay salas disponibles. ¡Crea una nueva!
           </div>
         )}
+
+        {/* Paginación */}
+        {totalPaginas > 1 && (
+          <div className="paginacion">
+            <div className="paginacion-info">
+              Página {paginaActual} de {totalPaginas} • {totalSalas} salas disponibles
+            </div>
+            <div className="paginacion-controles">
+              <button 
+                className="paginacion-btn"
+                onClick={paginaAnterior}
+                disabled={paginaActual === 1}
+              >
+                ← Anterior
+              </button>
+              
+              <div className="paginacion-numeros">
+                {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                  let numeroPagina;
+                  if (totalPaginas <= 5) {
+                    numeroPagina = i + 1;
+                  } else if (paginaActual <= 3) {
+                    numeroPagina = i + 1;
+                  } else if (paginaActual >= totalPaginas - 2) {
+                    numeroPagina = totalPaginas - 4 + i;
+                  } else {
+                    numeroPagina = paginaActual - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={numeroPagina}
+                      className={`paginacion-numero ${paginaActual === numeroPagina ? 'activa' : ''}`}
+                      onClick={() => irAPagina(numeroPagina)}
+                    >
+                      {numeroPagina}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button 
+                className="paginacion-btn"
+                onClick={paginaSiguiente}
+                disabled={paginaActual === totalPaginas}
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Modal para crear sala */}
-      {showModal && (
+      {/* Modal para crear sala - Solo para usuarios registrados */}
+      {showModal && !isAnonymous && (
       <div className="modal-backdrop" onClick={() => setShowModal(false)}>
         <div className="modal-content" onClick={e => e.stopPropagation()}>
           <h2>Crear Nueva Sala</h2>
@@ -665,6 +835,36 @@ const SalasPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para enlace de invitación */}
+      {showLinkModal && (
+        <div className="modal-backdrop" onClick={() => setShowLinkModal(false)}>
+          <div className="modal-content enlace-modal" onClick={e => e.stopPropagation()}>
+            <h2>Enlace de Invitación</h2>
+            <div className="enlace-content">
+              <input 
+                type="text" 
+                value={enlaceInvitacion}
+                readOnly
+                className="enlace-input"
+              />
+              <button 
+                className="copy-link-button"
+                onClick={copiarEnlace}
+                title="Copiar enlace al portapapeles"
+              >
+                Copiar Enlace
+              </button>
+            </div>
+            <p>Comparte este enlace con tus amigos para que se unan a la sala.</p>
+            <div className="modal-actions">
+              <button type="button" className="cancel-button" onClick={() => setShowLinkModal(false)}>
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
