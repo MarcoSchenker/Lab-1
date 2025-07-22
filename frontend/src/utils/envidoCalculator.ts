@@ -12,18 +12,22 @@ interface Carta {
 
 /**
  * Calcula el envido de un jugador basado en sus cartas
- * @param cartas Las cartas del jugador
+ * @param cartas Las cartas del jugador (tanto en mano como jugadas)
+ * @param cartasJugadas Las cartas que ya jugó el jugador (opcional)
  * @returns El valor del envido (0-33)
  */
-export function calcularEnvido(cartas: Carta[]): number {
-  if (!cartas || cartas.length === 0) {
+export function calcularEnvido(cartas: Carta[], cartasJugadas: Carta[] = []): number {
+  // ✅ PROBLEMA 5 CORREGIDO: Incluir cartas ya jugadas en el cálculo del envido
+  const todasLasCartas = [...cartas, ...cartasJugadas];
+  
+  if (!todasLasCartas || todasLasCartas.length === 0) {
     return 0;
   }
 
   // Agrupar cartas por palo
   const cartasPorPalo: Record<string, Carta[]> = {};
   
-  cartas.forEach(carta => {
+  todasLasCartas.forEach(carta => {
     if (!cartasPorPalo[carta.palo]) {
       cartasPorPalo[carta.palo] = [];
     }
@@ -76,28 +80,32 @@ export function obtenerDescripcionEnvido(envido: number): string {
 /**
  * Valida si un valor de envido declarado es correcto
  * @param envidoDeclarado El envido que declara el jugador
- * @param cartas Las cartas reales del jugador
+ * @param cartas Las cartas reales del jugador (en mano)
+ * @param cartasJugadas Las cartas ya jugadas por el jugador
  * @returns true si el envido es correcto
  */
-export function validarEnvidoDeclarado(envidoDeclarado: number, cartas: Carta[]): boolean {
-  const envidoReal = calcularEnvido(cartas);
+export function validarEnvidoDeclarado(envidoDeclarado: number, cartas: Carta[], cartasJugadas: Carta[] = []): boolean {
+  const envidoReal = calcularEnvido(cartas, cartasJugadas);
   return envidoReal === envidoDeclarado;
 }
 
 /**
  * Obtiene las cartas que forman el mejor envido
- * @param cartas Las cartas del jugador
+ * @param cartas Las cartas del jugador (en mano)
+ * @param cartasJugadas Las cartas ya jugadas por el jugador
  * @returns Las dos cartas que forman el mejor envido, o null si no hay envido
  */
-export function obtenerCartasEnvido(cartas: Carta[]): { cartas: Carta[], palo: string } | null {
-  if (!cartas || cartas.length === 0) {
+export function obtenerCartasEnvido(cartas: Carta[], cartasJugadas: Carta[] = []): { cartas: Carta[], palo: string } | null {
+  const todasLasCartas = [...cartas, ...cartasJugadas];
+  
+  if (!todasLasCartas || todasLasCartas.length === 0) {
     return null;
   }
 
   // Agrupar cartas por palo
   const cartasPorPalo: Record<string, Carta[]> = {};
   
-  cartas.forEach(carta => {
+  todasLasCartas.forEach(carta => {
     if (!cartasPorPalo[carta.palo]) {
       cartasPorPalo[carta.palo] = [];
     }

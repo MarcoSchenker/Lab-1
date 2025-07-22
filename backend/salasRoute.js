@@ -32,6 +32,7 @@ router.get('/publicas', async (req, res) => {
       FROM partidas p
       LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
       WHERE p.estado = 'en_juego' AND p.tipo = 'publica'
+        AND (p.tiempo_expiracion IS NULL OR p.tiempo_expiracion > NOW())
       GROUP BY p.codigo_sala, p.tipo, p.puntos_victoria, p.max_jugadores, p.tiempo_expiracion, p.fecha_inicio
     `;
 
@@ -47,13 +48,22 @@ router.get('/publicas', async (req, res) => {
 
     const [salas] = await pool.query(query, [parseInt(limite), offset]);
 
-    // Consulta simplificada para contar el total de salas públicas
+    // Filtrar salas expiradas (igual que en la ruta principal)
+    const ahora = new Date();
+    const salasActualizadas = salas.filter(sala => {
+      if (!sala.tiempo_expiracion) return true;
+      const expiracion = new Date(sala.tiempo_expiracion);
+      return expiracion > ahora;
+    });
+
+    // Consulta simplificada para contar el total de salas públicas disponibles
     let countQuery = `
       SELECT COUNT(*) as total FROM (
         SELECT p.codigo_sala
         FROM partidas p
         LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
         WHERE p.estado = 'en_juego' AND p.tipo = 'publica'
+          AND (p.tiempo_expiracion IS NULL OR p.tiempo_expiracion > NOW())
         GROUP BY p.codigo_sala, p.max_jugadores
     `;
 
@@ -68,7 +78,7 @@ router.get('/publicas', async (req, res) => {
     const totalPaginas = Math.ceil(totalSalas / parseInt(limite));
 
     res.json({
-      salas,
+      salas: salasActualizadas,
       paginacion: {
         pagina_actual: parseInt(pagina),
         total_paginas: totalPaginas,
@@ -85,7 +95,7 @@ router.get('/publicas', async (req, res) => {
 // Obtener todas las salas disponibles con filtros
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { filtro = 'todas', pagina = 1, limite = 12, excluir_llenas = 'true' } = req.query;
+    const { filtro = 'todas', pagina = 1, limite = 6, excluir_llenas = 'true' } = req.query;
     const offset = (parseInt(pagina) - 1) * parseInt(limite);
     
     let query = `
@@ -101,6 +111,7 @@ router.get('/', authenticateToken, async (req, res) => {
       FROM partidas p
       LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
       WHERE p.estado = 'en_juego'
+        AND (p.tiempo_expiracion IS NULL OR p.tiempo_expiracion > NOW())
     `;
 
     if (filtro === 'publicas') {
@@ -125,12 +136,13 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const [salas] = await pool.query(query, [parseInt(limite), offset]);
 
-    // Consulta para contar el total de salas (para paginación)
+    // Consulta para contar el total de salas disponibles (para paginación)
     let countQuery = `
       SELECT COUNT(DISTINCT p.codigo_sala) as total
       FROM partidas p
       LEFT JOIN jugadores_partidas jp ON p.codigo_sala = jp.partida_id
       WHERE p.estado = 'en_juego'
+        AND (p.tiempo_expiracion IS NULL OR p.tiempo_expiracion > NOW())
     `;
 
     if (filtro === 'publicas') {
