@@ -297,6 +297,7 @@ const OnlineGamePage: React.FC = () => {
             trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
             manoActual={gameState.rondaActual.turnoInfo.manoActualNumero}
             cartasJugador={gameState.jugadores.find(j => j.id === jugadorId)?.cartasMano || []}
+            cartasJugadas={gameState.jugadores.find(j => j.id === jugadorId)?.cartasJugadasRonda || []} // ✅ PROBLEMA 4 CORREGIDO: Pasar cartas jugadas
             onCantar={cantar}
             onResponderCanto={responderCanto}
             onDeclararPuntosEnvido={handleDeclararPuntosEnvido}

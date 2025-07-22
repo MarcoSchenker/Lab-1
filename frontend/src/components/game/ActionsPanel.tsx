@@ -54,7 +54,8 @@ interface ActionsPanelProps {
   esMiTurno: boolean;
   trucoPendientePorEnvidoPrimero: boolean;
   manoActual?: number; // Agregamos información de la mano actual (1, 2, o 3)
-  cartasJugador?: Carta[]; // Cartas del jugador para calcular envido automáticamente
+  cartasJugador?: Carta[]; // Cartas en mano del jugador para calcular envido automáticamente
+  cartasJugadas?: Carta[]; // ✅ PROBLEMA 5: Cartas ya jugadas por el jugador
   onCantar: (tipoCanto: string) => void;
   onResponderCanto: (respuesta: string) => void;
   onDeclararPuntosEnvido: (puntos: number) => void;
@@ -71,6 +72,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
   trucoPendientePorEnvidoPrimero,
   manoActual = 1,
   cartasJugador = [],
+  cartasJugadas = [], // ✅ PROBLEMA 5: Cartas ya jugadas
   onCantar,
   onResponderCanto,
   onDeclararPuntosEnvido,
@@ -79,10 +81,10 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 }) => {
   const [showEnvidoInput, setShowEnvidoInput] = useState(false);
 
-  // Calcular envido automáticamente basado en las cartas del jugador
+  // ✅ PROBLEMA 5 CORREGIDO: Calcular envido incluyendo cartas ya jugadas
   const miEnvido = useMemo(() => {
-    return calcularEnvido(cartasJugador);
-  }, [cartasJugador]);
+    return calcularEnvido(cartasJugador, cartasJugadas);
+  }, [cartasJugador, cartasJugadas]);
 
   if (!jugadorId) return null;
 
@@ -96,27 +98,82 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
       return false;
     }
     
+    // ✅ CORRECCIÓN ADICIONAL: Lógica mejorada para "envido va primero"
     if (trucoPendientePorEnvidoPrimero) {
-      return trucoInfo.equipoDebeResponderTrucoId === miEquipo.id;
+      // Cuando hay truco pendiente por "envido va primero", puedo cantar envido si:
+      // 1. Soy del equipo que debe responder al truco
+      // 2. No se ha cantado envido aún
+      // 3. Es mi turno (esMiTurno debería ser true en este caso)
+      return trucoInfo.equipoDebeResponderTrucoId === miEquipo.id && 
+             !envidoInfo.cantado && 
+             esMiTurno;
     }
-    return esMiTurno && !envidoInfo.cantado;
+    
+    // Caso normal: puedo cantar envido si es mi turno y no hay envido cantado
+    // Y no hay truco cantado Y pendiente de respuesta (porque entonces debería responder al truco)
+    const noHayTrucoQueResponder = !trucoInfo.cantado || 
+                                   trucoInfo.estadoResolucion !== 'cantado_pendiente_respuesta' ||
+                                   trucoInfo.equipoDebeResponderTrucoId !== miEquipo.id;
+    
+    return esMiTurno && !envidoInfo.cantado && noHayTrucoQueResponder;
   };
 
   // Verificar si puedo cantar truco
   const puedoCantarTruco = (): boolean => {
-    return esMiTurno && !trucoInfo.cantado;
+    // ✅ PROBLEMA 2 CORREGIDO: No mostrar niveles de truco ya cantados
+    // Puedo cantar truco inicial si no hay truco cantado
+    if (!trucoInfo.cantado && esMiTurno) {
+      return true;
+    }
+    
+    // Puedo subir el truco si fue querido y no soy quien lo cantó originalmente
+    if (trucoInfo.cantado && 
+        trucoInfo.querido && 
+        trucoInfo.cantadoPorEquipoId !== miEquipo.id &&
+        esMiTurno) {
+      
+      // Verificar que puedo subir al siguiente nivel (no mostrar el mismo nivel)
+      if (trucoInfo.nivelActual === 'TRUCO') {
+        return true; // Puedo cantar RETRUCO
+      } else if (trucoInfo.nivelActual === 'RETRUCO') {
+        return true; // Puedo cantar VALE_CUATRO
+      }
+      // Si ya es VALE_CUATRO, no se puede subir más
+    }
+    
+    return false;
+  };
+
+  // ✅ Función auxiliar para determinar qué nivel de truco puedo cantar
+  const getNivelTrucoDisponible = (): string | null => {
+    if (!trucoInfo.cantado) {
+      return 'TRUCO'; // Primer canto
+    }
+    
+    if (trucoInfo.querido && trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
+      if (trucoInfo.nivelActual === 'TRUCO') {
+        return 'RETRUCO';
+      } else if (trucoInfo.nivelActual === 'RETRUCO') {
+        return 'VALE_CUATRO';
+      }
+    }
+    
+    return null;
   };
 
   // Verificar si debo responder a un canto
   const deboResponderCanto = (): boolean => {
-    // Para envido - Solo si NO soy quien cantó
+    // ✅ CORRECCIÓN ADICIONAL: No mostrar respuestas para cantos ya resueltos
+    
+    // Para envido - Solo si NO soy quien cantó Y el estado es pendiente de respuesta
     if (envidoInfo.cantado && 
         envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
-        envidoInfo.cantadoPorEquipoId !== miEquipo.id) {
+        envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
+        !envidoInfo.declaracionEnCurso) { // ✅ No mostrar respuestas si ya estamos declarando puntos
       return true;
     }
     
-    // Para truco - Solo si soy del equipo que debe responder
+    // Para truco - Solo si soy del equipo que debe responder Y el estado es pendiente
     if (trucoInfo.cantado &&
         trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
         trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
@@ -255,14 +312,17 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // Verificar si hay "envido va primero" activo
   const hayEnvidoVaPrimero = (): boolean => {
+    // ✅ CORRECCIÓN ADICIONAL: Lógica simplificada para detectar "envido va primero"
     return trucoPendientePorEnvidoPrimero && 
            trucoInfo.cantado && 
            trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
-           manoActual === 1;
+           trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+           manoActual === 1 &&
+           !envidoInfo.cantado;
   };
 
   // Si hay "envido va primero", mostrar mensaje especial
-  if (hayEnvidoVaPrimero() && puedoCantarEnvido()) {
+  if (hayEnvidoVaPrimero()) {
     return (
       <div className="actions-panel envido-va-primero">
         <div className="panel-title">
@@ -309,6 +369,23 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
           >
             No Quiero Truco
           </button>
+          {/* ✅ CORRECCIÓN ADICIONAL: Permitir recantos de truco en "envido va primero" */}
+          {trucoInfo.nivelActual === 'TRUCO' && (
+            <button 
+              className="btn-action btn-retruco"
+              onClick={() => onResponderCanto('RETRUCO')}
+            >
+              Retruco
+            </button>
+          )}
+          {trucoInfo.nivelActual === 'RETRUCO' && (
+            <button 
+              className="btn-action btn-vale-cuatro"
+              onClick={() => onResponderCanto('VALE_CUATRO')}
+            >
+              Vale Cuatro
+            </button>
+          )}
         </div>
       </div>
     );
@@ -346,6 +423,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
           {/* Recantos para envido */}
           {esEnvido && (
             <div className="recantos-envido">
+              {/* ✅ PROBLEMA 2 CORREGIDO: Opciones completas de encadenamiento de envido */}
               {nivelActual === 'ENVIDO' && (
                 <>
                   <button 
@@ -368,7 +446,32 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
                   </button>
                 </>
               )}
-              {(nivelActual === 'ENVIDO_ENVIDO' || nivelActual === 'REAL_ENVIDO') && (
+              {nivelActual === 'REAL_ENVIDO' && (
+                <button 
+                  className="btn-action btn-falta-envido"
+                  onClick={() => onCantar('FALTA_ENVIDO')}
+                >
+                  Falta Envido
+                </button>
+              )}
+              {(nivelActual === 'ENVIDO_ENVIDO') && (
+                <>
+                  <button 
+                    className="btn-action btn-real-envido"
+                    onClick={() => onCantar('REAL_ENVIDO')}
+                  >
+                    Real Envido
+                  </button>
+                  <button 
+                    className="btn-action btn-falta-envido"
+                    onClick={() => onCantar('FALTA_ENVIDO')}
+                  >
+                    Falta Envido
+                  </button>
+                </>
+              )}
+              {(nivelActual === 'ENVIDO_REAL_ENVIDO' || 
+                nivelActual === 'ENVIDO_ENVIDO_REAL_ENVIDO') && (
                 <button 
                   className="btn-action btn-falta-envido"
                   onClick={() => onCantar('FALTA_ENVIDO')}
@@ -400,84 +503,6 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
               )}
             </div>
           )}
-        </div>
-      </div>
-    );
-  }
-
-  // Panel especial: Envido va primero
-  // Si hay un truco pendiente de respuesta en primera mano y puede cantar envido
-  const hayTrucoPendienteEnPrimeraMano = trucoInfo.cantado && 
-                                        trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
-                                        manoActual === 1 &&
-                                        trucoInfo.equipoDebeResponderTrucoId === miEquipo.id;
-  
-  const puedeInvocarEnvidoPrimero = hayTrucoPendienteEnPrimeraMano && 
-                                   !envidoInfo.cantado && 
-                                   esMiTurno;
-
-  if (puedeInvocarEnvidoPrimero) {
-    return (
-      <div className="actions-panel envido-primero-panel">
-        <div className="panel-title">
-          <span>¡Envido va primero!</span>
-          <div className="text-sm text-yellow-300 mt-1">
-            Puedes cantar envido antes de responder al truco
-          </div>
-        </div>
-        
-        <div className="envido-primero-actions">
-          {/* Acciones de envido */}
-          <div className="action-group envido-group">
-            <span className="group-title">Cantar Envido</span>
-            <div className="action-buttons">
-              <button 
-                className="btn-action btn-envido"
-                onClick={() => onCantar('ENVIDO')}
-              >
-                Envido
-              </button>
-              <button 
-                className="btn-action btn-real-envido"
-                onClick={() => onCantar('REAL_ENVIDO')}
-              >
-                Real Envido
-              </button>
-              <button 
-                className="btn-action btn-falta-envido"
-                onClick={() => onCantar('FALTA_ENVIDO')}
-              >
-                Falta Envido
-              </button>
-            </div>
-          </div>
-          
-          {/* O responder al truco directamente */}
-          <div className="action-group truco-response-group">
-            <span className="group-title">O responder al Truco</span>
-            <div className="action-buttons">
-              <button 
-                className="btn-action btn-quiero"
-                onClick={() => onResponderCanto('QUIERO')}
-              >
-                Quiero Truco
-              </button>
-              <button 
-                className="btn-action btn-no-quiero"
-                onClick={() => onResponderCanto('NO_QUIERO')}
-              >
-                No Quiero Truco
-              </button>
-              {trucoInfo.nivelActual === 'TRUCO' && (
-                <button 
-                  className="btn-action btn-retruco"
-                  onClick={() => onResponderCanto('RETRUCO')}
-                >
-                  Retruco
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -523,13 +548,16 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
           <div className="action-group truco-group">
             <span className="group-title">Truco</span>
             <div className="action-buttons">
-              <button 
-                className="btn-action btn-truco"
-                onClick={() => onCantar('TRUCO')}
-              >
-                Truco
-              </button>
-              {trucoInfo.nivelActual === 'TRUCO' && (
+              {/* ✅ PROBLEMA 2 CORREGIDO: Solo mostrar el nivel de truco disponible */}
+              {getNivelTrucoDisponible() === 'TRUCO' && (
+                <button 
+                  className="btn-action btn-truco"
+                  onClick={() => onCantar('TRUCO')}
+                >
+                  Truco
+                </button>
+              )}
+              {getNivelTrucoDisponible() === 'RETRUCO' && (
                 <button 
                   className="btn-action btn-retruco"
                   onClick={() => onCantar('RETRUCO')}
@@ -537,7 +565,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
                   Retruco
                 </button>
               )}
-              {trucoInfo.nivelActual === 'RETRUCO' && (
+              {getNivelTrucoDisponible() === 'VALE_CUATRO' && (
                 <button 
                   className="btn-action btn-vale-cuatro"
                   onClick={() => onCantar('VALE_CUATRO')}

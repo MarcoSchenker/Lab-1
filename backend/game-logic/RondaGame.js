@@ -47,22 +47,35 @@ class RondaGame {
 
     manejarCanto(jugadorId, tipoCanto, detalleCanto) { // detalleCanto no se usa mucho aquí
         if (tipoCanto.includes('ENVIDO') || tipoCanto === 'FALTA_ENVIDO') {
-            // Verificar la regla "Envido Primero"
-            if (this.trucoHandler.estaPendienteDeRespuesta() && 
-                this.turnoHandler.manoActual === 1 && // Solo en primera mano
-                !this.envidoHandler.cantado) { // No se ha cantado envido previamente
-                
-                // Guardar el estado del truco para retomarlo después
-                this.trucoPendientePorEnvidoPrimero = true;
-                console.log("Invocando regla de Envido Primero: Se interrumpe el truco para resolver el envido");
-                
-                return this.envidoHandler.registrarCanto(jugadorId, tipoCanto);
-            }
             return this.envidoHandler.registrarCanto(jugadorId, tipoCanto);
         } else if (tipoCanto === 'TRUCO' || tipoCanto === 'RETRUCO' || tipoCanto === 'VALE_CUATRO') {
+            // ✅ PROBLEMA 1 CORREGIDO: Implementar "Envido va primero" correctamente
+            if (tipoCanto === 'TRUCO' && 
+                this.turnoHandler.manoActualNumero === 1 && 
+                !this.envidoHandler.cantado &&
+                this.envidoHandler.puedeCantarEnvidoGeneral) {
+                
+                // Marcar que hay un truco pendiente por "envido va primero"
+                this.trucoPendientePorEnvidoPrimero = true;
+                
+                // Registrar el truco pero mantenerlo en estado especial
+                const resultado = this.trucoHandler.registrarCanto(jugadorId, tipoCanto);
+                
+                if (resultado) {
+                    console.log(`[RONDA] ⚡ Truco cantado en primera mano - activando "Envido va primero"`);
+                    this._actualizarEstadoParaNotificar('truco_pendiente_por_envido_primero', {
+                        jugadorId,
+                        tipoCanto,
+                        trucoPendientePorEnvidoPrimero: true
+                    });
+                }
+                
+                return resultado;
+            }
+            
             return this.trucoHandler.registrarCanto(jugadorId, tipoCanto);
         } else {
-            console.warn(`Canto desconocido: ${tipoCanto}`);
+            console.warn(`Tipo de canto desconocido: ${tipoCanto}`);
             return false;
         }
     }

@@ -49,8 +49,10 @@ class RondaTrucoHandler {
      * @returns {boolean} true si el canto fue registrado exitosamente
      */
     registrarCanto(jugadorId, tipoCanto) {
-        // Validar si hay un envido pendiente
-        if (this.ronda.envidoHandler.estaPendienteDeRespuesta() && !this.ronda.trucoPendientePorEnvidoPrimero) {
+        // Validar si hay un envido pendiente (pero permitir en primera mano para "envido va primero")
+        if (this.ronda.envidoHandler.estaPendienteDeRespuesta() && 
+            !this.ronda.trucoPendientePorEnvidoPrimero &&
+            this.ronda.turnoHandler.manoActualNumero !== 1) {
             this.ronda.notificarEstado('error_accion_juego', { 
                 jugadorId, 
                 mensaje: 'Debe responder al envido antes de cantar truco.' 
@@ -65,11 +67,19 @@ class RondaTrucoHandler {
             return false;
         }
 
-        // Validar que el jugador pueda cantar en este momento (es su turno de jugar carta)
-        if (!this.ronda.turnoHandler.jugadorTurnoActual || this.ronda.turnoHandler.jugadorTurnoActual.id !== jugadorId) {
+        // ✅ PROBLEMA 3 CORREGIDO: Permitir cantar truco en cualquier mano cuando es el turno del jugador
+        // No solo validar turno de carta, sino también permitir cuando debe responder o puede subir el truco
+        const esSuTurnoDeJugarCarta = this.ronda.turnoHandler.jugadorTurnoActual && 
+                                     this.ronda.turnoHandler.jugadorTurnoActual.id === jugadorId;
+        
+        const puedeSubirTruco = this.querido && 
+                               this.cantadoPorEquipoId !== jugadorCantor.equipoId && 
+                               this.nivelActual !== 'VALE_CUATRO';
+        
+        if (!esSuTurnoDeJugarCarta && !puedeSubirTruco) {
             this.ronda.notificarEstado('error_accion_juego', { 
                 jugadorId, 
-                mensaje: 'Solo puedes cantar truco cuando es tu turno de jugar una carta.' 
+                mensaje: 'Solo puedes cantar truco cuando es tu turno o puedes subir la apuesta.' 
             });
             return false;
         }

@@ -160,9 +160,41 @@
   @apply flex flex-wrap gap-2;
 }
 
+/* ✅ MEJORA: Organización específica para botones de envido */
+.envido-group .action-buttons {
+  @apply flex flex-col gap-2;
+}
+
+.envido-group .btn-action {
+  @apply w-full text-center;
+}
+
+/* ✅ MEJORA: Organización específica para botones de truco */
+.truco-group .action-buttons {
+  @apply flex flex-col gap-2;
+}
+
+.truco-group .btn-action {
+  @apply w-full text-center;
+}
+
+/* ✅ MEJORA: Estilo mejorado para botones de mazo */
+.mazo-group {
+  @apply bg-yellow-900/30 border border-yellow-600;
+}
+
+.mazo-group .btn-mazo {
+  @apply w-full;
+}
+
 .recantos-envido,
 .recantos-truco {
-  @apply flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-600;
+  @apply flex flex-col gap-2 mt-3 pt-3 border-t border-slate-600;
+}
+
+/* ✅ MEJORA: Estilos específicos para recantos de truco en respuestas */
+.recantos-truco .btn-action {
+  @apply w-full text-center;
 }
 
 /* Responsivo */

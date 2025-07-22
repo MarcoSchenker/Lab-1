@@ -156,7 +156,12 @@ class RondaEnvidoHandler {
 
     registrarCanto(jugadorId, tipoCantoOriginal) {
         if (!this._puedeJugadorCantarEnvido(jugadorId, tipoCantoOriginal)) return false;
-        if (this.ronda.trucoHandler.estaPendienteDeRespuesta()) { this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'Debe responder al truco antes de cantar envido.' }); return false; }
+        
+        // ✅ CORRECCIÓN: Permitir envido cuando hay "envido va primero" activo
+        if (this.ronda.trucoHandler.estaPendienteDeRespuesta() && !this.ronda.trucoPendientePorEnvidoPrimero) { 
+            this.ronda.notificarEstado('error_accion_juego', { jugadorId, mensaje: 'Debe responder al truco antes de cantar envido.' }); 
+            return false; 
+        }
 
         const jugadorCantor = this.ronda.jugadoresEnOrden.find(j => j.id === jugadorId);
         if (!jugadorCantor) return false;
@@ -201,8 +206,14 @@ class RondaEnvidoHandler {
         this.estadoResolucion = 'cantado_pendiente_respuesta';
         this.equipoRespondedorCanto = this.ronda.equipos.find(e => e.id !== jugadorCantor.equipoId);
         
-        // Guardar el turno actual antes de cambiar para responder al envido
-        this.ronda.turnoHandler.guardarTurnoAntesCanto();
+        // ✅ CORRECCIÓN: Solo guardar el turno si es el primer canto de envido en la secuencia
+        if (this.cantosRealizados.length === 1) {
+            // Es el primer canto de envido, guardar el turno original
+            this.ronda.turnoHandler.guardarTurnoAntesCanto();
+            console.log(`[ENVIDO] Primer canto de envido - turno guardado: ${this.ronda.turnoHandler.jugadorTurnoActual?.id}`);
+        } else {
+            console.log(`[ENVIDO] Canto encadenado - manteniendo turno guardado original: ${this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId}`);
+        }
         
         if(this.ronda.trucoHandler.estadoResolucion === 'cantado_pendiente_respuesta') this.ronda.trucoPendientePorEnvidoPrimero = true;
 
@@ -465,37 +476,71 @@ class RondaEnvidoHandler {
     }
 
     resolverDependenciaTrucoYRestaurarTurno() {
-        // Restaurar turno al jugador que estaba en turno antes del envido
+        console.log("[ENVIDO] Resolviendo dependencia de truco y restaurando turno");
+        console.log(`[ENVIDO] Estado actual - trucoPendientePorEnvidoPrimero: ${this.ronda.trucoPendientePorEnvidoPrimero}`);
+        console.log(`[ENVIDO] Estado actual - jugadorTurnoAlMomentoDelCanto: ${this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId}`);
+        console.log(`[ENVIDO] Estado actual - jugadorTurnoActual: ${this.ronda.turnoHandler.jugadorTurnoActual?.id}`);
+        
         if (this.ronda.trucoPendientePorEnvidoPrimero) {
-            console.log("Hay un truco pendiente por Envido Primero que debe ser resuelto");
-            // El turno se mantiene para responder al truco
+            console.log("[ENVIDO] Hay un truco pendiente por Envido Primero");
+            // Cuando hay truco pendiente por "envido va primero", el turno debe ir al equipo que debe responder al truco
+            const equipoQueDebeResponderTruco = this.ronda.trucoHandler.equipoDebeResponderTruco;
+            if (equipoQueDebeResponderTruco && equipoQueDebeResponderTruco.jugadores.length > 0) {
+                const jugadorRespondeTruco = equipoQueDebeResponderTruco.jugadores[0];
+                this.ronda.turnoHandler.setTurnoA(jugadorRespondeTruco.id);
+                console.log(`[ENVIDO] Turno asignado a ${jugadorRespondeTruco.nombreUsuario} para responder truco pendiente`);
+            } else {
+                console.warn("[ENVIDO] No se encontró equipo que debe responder al truco");
+                // Fallback: restaurar turno guardado
+                this.ronda.turnoHandler.restaurarTurnoAntesCanto();
+            }
         } else {
-            // Si no hay truco pendiente, restaurar el turno normal de juego de cartas
-            if (!this.ronda.turnoHandler.restaurarTurnoAntesCanto()) {
-            if (!this.ronda.turnoHandler.restaurarTurnoAntesCanto()) {
-                // Si no hay referencia al turno anterior, usar la lógica de mano
-                console.log("[ENVIDO] No hay turno anterior guardado, determinando turno basado en mano actual");
+            // Si no hay truco pendiente, restaurar el turno del jugador que lo tenía cuando se cantó el primer envido
+            console.log("[ENVIDO] No hay truco pendiente, restaurando turno de juego normal");
+            
+            // ✅ CORRECCIÓN PRINCIPAL: Restaurar usando el método dedicado
+            if (this.ronda.turnoHandler.restaurarTurnoAntesCanto()) {
+                console.log("[ENVIDO] Turno restaurado exitosamente al jugador original");
+            } else {
+                // Si no hay turno guardado, determinar turno basado en la lógica de manos
+                console.log("[ENVIDO] No hay turno guardado, determinando turno basado en mano actual");
                 const manoActual = this.ronda.turnoHandler.manoActualNumero;
                 
                 if (manoActual === 1) {
-                    // Primera mano: empieza el que está a la derecha del mano
-                    const indiceMano = this.ronda.jugadoresEnOrden.findIndex(j => j.id === this.ronda.jugadorManoRonda.id);
-                    const indiceSiguiente = (indiceMano + 1) % this.ronda.jugadoresEnOrden.length;
-                    const jugadorInicia = this.ronda.jugadoresEnOrden[indiceSiguiente];
-                    this.ronda.turnoHandler.setTurnoA(jugadorInicia.id);
+                    // Primera mano: determinar quién debería tener el turno
+                    const cartasJugadas = this.ronda.turnoHandler.cartasEnMesaManoActual.length;
+                    const totalJugadores = this.ronda.jugadoresEnOrden.length;
+                    
+                    if (cartasJugadas === 0) {
+                        // No se han jugado cartas, empieza el que está a la derecha del mano
+                        const indiceMano = this.ronda.jugadoresEnOrden.findIndex(j => j.id === this.ronda.jugadorManoRonda.id);
+                        const indiceSiguiente = (indiceMano + 1) % this.ronda.jugadoresEnOrden.length;
+                        const jugadorInicia = this.ronda.jugadoresEnOrden[indiceSiguiente];
+                        this.ronda.turnoHandler.setTurnoA(jugadorInicia.id);
+                        console.log(`[ENVIDO] Primera mano sin cartas: turno a ${jugadorInicia.nombreUsuario} (siguiente al mano)`);
+                    } else {
+                        // Ya se jugaron cartas, continuar el orden desde la última carta jugada
+                        const ultimaCartaJugada = this.ronda.turnoHandler.cartasEnMesaManoActual[cartasJugadas - 1];
+                        const indiceUltimo = this.ronda.jugadoresEnOrden.findIndex(j => j.id === ultimaCartaJugada.jugadorId);
+                        const indiceSiguiente = (indiceUltimo + 1) % totalJugadores;
+                        const siguienteJugador = this.ronda.jugadoresEnOrden[indiceSiguiente];
+                        this.ronda.turnoHandler.setTurnoA(siguienteJugador.id);
+                        console.log(`[ENVIDO] Primera mano con ${cartasJugadas} cartas: turno a ${siguienteJugador.nombreUsuario} (siguiente al último)`);
+                    }
                 } else {
                     // Segunda o tercera mano: empieza el ganador de la mano anterior
                     const manoAnterior = this.ronda.turnoHandler.manosJugadas[manoActual - 2];
                     if (manoAnterior && manoAnterior.ganadorManoJugadorId) {
                         this.ronda.turnoHandler.setTurnoA(manoAnterior.ganadorManoJugadorId);
+                        console.log(`[ENVIDO] Mano ${manoActual}: turno a ganador de mano anterior (${manoAnterior.ganadorManoJugadorId})`);
                     } else {
                         // Fallback: el mano
                         this.ronda.turnoHandler.setTurnoA(this.ronda.jugadorManoRonda.id);
+                        console.log(`[ENVIDO] Fallback: turno al mano (${this.ronda.jugadorManoRonda.id})`);
                     }
                 }
             }
         }
-    }
     }
 
     getEstado() {
