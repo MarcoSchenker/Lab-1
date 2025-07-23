@@ -120,6 +120,7 @@ interface UseGameSocketReturn {
   declararPuntosEnvido: (puntos: number) => void;
   declararSonBuenas: () => void;
   irseAlMazo: () => void;
+  abandonarPartida: () => void; // ✅ Nueva función para abandonar partida
   requestGameState: () => void;
   retryConnection: () => void;
 }
@@ -867,6 +868,19 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     setTimeout(() => setEsperandoRespuesta(false), 1000);
   }, [esperandoRespuesta]);
 
+  // ✅ Nueva función para abandonar partida
+  const abandonarPartida = useCallback(() => {
+    if (!socketRef.current) return;
+    
+    console.log('[CLIENT] 🚪 Abandonando partida');
+    socketRef.current.emit('abandonar_partida_ws');
+    
+    // Navegar de vuelta al lobby después de un breve delay
+    setTimeout(() => {
+      navigate('/salas');
+    }, 500);
+  }, [navigate]);
+
   return {
     socket: socketRef.current,
     gameState,
@@ -881,6 +895,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     declararPuntosEnvido,
     declararSonBuenas,
     irseAlMazo,
+    abandonarPartida, // ✅ Agregar la nueva función
     requestGameState,
     retryConnection,
   };

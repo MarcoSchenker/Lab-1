@@ -1,0 +1,189 @@
+/* LeaveGameModal.css */
+.leave-game-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001; /* Mayor que GameEndModal */
+  animation: fadeIn 0.3s ease-out;
+}
+
+.leave-game-modal {
+  background: linear-gradient(135deg, #2a1a1a, #3a2a2a);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border: 2px solid #d9534f;
+  animation: modalSlideIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { 
+    transform: translateY(-50px) scale(0.9);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Header del modal */
+.leave-game-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #d9534f;
+}
+
+.leave-game-header h2 {
+  color: #fff;
+  font-size: 1.8rem;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Contenido del modal */
+.leave-game-content {
+  margin-bottom: 2rem;
+}
+
+.warning-message {
+  color: #fff;
+}
+
+.main-warning {
+  font-size: 1.1rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #ffdddd;
+}
+
+.consequences {
+  background: rgba(217, 83, 79, 0.1);
+  border: 1px solid #d9534f;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.consequences h4 {
+  color: #ff6b6b;
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+}
+
+.consequences ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: none;
+}
+
+.consequences li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  color: #ffcccc;
+  position: relative;
+}
+
+.consequences li:last-child {
+  margin-bottom: 0;
+}
+
+.recommendation {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid #ffc107;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.recommendation p {
+  margin: 0;
+  color: #fff3cd;
+  line-height: 1.4;
+}
+
+/* Acciones del modal */
+.leave-game-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-cancel-leave,
+.btn-confirm-leave {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.btn-cancel-leave {
+  background: linear-gradient(135deg, #5cb85c, #4cae4c);
+  color: white;
+  box-shadow: 0 4px 15px rgba(92, 184, 92, 0.3);
+}
+
+.btn-cancel-leave:hover {
+  background: linear-gradient(135deg, #4cae4c, #419641);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(92, 184, 92, 0.4);
+}
+
+.btn-confirm-leave {
+  background: linear-gradient(135deg, #d9534f, #c9302c);
+  color: white;
+  box-shadow: 0 4px 15px rgba(217, 83, 79, 0.3);
+}
+
+.btn-confirm-leave:hover {
+  background: linear-gradient(135deg, #c9302c, #ac2925);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(217, 83, 79, 0.4);
+}
+
+.btn-cancel-leave:active,
+.btn-confirm-leave:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .leave-game-modal {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .leave-game-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .leave-game-actions {
+    flex-direction: column;
+  }
+  
+  .btn-cancel-leave,
+  .btn-confirm-leave {
+    width: 100%;
+    min-width: auto;
+  }
+}

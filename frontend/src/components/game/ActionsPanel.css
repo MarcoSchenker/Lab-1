@@ -2,8 +2,9 @@
 
 .actions-panel {
   @apply bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 shadow-2xl border border-slate-600;
-  min-width: 300px;
-  max-width: 500px;
+  min-width: 240px;
+  max-width: 240px;
+  width: 100%;
 }
 
 .panel-title {
@@ -62,13 +63,15 @@
 
 .truco-pendiente-actions {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
 .truco-pendiente-actions .btn-action {
-  flex: 1;
+  width: 100%;
   font-size: 0.75rem;
+  text-align: center;
 }
 
 /* Botones de acción */

@@ -1,0 +1,94 @@
+/* TeamsPanel.css - Estilo similar al ActionsPanel */
+.teams-panel {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  border: 1px solid #475569;
+  min-width: 240px;
+  max-width: 240px;
+  width: 100%;
+}
+
+/* Título del panel - mismo estilo que ActionsPanel */
+.panel-title {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: white;
+  font-weight: bold;
+  font-size: 1.125rem;
+}
+
+.panel-title span {
+  font-size: 1.25rem;
+}
+
+/* Contenido principal */
+.teams-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Sección de equipo */
+.team-section {
+  background: #334155;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.team-section.my-team {
+  border: 2px solid #10b981;
+  background: linear-gradient(135deg, #1f2937, #059669);
+}
+
+.team-section.other-team {
+  border: 2px solid #64748b;
+}
+
+/* Header del equipo */
+.team-header {
+  margin-bottom: 0.75rem;
+}
+
+.team-name {
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0;
+}
+
+/* Miembros del equipo */
+.team-members {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.member-item {
+  color: white;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-item.current-player {
+  background: #eab308;
+  color: black;
+  font-weight: 600;
+}
+
+.member-name {
+  flex: 1;
+  text-align: center;
+}
+
+.tu-indicator {
+  color: #fde047;
+  font-weight: bold;
+}

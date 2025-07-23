@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useGameSocket } from '../hooks/useGameSocket';
 
 // Importar los nuevos componentes modulares
@@ -7,6 +7,9 @@ import GameHeader from '../components/game/GameHeader';
 import GameBoard from '../components/game/GameBoard';
 import PlayerHand from '../components/game/PlayerHand';
 import ActionsPanel from '../components/game/ActionsPanel';
+import TeamsPanel from '../components/game/TeamsPanel'; // ✅ Nuevo componente
+import GameEndModal from '../components/game/GameEndModal'; // ✅ Nuevo componente
+import LeaveGameModal from '../components/game/LeaveGameModal'; // ✅ Nuevo componente
 import GameReconnectOptions from '../components/GameReconnectOptions';
 import GameStateViewer from '../components/GameStateViewer';
 
@@ -17,6 +20,7 @@ import './OnlineGamePage.css';
 // Componente GamePage refactorizado
 const OnlineGamePage: React.FC = () => {
   const { codigo_sala } = useParams<{ codigo_sala: string }>();
+  const navigate = useNavigate(); // ✅ Agregamos useNavigate
   const codigoSala = codigo_sala; // Convert to camelCase for consistency
   const {
     socket,
@@ -32,6 +36,7 @@ const OnlineGamePage: React.FC = () => {
     declararPuntosEnvido,
     declararSonBuenas,
     irseAlMazo,
+    abandonarPartida, // ✅ Nueva función
     requestGameState,
     retryConnection
   } = useGameSocket(codigoSala);
@@ -39,6 +44,7 @@ const OnlineGamePage: React.FC = () => {
   const [jugadorSkins, setJugadorSkins] = useState<Record<number, string>>({});
   const [showReconnectOption, setShowReconnectOption] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [showLeaveGameModal, setShowLeaveGameModal] = useState(false); // ✅ Estado para modal de abandono
   const maxReconnectAttempts = 5;
 
   // Debug: Log game state changes
@@ -123,6 +129,36 @@ const OnlineGamePage: React.FC = () => {
       jugadorQueInicioManoId: mano.jugadorQueInicioManoId || null
     }));
   };
+
+  // ✅ Verificar si la partida ha terminado (incluyendo por abandono)
+  const partidaTerminada = useCallback((): boolean => {
+    if (!gameState || !gameState.equipos) return false;
+    
+    // Verificar si algún equipo llegó a los puntos de victoria o si la partida está finalizada
+    return gameState.estadoPartida === 'finalizada' || 
+           gameState.equipos.some(equipo => equipo.puntosPartida >= gameState.puntosVictoria);
+  }, [gameState]);
+
+  // ✅ Manejar click en abandonar partida
+  const handleAbandonarPartida = useCallback(() => {
+    setShowLeaveGameModal(true);
+  }, []);
+
+  // ✅ Confirmar abandono de partida
+  const confirmarAbandonarPartida = useCallback(() => {
+    setShowLeaveGameModal(false);
+    abandonarPartida();
+  }, [abandonarPartida]);
+
+  // ✅ Cancelar abandono de partida
+  const cancelarAbandonarPartida = useCallback(() => {
+    setShowLeaveGameModal(false);
+  }, []);
+
+  // ✅ Volver a la sala después de que termine la partida
+  const volverASalaPostPartida = useCallback(() => {
+    navigate('/salas');
+  }, [navigate]);
 
   if (isLoading && !loadingTimeoutActive && !gameState) {
     return (
@@ -264,56 +300,91 @@ const OnlineGamePage: React.FC = () => {
 
   return (
     <div className="game-container">
-      {/* Header del juego con puntajes */}
-      <GameHeader 
-        equipos={gameState.equipos} 
-        codigoSala={codigoSala || ''} 
-        puntosVictoria={gameState.puntosVictoria}
-        numeroRondaActual={gameState.numeroRondaActual}
-      />
-      
       {/* Contenido principal del juego */}
-      <main className="game-content">
-        {/* Tablero de juego con jugadores - ahora más centrado */}
-        <div className="game-main-area">
-          <GameBoard 
-            jugadores={gameState.jugadores} 
-            jugadorActualId={jugadorId}
-            jugadorEnTurnoId={gameState.rondaActual?.turnoInfo?.jugadorTurnoActualId}
-            cartasEnMesa={gameState.rondaActual?.turnoInfo?.cartasEnMesaManoActual || []}
-            manosJugadas={transformManosJugadas(gameState.rondaActual?.turnoInfo?.manosJugadas || [])}
-            jugadorSkins={jugadorSkins}
-            manoActual={(gameState.rondaActual?.turnoInfo?.manoActualNumero || 1) - 1}
-            ordenJugadoresRonda={gameState.rondaActual?.ordenJugadoresRonda || []}
-          />
+      <div className="game-main-content">
+        {/* Header del juego con puntajes */}
+        <GameHeader 
+          equipos={gameState.equipos} 
+          codigoSala={codigoSala || ''} 
+          puntosVictoria={gameState.puntosVictoria}
+          numeroRondaActual={gameState.numeroRondaActual}
+          onAbandonarPartida={handleAbandonarPartida} // ✅ Manejar abandono
+        />
+        
+        {/* Contenido principal del juego */}
+        <main className="game-content">
+          {/* Tablero de juego con paneles laterales */}
+          <div className="game-main-area-with-panels">
+            {/* Panel lateral izquierdo - Teams */}
+            <div className="left-panel">
+              <TeamsPanel
+                equipos={gameState.equipos}
+                jugadores={gameState.jugadores}
+                jugadorActualId={jugadorId}
+              />
+            </div>
 
-          {/* Panel de acciones */}
-          <ActionsPanel
-            jugadorId={jugadorId}
-            equipos={gameState.equipos}
-            envidoInfo={gameState.rondaActual.envidoInfo}
-            trucoInfo={gameState.rondaActual.trucoInfo}
-            esMiTurno={esMiTurno()}
-            trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
-            manoActual={gameState.rondaActual.turnoInfo.manoActualNumero}
-            cartasJugador={gameState.jugadores.find(j => j.id === jugadorId)?.cartasMano || []}
-            cartasJugadas={gameState.jugadores.find(j => j.id === jugadorId)?.cartasJugadasRonda || []} // ✅ PROBLEMA 4 CORREGIDO: Pasar cartas jugadas
-            onCantar={cantar}
-            onResponderCanto={responderCanto}
-            onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
-            onDeclararSonBuenas={declararSonBuenas}
-            onIrseAlMazo={irseAlMazo}
-          />
-        </div>
-      </main>
+            {/* Tablero de juego centrado */}
+            <div className="game-board-container">
+              <GameBoard 
+                jugadores={gameState.jugadores} 
+                jugadorActualId={jugadorId}
+                jugadorEnTurnoId={gameState.rondaActual?.turnoInfo?.jugadorTurnoActualId}
+                cartasEnMesa={gameState.rondaActual?.turnoInfo?.cartasEnMesaManoActual || []}
+                manosJugadas={transformManosJugadas(gameState.rondaActual?.turnoInfo?.manosJugadas || [])}
+                jugadorSkins={jugadorSkins}
+                manoActual={(gameState.rondaActual?.turnoInfo?.manoActualNumero || 1) - 1}
+                ordenJugadoresRonda={gameState.rondaActual?.ordenJugadoresRonda || []}
+              />
+            </div>
 
-      {/* Mano del jugador - vuelve a estar fija en la parte inferior */}
-      <PlayerHand 
-        jugadorActualId={jugadorId}
+            {/* Panel lateral derecho - Actions */}
+            <div className="right-panel">
+              <ActionsPanel
+                jugadorId={jugadorId}
+                equipos={gameState.equipos}
+                envidoInfo={gameState.rondaActual.envidoInfo}
+                trucoInfo={gameState.rondaActual.trucoInfo}
+                esMiTurno={esMiTurno()}
+                trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
+                manoActual={gameState.rondaActual.turnoInfo.manoActualNumero}
+                cartasJugador={gameState.jugadores.find(j => j.id === jugadorId)?.cartasMano || []}
+                cartasJugadas={gameState.jugadores.find(j => j.id === jugadorId)?.cartasJugadasRonda || []}
+                onCantar={cantar}
+                onResponderCanto={responderCanto}
+                onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
+                onDeclararSonBuenas={declararSonBuenas}
+                onIrseAlMazo={irseAlMazo}
+              />
+            </div>
+          </div>
+        </main>
+
+        {/* Mano del jugador - vuelve a estar fija en la parte inferior */}
+        <PlayerHand 
+          jugadorActualId={jugadorId}
+          jugadores={gameState.jugadores}
+          jugadorSkins={jugadorSkins}
+          esMiTurno={esMiTurno()}
+          onJugarCarta={jugarCarta}
+        />
+      </div>
+      
+      {/* ✅ Modal de Fin de Partida */}
+      <GameEndModal
+        isVisible={partidaTerminada()}
+        equipos={gameState.equipos}
         jugadores={gameState.jugadores}
-        jugadorSkins={jugadorSkins}
-        esMiTurno={esMiTurno()}
-        onJugarCarta={jugarCarta}
+        jugadorActualId={jugadorId}
+        puntosVictoria={gameState.puntosVictoria}
+        onVolverASala={volverASalaPostPartida}
+      />
+
+      {/* ✅ Modal de Confirmación de Abandono */}
+      <LeaveGameModal
+        isVisible={showLeaveGameModal}
+        onConfirm={confirmarAbandonarPartida}
+        onCancel={cancelarAbandonarPartida}
       />
       
       {/* Panel de depuración */}

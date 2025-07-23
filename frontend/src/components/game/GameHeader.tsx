@@ -14,13 +14,15 @@ interface GameHeaderProps {
   codigoSala: string;
   puntosVictoria: number;
   numeroRondaActual: number;
+  onAbandonarPartida?: () => void; // ✅ Nueva prop para manejar abandono
 }
 
 const GameHeader: React.FC<GameHeaderProps> = ({ 
   equipos, 
   codigoSala, 
   puntosVictoria,
-  numeroRondaActual 
+  numeroRondaActual,
+  onAbandonarPartida // ✅ Nueva prop
 }) => {
   const navigate = useNavigate();
 
@@ -30,8 +32,13 @@ const GameHeader: React.FC<GameHeaderProps> = ({
   };
 
   const volverASalas = () => {
-    if (window.confirm('¿Estás seguro de que quieres salir de la partida?')) {
-      navigate('/salas');
+    // ✅ Usar el callback si está disponible, sino confirmar directamente
+    if (onAbandonarPartida) {
+      onAbandonarPartida();
+    } else {
+      if (window.confirm('¿Estás seguro de que quieres salir de la partida?')) {
+        navigate('/salas');
+      }
     }
   };
 
