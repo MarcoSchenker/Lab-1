@@ -50,7 +50,7 @@ const obtenerEstadisticasPorUsername = async (req, res) => {
         victorias: 0,
         derrotas: 0,
         partidas_jugadas: 0,
-        elo: 0,
+        elo: 500,
       });
     }
 
@@ -67,15 +67,20 @@ const obtenerEstadisticasPorUsername = async (req, res) => {
 const obtenerRanking = async (req, res) => {
   try {
     // Obtener todos los usuarios con sus estadísticas, ordenados por ELO descendente
+    // Excluir usuarios anónimos (que empiecen con "Anónimo" o tengan ELO menor a 500)
     const [rows] = await pool.query(`
       SELECT u.id,
              u.nombre_usuario, 
              IFNULL(e.victorias, 0) as victorias, 
              IFNULL(e.derrotas, 0) as derrotas, 
              IFNULL(e.partidas_jugadas, 0) as partidas_jugadas, 
-             IFNULL(e.elo, 0) as elo
+             IFNULL(e.elo, 500) as elo
       FROM usuarios u
       LEFT JOIN estadisticas e ON u.id = e.usuario_id
+      WHERE u.nombre_usuario NOT LIKE 'Anónimo%' 
+        AND u.nombre_usuario NOT LIKE 'Guest%'
+        AND IFNULL(e.elo, 500) >= 500
+        AND IFNULL(e.partidas_jugadas, 0) > 0
       ORDER BY e.elo DESC, e.victorias DESC
     `);
     

@@ -14,12 +14,31 @@ interface Jugador {
   equipoId: number;
 }
 
+interface RecompensaJugador {
+  jugadorId: number;
+  nombreJugador: string;
+  equipoId: number;
+  esGanador: boolean;
+  eloAnterior: number;
+  cambioEloPartida: number;
+  cambioEloEnvido: number;
+  cambioEloTotal: number;
+  nuevoElo: number;
+  monedasGanadas: number;
+  nuevasVictorias: number;
+  nuevasDerrotas: number;
+  nuevasPartidas: number;
+  ganoEnvido?: boolean;
+  perdioEnvido?: boolean;
+}
+
 interface GameEndModalProps {
   isVisible: boolean;
   equipos: Equipo[];
   jugadores: Jugador[];
   jugadorActualId: number | null;
   puntosVictoria: number;
+  recompensas?: { [key: string]: RecompensaJugador } | null;
   onVolverASala: () => void;
 }
 
@@ -29,6 +48,7 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
   jugadores,
   jugadorActualId,
   puntosVictoria,
+  recompensas,
   onVolverASala
 }) => {
   if (!isVisible || !jugadorActualId) return null;
@@ -47,6 +67,15 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
     return jugadores.filter(jugador => jugador.equipoId === equipoId);
   };
 
+  // Obtener recompensa de un jugador
+  const getRecompensaJugador = (jugadorId: number) => {
+    if (!recompensas) return null;
+    return recompensas[jugadorId.toString()] || null;
+  };
+
+  // Obtener mi recompensa
+  const miRecompensa = getRecompensaJugador(jugadorActualId);
+
   return (
     <div className="game-end-modal-overlay">
       <div className="game-end-modal">
@@ -58,6 +87,44 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
         </div>
 
         <div className="game-end-content">
+          {/* Sección de Recompensas */}
+          {recompensas && (
+            <div className="rewards-section">
+              <h2>🏆 Recompensas</h2>
+              <div className="rewards-summary">
+                {miRecompensa && (
+                  <div className="my-rewards">
+                    <div className="reward-item elo-reward">
+                      <span className="reward-label">ELO:</span>
+                      <span className="reward-value">
+                        {miRecompensa.eloAnterior} → {miRecompensa.nuevoElo}
+                        <span className={`elo-change ${miRecompensa.cambioEloTotal >= 0 ? 'positive' : 'negative'}`}>
+                          ({miRecompensa.cambioEloTotal >= 0 ? '+' : ''}{miRecompensa.cambioEloTotal})
+                        </span>
+                      </span>
+                    </div>
+                    {miRecompensa.monedasGanadas > 0 && (
+                      <div className="reward-item coins-reward">
+                        <span className="reward-label">💰 Monedas:</span>
+                        <span className="reward-value">+{miRecompensa.monedasGanadas}</span>
+                      </div>
+                    )}
+                    <div className="reward-breakdown">
+                      <div className="breakdown-item">
+                        <span>Partida: {miRecompensa.cambioEloPartida >= 0 ? '+' : ''}{miRecompensa.cambioEloPartida}</span>
+                      </div>
+                      {miRecompensa.cambioEloEnvido !== 0 && (
+                        <div className="breakdown-item">
+                          <span>Envido: {miRecompensa.cambioEloEnvido >= 0 ? '+' : ''}{miRecompensa.cambioEloEnvido}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="final-scores">
             <h2>Puntuación Final</h2>
             <div className="teams-final-score">
@@ -82,15 +149,33 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
                     </div>
                     
                     <div className="team-members">
-                      {jugadoresEquipo.map(jugador => (
-                        <div 
-                          key={jugador.id} 
-                          className={`member ${jugador.id === jugadorActualId ? 'current-player' : ''}`}
-                        >
-                          {jugador.nombreUsuario} {/* ✅ Usar nombreUsuario */}
-                          {jugador.id === jugadorActualId && <span className="you-indicator">(Tú)</span>}
-                        </div>
-                      ))}
+                      {jugadoresEquipo.map(jugador => {
+                        const recompensaJugador = getRecompensaJugador(jugador.id);
+                        return (
+                          <div 
+                            key={jugador.id} 
+                            className={`member ${jugador.id === jugadorActualId ? 'current-player' : ''}`}
+                          >
+                            <div className="member-info">
+                              {jugador.nombreUsuario} {/* ✅ Usar nombreUsuario */}
+                              {jugador.id === jugadorActualId && <span className="you-indicator">(Tú)</span>}
+                            </div>
+                            {recompensaJugador && (
+                              <div className="member-rewards">
+                                <span className="member-elo">
+                                  ELO: {recompensaJugador.nuevoElo} 
+                                  <span className={`elo-delta ${recompensaJugador.cambioEloTotal >= 0 ? 'positive' : 'negative'}`}>
+                                    ({recompensaJugador.cambioEloTotal >= 0 ? '+' : ''}{recompensaJugador.cambioEloTotal})
+                                  </span>
+                                </span>
+                                {recompensaJugador.monedasGanadas > 0 && (
+                                  <span className="member-coins">💰 +{recompensaJugador.monedasGanadas}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

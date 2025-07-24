@@ -243,8 +243,9 @@ class PartidaGame {
                                        this.equipos.find(e => e.id === this.rondaActual.envidoHandler.cantos[this.rondaActual.envidoHandler.cantos.length -1].equipoId) : null);
             if (equipoGanadorEnvido) {
                 // ✅ VERIFICAR: Solo sumar puntos si no se sumaron ya por victoria inmediata
-                const puntosYaSumados = equipoGanadorEnvido.puntosPartida >= this.puntosVictoria;
-                if (!puntosYaSumados) {
+                const puntosYaSumadosPorVictoria = this.rondaActual.envidoHandler && this.rondaActual.envidoHandler._puntosYaSumados;
+                
+                if (!puntosYaSumadosPorVictoria) {
                     equipoGanadorEnvido.sumarPuntos(estadoRondaFinalizada.puntosGanadosEnvido);
                     puntosEnvido = estadoRondaFinalizada.puntosGanadosEnvido;
                     console.log(`Equipo ${equipoGanadorEnvido.nombre} sumó ${puntosEnvido} puntos de envido.`);
@@ -287,6 +288,12 @@ class PartidaGame {
     // --- Métodos para que el gameLogicHandler llame ---
     manejarAccionJugador(jugadorId, tipoAccion, datosAccion) {
         console.log(`[PARTIDA] 🎯 Recibida acción ${tipoAccion} de jugador ${jugadorId}:`, datosAccion);
+        
+        // ✅ NUEVA VERIFICACIÓN: Si la partida ya terminó, no procesar más acciones
+        if (this.estadoPartida === 'finalizada') {
+            console.warn("[PARTIDA] ❌ Partida ya finalizada - ignorando acción", tipoAccion);
+            return;
+        }
         
         if (this.estadoPartida !== 'en_juego' || !this.rondaActual) {
             console.warn("[PARTIDA] ❌ Acción de jugador recibida pero la partida no está en juego o no hay ronda activa.");

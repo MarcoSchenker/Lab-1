@@ -17,9 +17,9 @@
   background: linear-gradient(135deg, #1a1a2e, #16213e);
   border-radius: 20px;
   padding: 2rem;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
+  max-width: 700px; /* Aumentar ancho para recompensas */
+  width: 95%;
+  max-height: 95vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   border: 2px solid #333;
@@ -40,6 +40,102 @@
     transform: translateY(0) scale(1);
     opacity: 1;
   }
+}
+
+/* ===== SECCIÓN DE RECOMPENSAS ===== */
+.rewards-section {
+  background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 2px solid #444;
+}
+
+.rewards-section h2 {
+  color: #f7b733;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.my-rewards {
+  background: rgba(247, 183, 51, 0.1);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid #f7b733;
+}
+
+.reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.reward-label {
+  font-weight: 600;
+  color: #fff;
+}
+
+.reward-value {
+  font-weight: bold;
+  color: #f7b733;
+}
+
+.elo-change {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.elo-change.positive {
+  color: #4caf50;
+}
+
+.elo-change.negative {
+  color: #f44336;
+}
+
+.reward-breakdown {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.breakdown-item {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 0.2rem;
+}
+
+/* ===== MIEMBROS DE EQUIPO CON RECOMPENSAS ===== */
+.member {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.member-info {
+  font-weight: 600;
+}
+
+.member-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.member-elo, .member-coins {
+  color: #f7b733;
+}
+
+.elo-delta.positive {
+  color: #4caf50;
+}
+
+.elo-delta.negative {
+  color: #f44336;
 }
 
 /* Header del modal */

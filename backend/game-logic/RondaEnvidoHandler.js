@@ -268,11 +268,17 @@ class RondaEnvidoHandler {
 
     // ✅ NUEVO: Verificar victoria inmediata después de ganar envido
     _verificarVictoriaInmediata() {
-        if (!this.partida || !this.ganadorEnvidoEquipoId || !this.puntosEnJuegoCalculados) return;
+        if (!this.partida || !this.ganadorEnvidoEquipoId || !this.puntosEnJuegoCalculados) return false;
+        
+        // Si la partida ya terminó, no verificar de nuevo
+        if (this.partida.estadoPartida === 'finalizada') {
+            console.log("[ENVIDO_VICTORIA] Partida ya finalizada - no verificar victoria");
+            return true;
+        }
         
         // Encontrar el equipo ganador del envido
         const equipoGanadorEnvido = this.partida.equipos.find(e => e.id === this.ganadorEnvidoEquipoId);
-        if (!equipoGanadorEnvido) return;
+        if (!equipoGanadorEnvido) return false;
         
         // Sumar los puntos temporalmente para verificar si alcanza la victoria
         const puntosActuales = equipoGanadorEnvido.puntosPartida;
@@ -286,6 +292,9 @@ class RondaEnvidoHandler {
             
             // Sumar los puntos inmediatamente
             equipoGanadorEnvido.sumarPuntos(this.puntosEnJuegoCalculados);
+            
+            // Marcar que los puntos ya fueron sumados para evitar doble suma
+            this._puntosYaSumados = true;
             
             // Finalizar la partida
             this.partida.estadoPartida = 'finalizada';
@@ -347,11 +356,14 @@ class RondaEnvidoHandler {
             const partidaTerminada = this._verificarVictoriaInmediata();
             if (partidaTerminada) {
                 // La partida terminó, no continuar con la ronda
+                console.log("[ENVIDO] Partida terminada por victoria inmediata - no restaurar turno");
                 return true;
             }
             
             this.ronda.persistirAccion({ tipo_accion: 'RESP_ENV', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.nivelActual } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados });
+            
+            // Solo restaurar turno si la partida no terminó
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else { 
             // Es un canto encadenado (ENVIDO, REAL_ENVIDO, FALTA_ENVIDO)
@@ -451,11 +463,14 @@ class RondaEnvidoHandler {
             const partidaTerminada = this._verificarVictoriaInmediata();
             if (partidaTerminada) {
                 // La partida terminó, no continuar con la ronda
+                console.log("[ENVIDO] Partida terminada por victoria inmediata en declaración - no restaurar turno");
                 return true;
             }
             
             this.ronda.persistirAccion({ tipo_accion: 'DECL_ENV', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados, puntosDeclarados: this.puntosDeclaradosPorJugador });
+            
+            // Solo restaurar turno si la partida no terminó
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else if (proximoJugadorId) {
             this.jugadorTurnoDeclararPuntosId = proximoJugadorId;
@@ -558,6 +573,12 @@ class RondaEnvidoHandler {
     }
 
     resolverDependenciaTrucoYRestaurarTurno() {
+        // ✅ NUEVO: Si la partida ya terminó, no restaurar turno
+        if (this.partida.estadoPartida === 'finalizada') {
+            console.log("[ENVIDO] Partida ya finalizada - no restaurar turno");
+            return;
+        }
+        
         console.log("[ENVIDO] Resolviendo dependencia de truco y restaurando turno");
         console.log(`[ENVIDO] Estado actual - trucoPendientePorEnvidoPrimero: ${this.ronda.trucoPendientePorEnvidoPrimero}`);
         console.log(`[ENVIDO] Estado actual - jugadorTurnoAlMomentoDelCanto: ${this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId}`);

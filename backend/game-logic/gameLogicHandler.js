@@ -290,11 +290,62 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
     };
     
     const finalizarPartidaCallback = async (sala, ganadorEquipoId) => {
-        console.log(`Partida en sala ${sala} finalizada. Ganador Equipo ID: ${ganadorEquipoId}. Limpiando...`);
-        // Actualizar estado de la sala en DB (e.g., a 'esperando' o 'finalizada')
-        // Otorgar recompensas, actualizar estadísticas, etc.
-        delete activeGames[sala]; // Eliminar de partidas activas en memoria
-        // Podrías notificar a la sala que la partida terminó y se puede volver al lobby, etc.
+        console.log(`Partida en sala ${sala} finalizada. Ganador Equipo ID: ${ganadorEquipoId}. Procesando recompensas...`);
+        
+        try {
+            const partida = activeGames[sala];
+            if (!partida) {
+                console.error(`[RECOMPENSAS] No se encontró la partida ${sala} para procesar recompensas`);
+                return;
+            }
+
+            // Obtener información necesaria para las recompensas
+            const jugadores = partida.jugadores.map(j => ({
+                id: j.id,
+                nombreUsuario: j.nombreUsuario,
+                equipoId: j.equipoId
+            }));
+
+            // Verificar si hubo envido y quién lo ganó
+            const huboEnvido = partida.rondaActual?.envidoHandler?.cantado || false;
+            const ganadorEnvidoEquipoId = partida.rondaActual?.envidoHandler?.ganadorEnvidoEquipoId || null;
+
+            // Filtrar usuarios anónimos (no deben recibir recompensas)
+            const jugadoresRegistrados = jugadores.filter(j => 
+                !j.nombreUsuario.startsWith('Anónimo') && 
+                !j.nombreUsuario.startsWith('Guest')
+            );
+
+            if (jugadoresRegistrados.length > 0) {
+                const { procesarRecompensasFinPartida } = require('../controllers/recompensasController');
+                
+                const datosPartida = {
+                    codigoSala: sala,
+                    ganadorEquipoId,
+                    jugadores: jugadoresRegistrados,
+                    huboEnvido,
+                    ganadorEnvidoEquipoId,
+                    tipoPartida: partida.tipoPartida,
+                    puntosObjetivo: partida.puntosVictoria
+                };
+
+                const recompensas = await procesarRecompensasFinPartida(datosPartida);
+                
+                // Enviar las recompensas a los clientes para mostrar en la pantalla final
+                io.to(sala).emit('recompensas_partida', recompensas);
+                console.log(`[RECOMPENSAS] ✅ Recompensas procesadas y enviadas para sala ${sala}`);
+            } else {
+                console.log(`[RECOMPENSAS] No hay jugadores registrados en sala ${sala} - solo usuarios anónimos`);
+            }
+
+        } catch (error) {
+            console.error(`[RECOMPENSAS] ❌ Error procesando recompensas para sala ${sala}:`, error);
+        }
+
+        // Limpiar la partida de memoria
+        delete activeGames[sala];
+        
+        // Notificar que la partida terminó
         io.to(sala).emit('partida_terminada_en_servidor', { codigoSala: sala, ganadorEquipoId });
     };
 

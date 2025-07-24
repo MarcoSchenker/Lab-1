@@ -12,6 +12,7 @@ import GameEndModal from '../components/game/GameEndModal'; // ✅ Nuevo compone
 import LeaveGameModal from '../components/game/LeaveGameModal'; // ✅ Nuevo componente
 import GameReconnectOptions from '../components/GameReconnectOptions';
 import GameStateViewer from '../components/GameStateViewer';
+// import RecompensasScreen from '../components/RecompensasScreen'; // ✅ Ya no necesario - integrado en GameEndModal
 
 // Importar estilos
 import '../styles/GameBoard/index.css';
@@ -45,6 +46,8 @@ const OnlineGamePage: React.FC = () => {
   const [showReconnectOption, setShowReconnectOption] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showLeaveGameModal, setShowLeaveGameModal] = useState(false); // ✅ Estado para modal de abandono
+  const [recompensas, setRecompensas] = useState<any>(null); // ✅ Estado para recompensas integradas en GameEndModal
+  // const [showRecompensas, setShowRecompensas] = useState(false); // ✅ Ya no necesario
   const maxReconnectAttempts = 5;
 
   // Debug: Log game state changes
@@ -73,6 +76,23 @@ const OnlineGamePage: React.FC = () => {
     });
     setJugadorSkins(nuevasSkins);
   }, [gameState]);
+
+  // ✅ Listener para recompensas de fin de partida
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRecompensasPartida = useCallback((data: any) => {
+      console.log('[CLIENT] 🏆 Recompensas recibidas:', data);
+      setRecompensas(data);
+      // Las recompensas se mostrarán automáticamente en GameEndModal cuando la partida termine
+    }, []);
+
+    socket.on('recompensas_partida', handleRecompensasPartida);
+
+    return () => {
+      socket.off('recompensas_partida', handleRecompensasPartida);
+    };
+  }, [socket]);
 
   // Mostrar opciones de reconexión después de un tiempo
   useEffect(() => {
@@ -159,6 +179,13 @@ const OnlineGamePage: React.FC = () => {
   const volverASalaPostPartida = useCallback(() => {
     navigate('/salas');
   }, [navigate]);
+
+  // ✅ Ya no necesario - las recompensas se muestran integradas en GameEndModal
+  // const handleContinuarRecompensas = useCallback(() => {
+  //   setShowRecompensas(false);
+  //   setRecompensas(null);
+  //   navigate('/salas');
+  // }, [navigate]);
 
   if (isLoading && !loadingTimeoutActive && !gameState) {
     return (
@@ -377,6 +404,7 @@ const OnlineGamePage: React.FC = () => {
         jugadores={gameState.jugadores}
         jugadorActualId={jugadorId}
         puntosVictoria={gameState.puntosVictoria}
+        recompensas={recompensas}
         onVolverASala={volverASalaPostPartida}
       />
 
@@ -404,6 +432,8 @@ const OnlineGamePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ✅ Pantalla de recompensas ya no necesaria - integrada en GameEndModal */}
     </div>
   );
 };
