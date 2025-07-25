@@ -1,6 +1,6 @@
-const PartidaGame = require('./game-logic/PartidaGame');
-const JugadorGame = require('./game-logic/JugadorGame');
-const EquipoGame = require('./game-logic/EquipoGame');
+const PartidaGame = require('../game-logic/PartidaGame');
+const JugadorGame = require('../game-logic/JugadorGame');
+const EquipoGame = require('../game-logic/EquipoGame');
 
 console.log('=== TEST TURNO DESPUÉS DE ENVIDO ENCADENADO ===\n');
 

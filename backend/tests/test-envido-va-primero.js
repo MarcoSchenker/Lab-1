@@ -1,4 +1,4 @@
-const PartidaGame = require('./game-logic/PartidaGame');
+const PartidaGame = require('../game-logic/PartidaGame');
 
 async function testEnvidoVaPrimero() {
     console.log('=== TEST ENVIDO VA PRIMERO ===\n');

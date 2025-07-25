@@ -79,6 +79,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
   onDeclararSonBuenas,
   onIrseAlMazo
 }) => {
+  // ✅ HOOKS MUST BE CALLED FIRST - before any early returns
   const [showEnvidoInput, setShowEnvidoInput] = useState(false);
 
   // ✅ PROBLEMA 5 CORREGIDO: Calcular envido incluyendo cartas ya jugadas
@@ -86,6 +87,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     return calcularEnvido(cartasJugador, cartasJugadas);
   }, [cartasJugador, cartasJugadas]);
 
+  // Early returns AFTER hooks
   if (!jugadorId) return null;
 
   const miEquipo = equipos.find(e => e.jugadoresIds.includes(jugadorId));

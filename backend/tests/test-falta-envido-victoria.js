@@ -5,9 +5,9 @@
  * 3. El modal de fin de partida aparece correctamente
  */
 
-const PartidaGame = require('./game-logic/PartidaGame');
-const JugadorGame = require('./game-logic/JugadorGame');
-const EquipoGame = require('./game-logic/EquipoGame');
+const PartidaGame = require('../game-logic/PartidaGame');
+const JugadorGame = require('../game-logic/JugadorGame');
+const EquipoGame = require('../game-logic/EquipoGame');
 
 function crearPartidaTest() {
     const jugadores = [

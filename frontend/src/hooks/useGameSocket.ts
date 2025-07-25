@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // ✅ Removido - la navegación se maneja desde el componente
 import { io, Socket } from 'socket.io-client';
 import gameStateDebugger from '../utils/gameStateDebugger';
 import { gamePerformanceMonitor } from '../utils/gamePerformanceMonitor';
@@ -113,6 +113,7 @@ interface UseGameSocketReturn {
   isLoading: boolean;
   reconnectAttempts: number;
   loadingTimeoutActive: boolean;
+  shouldRedirectToLogin: boolean; // ✅ Nuevo campo para manejar redirección
   // Action functions
   jugarCarta: (carta: Carta) => void;
   cantar: (tipoCanto: string) => void;
@@ -123,6 +124,7 @@ interface UseGameSocketReturn {
   abandonarPartida: () => void; // ✅ Nueva función para abandonar partida
   requestGameState: () => void;
   retryConnection: () => void;
+  clearRedirectFlag: () => void; // ✅ Función para limpiar la flag de redirección
 }
 
 // 🔥 Flag global para detectar React Dev Mode y evitar cleanup múltiple
@@ -132,7 +134,6 @@ let cleanupTimeoutId: NodeJS.Timeout | null = null; // Para debounce del cleanup
 let isFirstMount = true; // Flag para detectar primer mount
 
 export function useGameSocket(codigoSala: string | undefined): UseGameSocketReturn {
-  const navigate = useNavigate();
   const [gameState, setGameState] = useState<EstadoJuego | null>(null);
   const [jugadorId, setJugadorId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +141,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [esperandoRespuesta, setEsperandoRespuesta] = useState(false);
   const [loadingTimeoutActive, setLoadingTimeoutActive] = useState(false);
+  const [shouldRedirectToLogin, setShouldRedirectToLogin] = useState(false); // ✅ Nueva flag
   
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -148,7 +150,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   const emergencyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isConnectingRef = useRef(false); // Flag para evitar múltiples conexiones
   const isCleaningUpRef = useRef(false); // Flag para evitar cleanup innecesario
-  const currentRoomRef = useRef<string | undefined>(null); // Track current room
+  const currentRoomRef = useRef<string | null>(null); // Track current room
   const hasConnectedOnceRef = useRef(false); // Flag para evitar cleanup en primera conexión
   
   const maxReconnectAttempts = 5;
@@ -331,7 +333,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     });
 
     socketRef.current = newSocket;
-    currentRoomRef.current = codigoSala;
+    currentRoomRef.current = codigoSala || null;
     newSocket.connect();
 
     // === EVENTOS DE CONEXIÓN ===
@@ -402,8 +404,8 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
             console.log('[CLIENT] Reintentando tras fallo de autenticación...');
             retryConnection();
           } else {
-            // Redirigir a login si falla múltiples veces
-            navigate('/login');
+            // Marcar para redirigir a login si falla múltiples veces
+            setShouldRedirectToLogin(true);
           }
           return currentAttempts;
         });
@@ -664,7 +666,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     const token = localStorage.getItem('token');
     if (!token) {
       setError('No estás autenticado. Por favor, inicia sesión.');
-      navigate('/login');
+      setShouldRedirectToLogin(true);
       return;
     }
 
@@ -693,9 +695,9 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     } catch (error) {
       gameStateDebugger.logError('Error al decodificar token', error);
       setError('Error al identificar usuario. Por favor, inicia sesión nuevamente.');
-      navigate('/login');
+      setShouldRedirectToLogin(true);
     }
-  }, [codigoSala, navigate]); // Solo dependencias realmente necesarias
+  }, [codigoSala]); // Solo dependencias realmente necesarias
 
   // Inicializar conexión socket cuando esté disponible el código de sala - mejorado
   useEffect(() => {
@@ -709,7 +711,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     }
     
     // Actualizar room actual
-    currentRoomRef.current = codigoSala;
+    currentRoomRef.current = codigoSala || null;
     
     if (codigoSala && !isCleaningUpRef.current) {
       console.log('[CLIENT] 🚀 Iniciando conexión para sala:', codigoSala);
@@ -875,11 +877,14 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     console.log('[CLIENT] 🚪 Abandonando partida');
     socketRef.current.emit('abandonar_partida_ws');
     
-    // Navegar de vuelta al lobby después de un breve delay
-    setTimeout(() => {
-      navigate('/salas');
-    }, 500);
-  }, [navigate]);
+    // NO navegar desde aquí - dejar que el componente padre lo maneje
+    // La navegación se debe hacer desde el componente que usa este hook
+  }, []); // Sin navigate como dependencia
+
+  // ✅ Función para limpiar la flag de redirección
+  const clearRedirectFlag = useCallback(() => {
+    setShouldRedirectToLogin(false);
+  }, []);
 
   return {
     socket: socketRef.current,
@@ -889,6 +894,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     isLoading,
     reconnectAttempts,
     loadingTimeoutActive,
+    shouldRedirectToLogin, // ✅ Nueva propiedad
     jugarCarta,
     cantar,
     responderCanto,
@@ -898,5 +904,6 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     abandonarPartida, // ✅ Agregar la nueva función
     requestGameState,
     retryConnection,
+    clearRedirectFlag, // ✅ Nueva función
   };
 }

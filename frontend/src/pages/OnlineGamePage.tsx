@@ -31,6 +31,7 @@ const OnlineGamePage: React.FC = () => {
     isLoading,
     reconnectAttempts,
     loadingTimeoutActive,
+    shouldRedirectToLogin, // ✅ Nueva propiedad
     jugarCarta,
     cantar,
     responderCanto,
@@ -39,7 +40,8 @@ const OnlineGamePage: React.FC = () => {
     irseAlMazo,
     abandonarPartida, // ✅ Nueva función
     requestGameState,
-    retryConnection
+    retryConnection,
+    clearRedirectFlag // ✅ Nueva función
   } = useGameSocket(codigoSala);
 
   const [jugadorSkins, setJugadorSkins] = useState<Record<number, string>>({});
@@ -77,22 +79,32 @@ const OnlineGamePage: React.FC = () => {
     setJugadorSkins(nuevasSkins);
   }, [gameState]);
 
+  // ✅ Callback para recompensas - definido a nivel superior
+  const handleRecompensasPartida = useCallback((data: any) => {
+    console.log('[CLIENT] 🏆 Recompensas recibidas:', data);
+    setRecompensas(data);
+    // Las recompensas se mostrarán automáticamente en GameEndModal cuando la partida termine
+  }, []);
+
   // ✅ Listener para recompensas de fin de partida
   useEffect(() => {
     if (!socket) return;
-
-    const handleRecompensasPartida = useCallback((data: any) => {
-      console.log('[CLIENT] 🏆 Recompensas recibidas:', data);
-      setRecompensas(data);
-      // Las recompensas se mostrarán automáticamente en GameEndModal cuando la partida termine
-    }, []);
 
     socket.on('recompensas_partida', handleRecompensasPartida);
 
     return () => {
       socket.off('recompensas_partida', handleRecompensasPartida);
     };
-  }, [socket]);
+  }, [socket, handleRecompensasPartida]);
+
+  // ✅ Manejar redirección a login desde el hook
+  useEffect(() => {
+    if (shouldRedirectToLogin) {
+      console.log('[OnlineGamePage] 🚪 Redirigiendo a login por solicitud del hook');
+      clearRedirectFlag(); // Limpiar la flag antes de navegar
+      navigate('/login');
+    }
+  }, [shouldRedirectToLogin, clearRedirectFlag, navigate]);
 
   // Mostrar opciones de reconexión después de un tiempo
   useEffect(() => {
@@ -168,7 +180,12 @@ const OnlineGamePage: React.FC = () => {
   const confirmarAbandonarPartida = useCallback(() => {
     setShowLeaveGameModal(false);
     abandonarPartida();
-  }, [abandonarPartida]);
+    
+    // Navegar de vuelta al lobby después de un breve delay
+    setTimeout(() => {
+      navigate('/salas');
+    }, 500);
+  }, [abandonarPartida, navigate]);
 
   // ✅ Cancelar abandono de partida
   const cancelarAbandonarPartida = useCallback(() => {

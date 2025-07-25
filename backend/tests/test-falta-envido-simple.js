@@ -2,7 +2,7 @@
  * Test simple para verificar el cálculo del falta envido
  */
 
-const RondaEnvidoHandler = require('./game-logic/RondaEnvidoHandler');
+const RondaEnvidoHandler = require('../game-logic/RondaEnvidoHandler');
 
 function testFaltaEnvidoCalculoSimple() {
     console.log('🧪 TEST: Cálculo de Falta Envido');

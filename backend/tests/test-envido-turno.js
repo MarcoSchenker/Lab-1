@@ -2,8 +2,8 @@
  * Test para validar las correcciones de envido y turno
  */
 
-const RondaEnvidoHandler = require('./game-logic/RondaEnvidoHandler');
-const RondaTurnoHandler = require('./game-logic/RondaTurnoHandler');
+const RondaEnvidoHandler = require('../game-logic/RondaEnvidoHandler');
+const RondaTurnoHandler = require('../game-logic/RondaTurnoHandler');
 
 // Mock básico
 class MockRonda {
