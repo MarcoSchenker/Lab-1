@@ -122,6 +122,8 @@ class RondaEnvidoHandler {
      * @returns {number} Puntos que vale el envido
      */
     _calcularPuntosEnvido(nivelFinal, fueQuerido) {
+        console.log(`[ENVIDO] Calculando puntos para nivel: ${nivelFinal}, querido: ${fueQuerido}`);
+        
         // Tabla de puntos según las reglas del truco
         const tablaPuntos = {
             // Si se quiere | Si no se quiere
@@ -144,12 +146,19 @@ class RondaEnvidoHandler {
             return 1;
         }
 
+        console.log(`[ENVIDO] Regla encontrada para ${nivelFinal}:`, regla);
+
         if (fueQuerido) {
             if (regla.querido === 'calcular') {
-                return this._calcularPuntosFaltaEnvido();
+                console.log(`[ENVIDO] Regla requiere cálculo, llamando a _calcularPuntosFaltaEnvido()`);
+                const puntosCalculados = this._calcularPuntosFaltaEnvido();
+                console.log(`[ENVIDO] Resultado del cálculo: ${puntosCalculados}`);
+                return puntosCalculados;
             }
+            console.log(`[ENVIDO] Retornando puntos fijos (querido): ${regla.querido}`);
             return regla.querido;
         } else {
+            console.log(`[ENVIDO] Retornando puntos fijos (no querido): ${regla.noQuerido}`);
             return regla.noQuerido;
         }
     }
@@ -223,18 +232,86 @@ class RondaEnvidoHandler {
         this.ronda.turnoHandler.setTurnoA(this.equipoRespondedorCanto.jugadores[0].id); 
         return true;
     }
-     _calcularPuntosFaltaEnvido() { 
-        if (!this.ronda.partida) return 1;
-        const puntosVictoria = this.ronda.partida.puntosVictoria;
-        let puntosEquipoGanadorActual = 0;
-        let puntosEquipoPerdedorActual = 0;
-        const equipoGanadorDelEnvido = this.ronda.partida.equipos.find(e => e.id === this.ganadorEnvidoEquipoId);
-        const equipoPerdedorDelEnvido = this.ronda.partida.equipos.find(e => e.id !== this.ganadorEnvidoEquipoId);
-        if (equipoGanadorDelEnvido) puntosEquipoGanadorActual = equipoGanadorDelEnvido.puntosPartida;
-        if (equipoPerdedorDelEnvido) puntosEquipoPerdedorActual = equipoPerdedorDelEnvido.puntosPartida;
-        const equipoConMasPuntos = Math.max(puntosEquipoGanadorActual, puntosEquipoPerdedorActual);
-        let puntosFalta = puntosVictoria - equipoConMasPuntos;
+    _calcularPuntosFaltaEnvido() { 
+        if (!this.partida) {
+            console.log(`[FALTA_ENVIDO] No hay partida disponible, retornando 1`);
+            return 1;
+        }
+        
+        const puntosVictoria = this.partida.puntosVictoria;
+        console.log(`[FALTA_ENVIDO] Puntos para victoria: ${puntosVictoria}`);
+        
+        // ✅ CORRECCIÓN: Según las reglas, el falta envido se calcula basado en el equipo CON MÁS PUNTOS
+        // "En el falta envido los puntos se cuentan como la diferencia de lo que le falta al equipo que tiene mas puntos para llegar al limite"
+        const equipos = this.partida.equipos;
+        if (!equipos || equipos.length === 0) {
+            console.log(`[FALTA_ENVIDO] No hay equipos disponibles, retornando 1`);
+            return 1;
+        }
+        
+        console.log(`[FALTA_ENVIDO] Equipos disponibles:`, equipos.map(e => `${e.nombre} (${e.puntosPartida} pts)`));
+        
+        // Encontrar el equipo con más puntos
+        const equipoConMasPuntos = equipos.reduce((equipoMax, equipo) => {
+            return equipo.puntosPartida > equipoMax.puntosPartida ? equipo : equipoMax;
+        });
+        
+        const puntosEquipoConMasPuntos = equipoConMasPuntos.puntosPartida;
+        const puntosFalta = puntosVictoria - puntosEquipoConMasPuntos;
+        
+        console.log(`[FALTA_ENVIDO] Equipo con más puntos: ${equipoConMasPuntos.nombre} (${puntosEquipoConMasPuntos} puntos)`);
+        console.log(`[FALTA_ENVIDO] Puntos que faltan: ${puntosVictoria} - ${puntosEquipoConMasPuntos} = ${puntosFalta}`);
+        console.log(`[FALTA_ENVIDO] Retornando: ${Math.max(1, puntosFalta)}`);
+        
         return Math.max(1, puntosFalta);
+    }
+
+    // ✅ NUEVO: Verificar victoria inmediata después de ganar envido
+    _verificarVictoriaInmediata() {
+        if (!this.partida || !this.ganadorEnvidoEquipoId || !this.puntosEnJuegoCalculados) return false;
+        
+        // Si la partida ya terminó, no verificar de nuevo
+        if (this.partida.estadoPartida === 'finalizada') {
+            console.log("[ENVIDO_VICTORIA] Partida ya finalizada - no verificar victoria");
+            return true;
+        }
+        
+        // Encontrar el equipo ganador del envido
+        const equipoGanadorEnvido = this.partida.equipos.find(e => e.id === this.ganadorEnvidoEquipoId);
+        if (!equipoGanadorEnvido) return false;
+        
+        // Sumar los puntos temporalmente para verificar si alcanza la victoria
+        const puntosActuales = equipoGanadorEnvido.puntosPartida;
+        const puntosConEnvido = puntosActuales + this.puntosEnJuegoCalculados;
+        
+        console.log(`[ENVIDO_VICTORIA] ${equipoGanadorEnvido.nombre}: ${puntosActuales} + ${this.puntosEnJuegoCalculados} = ${puntosConEnvido} (Victoria: ${this.partida.puntosVictoria})`);
+        
+        // Si alcanza los puntos de victoria, terminar la partida inmediatamente
+        if (puntosConEnvido >= this.partida.puntosVictoria) {
+            console.log(`[ENVIDO_VICTORIA] ¡Partida terminada! ${equipoGanadorEnvido.nombre} ganó con envido`);
+            
+            // Sumar los puntos inmediatamente
+            equipoGanadorEnvido.sumarPuntos(this.puntosEnJuegoCalculados);
+            
+            // Marcar que los puntos ya fueron sumados para evitar doble suma
+            this._puntosYaSumados = true;
+            
+            // Finalizar la partida
+            this.partida.estadoPartida = 'finalizada';
+            this.partida._notificarEstadoGlobalActualizado('partida_finalizada', { 
+                ganadorPartidaId: equipoGanadorEnvido.id,
+                razon: 'victoria_por_envido'
+            });
+            this.partida.persistirEstadoPartida();
+            
+            if (this.partida.finalizarPartidaCallback) {
+                this.partida.finalizarPartidaCallback(this.partida.codigoSala, equipoGanadorEnvido.id);
+            }
+            
+            return true; // Indica que la partida terminó
+        }
+        
+        return false; // La partida continúa
     }
 
     registrarRespuesta(jugadorId, respuesta) {
@@ -275,8 +352,18 @@ class RondaEnvidoHandler {
             this.puntosEnJuegoCalculados = this._calcularPuntosEnvido(this.nivelActual, false);
             this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
             
+            // ✅ NUEVO: Verificar victoria inmediata
+            const partidaTerminada = this._verificarVictoriaInmediata();
+            if (partidaTerminada) {
+                // La partida terminó, no continuar con la ronda
+                console.log("[ENVIDO] Partida terminada por victoria inmediata - no restaurar turno");
+                return true;
+            }
+            
             this.ronda.persistirAccion({ tipo_accion: 'RESP_ENV', usuario_id_accion: jugadorId, detalle_accion: { respuesta, canto: this.nivelActual } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados });
+            
+            // Solo restaurar turno si la partida no terminó
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else { 
             // Es un canto encadenado (ENVIDO, REAL_ENVIDO, FALTA_ENVIDO)
@@ -372,8 +459,18 @@ class RondaEnvidoHandler {
             this.puntosEnJuegoCalculados = this._calcularPuntosEnvido(this.nivelActual, true);
             this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
             
+            // ✅ NUEVO: Verificar victoria inmediata
+            const partidaTerminada = this._verificarVictoriaInmediata();
+            if (partidaTerminada) {
+                // La partida terminó, no continuar con la ronda
+                console.log("[ENVIDO] Partida terminada por victoria inmediata en declaración - no restaurar turno");
+                return true;
+            }
+            
             this.ronda.persistirAccion({ tipo_accion: 'DECL_ENV', usuario_id_accion: jugadorId, detalle_accion: { puntos, esPaso, esSonBuenas, ganadorDeterminado: this.ganadorEnvidoEquipoId } });
             this.ronda._actualizarEstadoParaNotificar('envido_resuelto', { estadoEnvido: this.getEstado(), ganadorEquipoId: this.ganadorEnvidoEquipoId, puntos: this.puntosEnJuegoCalculados, puntosDeclarados: this.puntosDeclaradosPorJugador });
+            
+            // Solo restaurar turno si la partida no terminó
             this.resolverDependenciaTrucoYRestaurarTurno();
         } else if (proximoJugadorId) {
             this.jugadorTurnoDeclararPuntosId = proximoJugadorId;
@@ -476,6 +573,12 @@ class RondaEnvidoHandler {
     }
 
     resolverDependenciaTrucoYRestaurarTurno() {
+        // ✅ NUEVO: Si la partida ya terminó, no restaurar turno
+        if (this.partida.estadoPartida === 'finalizada') {
+            console.log("[ENVIDO] Partida ya finalizada - no restaurar turno");
+            return;
+        }
+        
         console.log("[ENVIDO] Resolviendo dependencia de truco y restaurando turno");
         console.log(`[ENVIDO] Estado actual - trucoPendientePorEnvidoPrimero: ${this.ronda.trucoPendientePorEnvidoPrimero}`);
         console.log(`[ENVIDO] Estado actual - jugadorTurnoAlMomentoDelCanto: ${this.ronda.turnoHandler.jugadorTurnoAlMomentoDelCantoId}`);

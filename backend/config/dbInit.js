@@ -340,7 +340,7 @@ async function initializeDatabase() {
         
         -- Crear estadísticas para el nuevo usuario
         INSERT INTO estadisticas (usuario_id, victorias, derrotas, partidas_jugadas, elo) 
-        VALUES (NEW.id, 0, 0, 0, 0);
+        VALUES (NEW.id, 0, 0, 0, 500);
         
         -- Crear perfil para el nuevo usuario con 100 monedas iniciales
         INSERT INTO perfiles (usuario_id, apodo, skin_id, monedas) 

@@ -177,6 +177,7 @@ class PartidaGame {
             this.ordenJugadoresRonda, // Jugadores en orden de juego para la ronda
             jugadorManoDeEstaRonda,   // Quién es mano en esta ronda específica
             this.equipos,
+            this,                     // ✅ Pasar la referencia de la partida
             (tipoEvento, detalleEvento) => this._manejarNotificacionRonda(tipoEvento, detalleEvento),
             (accion) => this._manejarPersistenciaAccionRonda(accion)
         );
@@ -241,9 +242,17 @@ class PartidaGame {
                                       (this.rondaActual.envidoHandler && this.rondaActual.envidoHandler.cantos && this.rondaActual.envidoHandler.cantos.length > 0 && !this.rondaActual.envidoHandler.querido ? 
                                        this.equipos.find(e => e.id === this.rondaActual.envidoHandler.cantos[this.rondaActual.envidoHandler.cantos.length -1].equipoId) : null);
             if (equipoGanadorEnvido) {
-                equipoGanadorEnvido.sumarPuntos(estadoRondaFinalizada.puntosGanadosEnvido);
-                puntosEnvido = estadoRondaFinalizada.puntosGanadosEnvido;
-                console.log(`Equipo ${equipoGanadorEnvido.nombre} sumó ${puntosEnvido} puntos de envido.`);
+                // ✅ VERIFICAR: Solo sumar puntos si no se sumaron ya por victoria inmediata
+                const puntosYaSumadosPorVictoria = this.rondaActual.envidoHandler && this.rondaActual.envidoHandler._puntosYaSumados;
+                
+                if (!puntosYaSumadosPorVictoria) {
+                    equipoGanadorEnvido.sumarPuntos(estadoRondaFinalizada.puntosGanadosEnvido);
+                    puntosEnvido = estadoRondaFinalizada.puntosGanadosEnvido;
+                    console.log(`Equipo ${equipoGanadorEnvido.nombre} sumó ${puntosEnvido} puntos de envido.`);
+                } else {
+                    puntosEnvido = estadoRondaFinalizada.puntosGanadosEnvido;
+                    console.log(`Equipo ${equipoGanadorEnvido.nombre} ya había sumado ${puntosEnvido} puntos de envido (victoria inmediata).`);
+                }
             }
         }
         if (equipoGanadorRonda && estadoRondaFinalizada.puntosGanadosTruco > 0) {
@@ -279,6 +288,12 @@ class PartidaGame {
     // --- Métodos para que el gameLogicHandler llame ---
     manejarAccionJugador(jugadorId, tipoAccion, datosAccion) {
         console.log(`[PARTIDA] 🎯 Recibida acción ${tipoAccion} de jugador ${jugadorId}:`, datosAccion);
+        
+        // ✅ NUEVA VERIFICACIÓN: Si la partida ya terminó, no procesar más acciones
+        if (this.estadoPartida === 'finalizada') {
+            console.warn("[PARTIDA] ❌ Partida ya finalizada - ignorando acción", tipoAccion);
+            return;
+        }
         
         if (this.estadoPartida !== 'en_juego' || !this.rondaActual) {
             console.warn("[PARTIDA] ❌ Acción de jugador recibida pero la partida no está en juego o no hay ronda activa.");
@@ -320,6 +335,10 @@ class PartidaGame {
                 case 'IRSE_AL_MAZO':
                     console.log(`[PARTIDA] 🏃 Yéndose al mazo`);
                     resultadoAccion = this.rondaActual.manejarIrseAlMazo(jugadorId);
+                    break;
+                case 'ABANDONAR_PARTIDA':
+                    console.log(`[PARTIDA] 🚪 Jugador ${jugadorId} abandona la partida`);
+                    resultadoAccion = this.manejarAbandonoPartida(jugadorId);
                     break;
                 // Otros tipos de acción...
                 default:
@@ -673,6 +692,69 @@ class PartidaGame {
             // Aquí podrías implementar lógica de pausa o finalización si todos se desconectan.
             this._notificarEstadoGlobalActualizado('jugador_desconectado', { jugadorId });
             this.persistirEstadoPartida();
+        }
+    }
+
+    // ✅ Nuevo método para manejar abandono de partida
+    manejarAbandonoPartida(jugadorId) {
+        console.log(`[PARTIDA] 🚪 Procesando abandono de partida del jugador ${jugadorId}`);
+        
+        try {
+            const jugador = this.jugadores.find(j => j.id === jugadorId);
+            if (!jugador) {
+                console.error(`[PARTIDA] ❌ Jugador ${jugadorId} no encontrado en la partida`);
+                return false;
+            }
+
+            // Encontrar el equipo del jugador que abandona
+            const equipoJugador = this.equipos.find(e => e.jugadoresIds.includes(jugadorId));
+            if (!equipoJugador) {
+                console.error(`[PARTIDA] ❌ Equipo del jugador ${jugadorId} no encontrado`);
+                return false;
+            }
+
+            // Encontrar el equipo contrario (ganador por abandono)
+            const equipoGanador = this.equipos.find(e => e.id !== equipoJugador.id);
+            if (!equipoGanador) {
+                console.error(`[PARTIDA] ❌ Equipo ganador no encontrado`);
+                return false;
+            }
+
+            console.log(`[PARTIDA] 🏆 El equipo ${equipoGanador.nombre} gana por abandono del equipo ${equipoJugador.nombre}`);
+
+            // Marcar al jugador como desconectado
+            jugador.estadoConexion = 'desconectado';
+
+            // Otorgar puntos de victoria al equipo ganador
+            equipoGanador.puntosPartida = this.puntosVictoria;
+
+            // Finalizar la partida
+            this.estadoPartida = 'finalizada';
+            this.ganadorPartidaId = equipoGanador.id;
+            this.motivoFinalizacion = 'abandono';
+
+            console.log(`[PARTIDA] 🎯 Partida finalizada por abandono. Ganador: Equipo ${equipoGanador.nombre}`);
+
+            // Notificar a todos los jugadores sobre el fin de la partida
+            this._notificarEstadoGlobalActualizado('partida_finalizada_por_abandono', {
+                equipoGanadorId: equipoGanador.id,
+                equipoPerdedorId: equipoJugador.id,
+                jugadorAbandonoId: jugadorId,
+                motivoFinalizacion: 'abandono'
+            });
+
+            // Persistir el estado final
+            this.persistirEstadoPartida();
+
+            // Llamar callback de finalización si existe
+            if (this.finalizarPartidaCallback) {
+                this.finalizarPartidaCallback(this.codigoSala, equipoGanador.id, 'abandono');
+            }
+
+            return true;
+        } catch (error) {
+            console.error(`[PARTIDA] ❌ Error procesando abandono de partida:`, error);
+            return false;
         }
     }
 }

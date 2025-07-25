@@ -476,6 +476,29 @@ function setupGameHandlers(socket, io) {
       socket.emit('error_juego', { message: 'Error al irse al mazo.' });
     }
   });
+
+  // ✅ Manejador para abandonar partida
+  socket.on('abandonar_partida_ws', () => {
+    try {
+      if (socket.currentRoom && socket.currentUserId) {
+        debugLog('gameSocketHandlers', `🚪 Abandono de partida - Usuario ${socket.currentUserId} en sala ${socket.currentRoom}`);
+        
+        // Manejar el abandono como una acción especial
+        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'ABANDONAR_PARTIDA', {});
+        
+        // Opcional: Desconectar al jugador de la sala inmediatamente
+        socket.leave(socket.currentRoom);
+        socket.currentRoom = null;
+        
+        debugLog('gameSocketHandlers', `✅ Usuario ${socket.currentUserId} abandonó la partida y salió de la sala`);
+      } else {
+        socket.emit('error_juego', { message: 'No estás en una sala válida.' });
+      }
+    } catch (error) {
+      debugLog('gameSocketHandlers', `❌ Error al abandonar partida: ${error.message}`, error);
+      socket.emit('error_juego', { message: 'Error al abandonar la partida.' });
+    }
+  });
 }
 
 module.exports = {

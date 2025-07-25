@@ -1,0 +1,383 @@
+/* GameEndModal.css */
+.game-end-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.game-end-modal {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 700px; /* Aumentar ancho para recompensas */
+  width: 95%;
+  max-height: 95vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  border: 2px solid #333;
+  animation: modalSlideIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { 
+    transform: translateY(-50px) scale(0.9);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== SECCIÓN DE RECOMPENSAS ===== */
+.rewards-section {
+  background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 2px solid #444;
+}
+
+.rewards-section h2 {
+  color: #f7b733;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.my-rewards {
+  background: rgba(247, 183, 51, 0.1);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid #f7b733;
+}
+
+.reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.reward-label {
+  font-weight: 600;
+  color: #fff;
+}
+
+.reward-value {
+  font-weight: bold;
+  color: #f7b733;
+}
+
+.elo-change {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.elo-change.positive {
+  color: #4caf50;
+}
+
+.elo-change.negative {
+  color: #f44336;
+}
+
+.reward-breakdown {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.breakdown-item {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 0.2rem;
+}
+
+/* ===== MIEMBROS DE EQUIPO CON RECOMPENSAS ===== */
+.member {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.member-info {
+  font-weight: 600;
+}
+
+.member-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.member-elo, .member-coins {
+  color: #f7b733;
+}
+
+.elo-delta.positive {
+  color: #4caf50;
+}
+
+.elo-delta.negative {
+  color: #f44336;
+}
+
+/* Header del modal */
+.game-end-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border-radius: 15px;
+  border: 2px solid;
+}
+
+.game-end-header.victory {
+  background: linear-gradient(135deg, #2d5a27, #4a7c59);
+  border-color: #5cb85c;
+  color: #fff;
+}
+
+.game-end-header.defeat {
+  background: linear-gradient(135deg, #5a2727, #7c4a4a);
+  border-color: #d9534f;
+  color: #fff;
+}
+
+.game-end-header h1 {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin: 0 0 0.5rem 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.game-end-subtitle {
+  font-size: 1.1rem;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Contenido principal */
+.game-end-content {
+  margin-bottom: 2rem;
+}
+
+.final-scores h2 {
+  color: #fff;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.teams-final-score {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.team-final-card {
+  background: linear-gradient(135deg, #2a2a3e, #3a3a5e);
+  border-radius: 15px;
+  padding: 1.5rem;
+  border: 2px solid;
+  min-width: 200px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.team-final-card:hover {
+  transform: translateY(-2px);
+}
+
+.team-final-card.winner {
+  border-color: #5cb85c;
+  background: linear-gradient(135deg, #2d5a27, #4a7c59);
+  box-shadow: 0 0 20px rgba(92, 184, 92, 0.3);
+}
+
+.team-final-card.loser {
+  border-color: #d9534f;
+  background: linear-gradient(135deg, #5a2727, #7c4a4a);
+}
+
+.team-final-card.my-team {
+  border-width: 3px;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.team-final-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.team-final-header h3 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.winner-crown {
+  font-size: 1.5rem;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.team-final-score {
+  margin-bottom: 1rem;
+}
+
+.score-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.score-total {
+  font-size: 1.2rem;
+  color: #ccc;
+  margin-left: 0.25rem;
+}
+
+.team-members {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.member {
+  color: #ddd;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.member.current-player {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: bold;
+}
+
+.you-indicator {
+  color: #ffd700;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+/* Estadísticas del juego */
+.game-end-stats {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1.5rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+.stat-value {
+  color: #fff;
+  font-weight: bold;
+}
+
+.stat-value.victory-text {
+  color: #5cb85c;
+}
+
+.stat-value.defeat-text {
+  color: #d9534f;
+}
+
+/* Acciones del modal */
+.game-end-actions {
+  text-align: center;
+}
+
+.btn-back-to-lobby {
+  background: linear-gradient(135deg, #337ab7, #5bc0de);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(51, 122, 183, 0.3);
+}
+
+.btn-back-to-lobby:hover {
+  background: linear-gradient(135deg, #2e6da4, #46b8da);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(51, 122, 183, 0.4);
+}
+
+.btn-back-to-lobby:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .game-end-modal {
+    padding: 1rem;
+    margin: 1rem;
+  }
+  
+  .game-end-header h1 {
+    font-size: 2rem;
+  }
+  
+  .teams-final-score {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .team-final-card {
+    min-width: 100%;
+    max-width: 300px;
+  }
+}

@@ -4,11 +4,12 @@ const RondaEnvidoHandler = require('./RondaEnvidoHandler');
 const RondaTrucoHandler = require('./RondaTrucoHandler');
 
 class RondaGame {
-    constructor(numeroRonda, jugadoresEnOrden, jugadorMano, equipos, notificarEstadoCallback, persistirAccionCallback) {
+    constructor(numeroRonda, jugadoresEnOrden, jugadorMano, equipos, partida, notificarEstadoCallback, persistirAccionCallback) {
         this.numeroRonda = numeroRonda;
         this.jugadoresEnOrden = jugadoresEnOrden;
         this.jugadorManoRonda = jugadorMano;
         this.equipos = equipos;
+        this.partida = partida; // ✅ Agregar referencia a la partida
         this.mazo = new Mazo();
         
         this.notificarEstado = notificarEstadoCallback;

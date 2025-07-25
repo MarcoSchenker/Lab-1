@@ -1,6 +1,6 @@
 .game-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* ✅ Volver a column ya que no hay panel lateral */
   min-height: 100vh;
   width: 100%;
   background: url('FondoSkin.png') no-repeat center center fixed;
@@ -21,14 +21,95 @@
   z-index: 0;
 }
 
+/* ✅ Contenedor principal simplificado */
+.game-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
 .game-content {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1600px; /* ✅ Aumentar mucho más para acomodar paneles laterales */
   margin: 0 auto;
   padding: 15px;
   overflow: visible;
+}
+
+/* ✅ Nuevo layout con paneles laterales */
+.game-main-area-with-panels {
+  display: flex;
+  gap: 8px; /* Reducir aún más el gap para dar más espacio a la mesa */
+  align-items: center; /* Centrar verticalmente ambos paneles */
+  min-height: 500px;
+  height: 100%;
+}
+
+/* Panel lateral izquierdo - Teams */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  width: 240px; /* Reducir más el ancho para dar más espacio a la mesa */
+  flex-shrink: 0;
+  justify-content: center; /* Centrar verticalmente el TeamsPanel */
+}
+
+.game-board-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 900px; /* Aumentar mucho más el ancho mínimo para una mesa muy amplia */
+}
+
+/* Panel lateral derecho - Actions */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 240px; /* Mismo ancho que el panel izquierdo */
+  flex-shrink: 0;
+  justify-content: center; /* Centrar verticalmente, pero ActionsPanel puede estar más abajo si es necesario */
+}
+
+/* Responsive design */
+@media (max-width: 1400px) {
+  .game-board-container {
+    min-width: 500px; /* Reducir ancho mínimo en pantallas más pequeñas */
+  }
+}
+
+@media (max-width: 1200px) {
+  .game-main-area-with-panels {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .left-panel,
+  .right-panel {
+    width: 100%;
+    max-width: 500px;
+    justify-content: center;
+  }
+  
+  .game-board-container {
+    max-width: 100%;
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .left-panel,
+  .right-panel {
+    max-width: 100%;
+  }
 }
 
 

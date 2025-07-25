@@ -163,22 +163,51 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // Verificar si debo responder a un canto
   const deboResponderCanto = (): boolean => {
-    // ✅ CORRECCIÓN ADICIONAL: No mostrar respuestas para cantos ya resueltos
+    // ✅ CORRECCIÓN MEJORADA: Priorizar envido durante "envido va primero", truco en situaciones normales
     
-    // Para envido - Solo si NO soy quien cantó Y el estado es pendiente de respuesta
-    if (envidoInfo.cantado && 
-        envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
-        envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
-        !envidoInfo.declaracionEnCurso) { // ✅ No mostrar respuestas si ya estamos declarando puntos
-      return true;
-    }
-    
-    // Para truco - Solo si soy del equipo que debe responder Y el estado es pendiente
-    if (trucoInfo.cantado &&
-        trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
-        trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
-        trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
-      return true;
+    // CASO ESPECIAL: Durante "envido va primero", priorizar respuestas de envido
+    if (trucoPendientePorEnvidoPrimero) {
+      // Si hay envido pendiente de respuesta durante "envido va primero", priorizarlo
+      if (envidoInfo.cantado && 
+          envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+          envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
+          !envidoInfo.declaracionEnCurso) {
+        return true;
+      }
+      
+      // Solo si no hay envido pendiente, considerar truco
+      if (trucoInfo.cantado &&
+          trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+          trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+          trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
+        return true;
+      }
+    } else {
+      // CASO NORMAL: Priorizar truco sobre envido cuando ambos están pendientes
+      
+      // 1. PRIORIDAD ALTA: Responder a truco pendiente (incluye recantos como VALE_CUATRO)
+      if (trucoInfo.cantado &&
+          trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+          trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+          trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
+        return true;
+      }
+      
+      // 2. PRIORIDAD BAJA: Responder a envido solo si NO hay truco pendiente
+      if (envidoInfo.cantado && 
+          envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+          envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
+          !envidoInfo.declaracionEnCurso) {
+        
+        // ✅ VALIDACIÓN ADICIONAL: Solo mostrar envido si no hay truco pendiente de respuesta
+        const hayTrucoPendiente = trucoInfo.cantado && 
+                                 trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+                                 trucoInfo.equipoDebeResponderTrucoId === miEquipo.id;
+        
+        if (!hayTrucoPendiente) {
+          return true;
+        }
+      }
     }
     
     return false;
@@ -393,11 +422,55 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // Si debo responder a un canto
   if (deboResponderCanto()) {
-    const esEnvido = envidoInfo.cantado && envidoInfo.cantadoPorEquipoId !== miEquipo.id;
-    const esTruco = trucoInfo.cantado && trucoInfo.equipoDebeResponderTrucoId === miEquipo.id;
+    // ✅ CORRECCIÓN MEJORADA: Determinar correctamente qué tipo de canto responder según el contexto
     
-    const cantadoTipo = esEnvido ? 'envido' : 'truco';
-    const nivelActual = esEnvido ? envidoInfo.nivelActual : trucoInfo.nivelActual;
+    let esEnvido = false;
+    let esTruco = false;
+    let cantadoTipo = '';
+    let nivelActual = '';
+    
+    // CASO ESPECIAL: Durante "envido va primero", priorizar envido
+    if (trucoPendientePorEnvidoPrimero) {
+      // Verificar primero si hay envido pendiente (mayor prioridad durante "envido va primero")
+      if (envidoInfo.cantado && 
+          envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+          envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
+          !envidoInfo.declaracionEnCurso) {
+        esEnvido = true;
+        cantadoTipo = 'envido';
+        nivelActual = envidoInfo.nivelActual;
+      }
+      // Solo si no hay envido pendiente, verificar truco
+      else if (trucoInfo.cantado &&
+               trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+               trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+               trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
+        esTruco = true;
+        cantadoTipo = 'truco';
+        nivelActual = trucoInfo.nivelActual;
+      }
+    } else {
+      // CASO NORMAL: Prioridad Truco > Envido
+      
+      // Verificar primero si hay truco pendiente (mayor prioridad)
+      if (trucoInfo.cantado &&
+          trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+          trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+          trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
+        esTruco = true;
+        cantadoTipo = 'truco';
+        nivelActual = trucoInfo.nivelActual;
+      }
+      // Solo si no hay truco pendiente, verificar envido
+      else if (envidoInfo.cantado && 
+               envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+               envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
+               !envidoInfo.declaracionEnCurso) {
+        esEnvido = true;
+        cantadoTipo = 'envido';
+        nivelActual = envidoInfo.nivelActual;
+      }
+    }
     
     return (
       <div className="actions-panel response-panel">
