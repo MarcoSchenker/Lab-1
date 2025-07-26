@@ -1,7 +1,7 @@
 // Test completo para verificar errores de flujo corregidos
-const PartidaGame = require('./game-logic/PartidaGame');
-const JugadorGame = require('./game-logic/JugadorGame');
-const EquipoGame = require('./game-logic/EquipoGame');
+const PartidaGame = require('../game-logic/PartidaGame');
+const JugadorGame = require('../game-logic/JugadorGame');
+const EquipoGame = require('../game-logic/EquipoGame');
 
 console.log("=== TEST DE ERRORES CRÍTICOS CORREGIDOS ===\n");
 

@@ -611,6 +611,10 @@ class PartidaGame {
             
             const estadoFinal = {
                 ...estadoGlobal,
+                // ✅ Agregamos campos de abandono si existen
+                motivoFinalizacion: this.motivoFinalizacion || undefined,
+                tipoFinalizacion: this.motivoFinalizacion ? this.motivoFinalizacion : undefined,
+                equipoGanador: this.ganadorPartidaId || undefined,
                 jugadores: this.jugadores.map(j => ({
                     id: j.id,
                     nombreUsuario: j.nombreUsuario,
@@ -707,7 +711,9 @@ class PartidaGame {
             }
 
             // Encontrar el equipo del jugador que abandona
-            const equipoJugador = this.equipos.find(e => e.jugadoresIds.includes(jugadorId));
+            const equipoJugador = this.equipos.find(e => 
+                e.jugadores.some(j => j.id === jugadorId)
+            );
             if (!equipoJugador) {
                 console.error(`[PARTIDA] ❌ Equipo del jugador ${jugadorId} no encontrado`);
                 return false;
@@ -756,6 +762,63 @@ class PartidaGame {
             console.error(`[PARTIDA] ❌ Error procesando abandono de partida:`, error);
             return false;
         }
+    }
+
+    /**
+     * Finaliza la partida por abandono de un jugador
+     * @param {number} jugadorId - ID del jugador que abandona
+     */
+    finalizarPorAbandono(jugadorId) {
+        console.log(`[PARTIDA] 🚪 Finalizando partida por abandono del jugador ${jugadorId}`);
+        
+        try {
+            const jugadorQueAbandona = this.jugadores.find(j => j.id === jugadorId);
+            if (!jugadorQueAbandona) {
+                console.error(`[PARTIDA] ❌ Jugador ${jugadorId} no encontrado`);
+                return false;
+            }
+
+            const equipoJugador = this.equipos.find(e => e.id === jugadorQueAbandona.equipoId);
+            const equipoGanador = this.equipos.find(e => e.id !== equipoJugador.id);
+
+            if (!equipoGanador) {
+                console.error(`[PARTIDA] ❌ No se pudo determinar el equipo ganador`);
+                return false;
+            }
+
+            // Asignar victoria automática al equipo contrario
+            equipoGanador.puntosPartida = this.puntosVictoria;
+
+            // Finalizar la partida
+            this.estadoPartida = 'finalizada';
+            this.ganadorPartidaId = equipoGanador.id;
+            this.motivoFinalizacion = 'abandono';
+            this.jugadorQueAbandonoId = jugadorId;
+
+            console.log(`[PARTIDA] 🎯 Partida finalizada por abandono. Ganador: Equipo ${equipoGanador.nombre}`);
+
+            return true;
+        } catch (error) {
+            console.error(`[PARTIDA] ❌ Error finalizando partida por abandono:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene todos los jugadores de la partida
+     * @returns {Array} Array de jugadores
+     */
+    obtenerTodosLosJugadores() {
+        return this.jugadores;
+    }
+
+    /**
+     * Obtiene un jugador por su ID
+     * @param {number} jugadorId - ID del jugador
+     * @returns {Object|null} Jugador encontrado o null
+     */
+    obtenerJugadorPorId(jugadorId) {
+        return this.jugadores.find(j => j.id === jugadorId) || null;
     }
 }
 

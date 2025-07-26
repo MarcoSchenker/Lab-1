@@ -1,6 +1,40 @@
 const pool = require('../config/db');
 
 /**
+ * Controlador para obtener estadísticas del usuario autenticado
+ */
+const obtenerEstadisticasUsuarioActual = async (req, res) => {
+  try {
+    const usuarioId = req.user.id; // Desde el middleware de autenticación
+
+    const [stats] = await pool.query(
+      'SELECT elo, victorias, derrotas, partidas_jugadas FROM estadisticas WHERE usuario_id = ?',
+      [usuarioId]
+    );
+
+    if (stats.length === 0) {
+      // Crear estadísticas por defecto si no existen
+      await pool.query(
+        'INSERT INTO estadisticas (usuario_id, elo, victorias, derrotas, partidas_jugadas) VALUES (?, 500, 0, 0, 0)',
+        [usuarioId]
+      );
+      
+      return res.json({
+        elo: 500,
+        victorias: 0,
+        derrotas: 0,
+        partidas_jugadas: 0
+      });
+    }
+
+    res.json(stats[0]);
+  } catch (err) {
+    console.error('Error al obtener estadísticas del usuario actual:', err.message);
+    res.status(500).json({ error: 'Error al obtener estadísticas' });
+  }
+};
+
+/**
  * Controlador para obtener estadísticas de un usuario por ID
  */
 const obtenerEstadisticasPorId = async (req, res) => {
@@ -92,6 +126,7 @@ const obtenerRanking = async (req, res) => {
 };
 
 module.exports = {
+  obtenerEstadisticasUsuarioActual,
   obtenerEstadisticasPorId,
   obtenerEstadisticasPorUsername,
   obtenerRanking

@@ -31,6 +31,7 @@ const OnlineGamePage: React.FC = () => {
     isLoading,
     reconnectAttempts,
     loadingTimeoutActive,
+    shouldRedirectToLogin, // ✅ Nueva propiedad
     jugarCarta,
     cantar,
     responderCanto,
@@ -39,7 +40,8 @@ const OnlineGamePage: React.FC = () => {
     irseAlMazo,
     abandonarPartida, // ✅ Nueva función
     requestGameState,
-    retryConnection
+    retryConnection,
+    clearRedirectFlag // ✅ Nueva función
   } = useGameSocket(codigoSala);
 
   const [jugadorSkins, setJugadorSkins] = useState<Record<number, string>>({});
@@ -77,22 +79,32 @@ const OnlineGamePage: React.FC = () => {
     setJugadorSkins(nuevasSkins);
   }, [gameState]);
 
+  // ✅ Callback para recompensas - definido a nivel superior
+  const handleRecompensasPartida = useCallback((data: any) => {
+    console.log('[CLIENT] 🏆 Recompensas recibidas:', data);
+    setRecompensas(data);
+    // Las recompensas se mostrarán automáticamente en GameEndModal cuando la partida termine
+  }, []);
+
   // ✅ Listener para recompensas de fin de partida
   useEffect(() => {
     if (!socket) return;
-
-    const handleRecompensasPartida = useCallback((data: any) => {
-      console.log('[CLIENT] 🏆 Recompensas recibidas:', data);
-      setRecompensas(data);
-      // Las recompensas se mostrarán automáticamente en GameEndModal cuando la partida termine
-    }, []);
 
     socket.on('recompensas_partida', handleRecompensasPartida);
 
     return () => {
       socket.off('recompensas_partida', handleRecompensasPartida);
     };
-  }, [socket]);
+  }, [socket, handleRecompensasPartida]);
+
+  // ✅ Manejar redirección a login desde el hook
+  useEffect(() => {
+    if (shouldRedirectToLogin) {
+      console.log('[OnlineGamePage] 🚪 Redirigiendo a login por solicitud del hook');
+      clearRedirectFlag(); // Limpiar la flag antes de navegar
+      navigate('/login');
+    }
+  }, [shouldRedirectToLogin, clearRedirectFlag, navigate]);
 
   // Mostrar opciones de reconexión después de un tiempo
   useEffect(() => {
@@ -154,9 +166,14 @@ const OnlineGamePage: React.FC = () => {
   const partidaTerminada = useCallback((): boolean => {
     if (!gameState || !gameState.equipos) return false;
     
-    // Verificar si algún equipo llegó a los puntos de victoria o si la partida está finalizada
-    return gameState.estadoPartida === 'finalizada' || 
-           gameState.equipos.some(equipo => equipo.puntosPartida >= gameState.puntosVictoria);
+    // Verificar si la partida está marcada como finalizada
+    if (gameState.estadoPartida === 'finalizada') return true;
+    
+    // Verificar si hay abandono
+    if (gameState.motivoFinalizacion === 'abandono' || gameState.tipoFinalizacion === 'abandono') return true;
+    
+    // Verificar si algún equipo llegó a los puntos de victoria
+    return gameState.equipos.some(equipo => equipo.puntosPartida >= gameState.puntosVictoria);
   }, [gameState]);
 
   // ✅ Manejar click en abandonar partida
@@ -168,6 +185,9 @@ const OnlineGamePage: React.FC = () => {
   const confirmarAbandonarPartida = useCallback(() => {
     setShowLeaveGameModal(false);
     abandonarPartida();
+    
+    // No navegar inmediatamente - esperar a que aparezca el GameEndModal
+    // La navegación se manejará desde el GameEndModal cuando el usuario haga click en "Volver a la Sala"
   }, [abandonarPartida]);
 
   // ✅ Cancelar abandono de partida
@@ -405,6 +425,7 @@ const OnlineGamePage: React.FC = () => {
         jugadorActualId={jugadorId}
         puntosVictoria={gameState.puntosVictoria}
         recompensas={recompensas}
+        gameState={gameState} // ✅ Pasar gameState para detectar abandono
         onVolverASala={volverASalaPostPartida}
       />
 
@@ -413,6 +434,10 @@ const OnlineGamePage: React.FC = () => {
         isVisible={showLeaveGameModal}
         onConfirm={confirmarAbandonarPartida}
         onCancel={cancelarAbandonarPartida}
+        jugadorActualId={jugadorId}
+        jugadores={gameState.jugadores}
+        equipos={gameState.equipos}
+        codigoSala={codigoSala || ''}
       />
       
       {/* Panel de depuración */}

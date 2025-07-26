@@ -1,40 +1,60 @@
 /* ActionsPanel.css - Estilos para el panel de acciones */
 
 .actions-panel {
-  @apply bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 shadow-2xl border border-slate-600;
+  background-image: linear-gradient(to bottom right, #1e293b, #0f172a); /* from-slate-800 to-slate-900 */
+  border-radius: 0.75rem; /* rounded-xl */
+  padding: 1.5rem; /* p-6 */
+  box-shadow: 0 25px 50px -12px rgba(30,41,59,0.25); /* shadow-2xl */
+  border: 1px solid #475569; /* border-slate-600 */
   min-width: 240px;
   max-width: 240px;
   width: 100%;
 }
 
 .panel-title {
-  @apply text-center mb-4 text-white font-bold text-lg;
+  text-align: center;
+  margin-bottom: 1rem; /* mb-4 */
+  color: #fff; /* text-white */
+  font-weight: bold; /* font-bold */
+  font-size: 1.125rem; /* text-lg */
 }
 
 .panel-title span {
-  @apply text-xl;
+  font-size: 1.25rem; /* text-xl */
 }
 
 .envido-actions,
 .response-actions,
 .action-groups {
-  @apply space-y-3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* space-y-3 */
 }
 
 .envido-form {
-  @apply bg-slate-700 p-4 rounded-lg space-y-3;
+  background-color: #334155; /* bg-slate-700 */
+  padding: 1rem; /* p-4 */
+  border-radius: 0.5rem; /* rounded-lg */
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* space-y-3 */
 }
 
 .envido-info {
-  @apply text-white text-center space-y-2;
+  color: #ffffff; /* text-white */
+  text-align: center; /* text-center */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* space-y-2 */
 }
 
 .envido-info p {
-  @apply text-sm;
+  font-size: 0.875rem; /* text-sm */
 }
 
 .envido-info strong {
-  @apply text-yellow-400 font-bold;
+  color: #facc15; /* text-yellow-400 */
+  font-weight: bold; /* font-bold */
 }
 
 /* Estilos para "Envido va primero" */
@@ -76,142 +96,227 @@
 
 /* Botones de acción */
 .btn-action {
-  @apply px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 min-w-[120px];
-  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800;
+  padding: 1rem 1rem; /* px-4 py-2 */
+  border-radius: 0.5rem; /* rounded-lg */
+  font-weight: 600; /* font-semibold */
+  font-size: 0.875rem; /* text-sm */
+  transition: all 0.2s; /* transition-all duration-200 */
+  min-width: 120px; /* min-w-[120px] */
+  outline: none; /* focus:outline-none */
+  border: none;
+  cursor: pointer;
+}
+
+.btn-action:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* Basic focus ring */
 }
 
 .btn-declare-points {
-  @apply bg-green-600 hover:bg-green-700 text-white;
-  @apply focus:ring-green-500;
+  background-color: #16a34a; /* bg-green-600 */
+  color: white; /* text-white */
+}
+
+.btn-declare-points:hover {
+  background-color: #15803d; /* hover:bg-green-700 */
 }
 
 .btn-son-buenas {
-  @apply bg-orange-600 hover:bg-orange-700 text-white;
-  @apply focus:ring-orange-500;
-  @apply border-2 border-orange-400;
+  background-color: #ea580c; /* bg-orange-600 */
+  color: white; /* text-white */
+  border: 2px solid #fb923c; /* border-2 border-orange-400 */
 }
 
 .btn-son-buenas:hover {
-  @apply bg-orange-700 border-orange-300 shadow-lg;
+  background-color: #c2410c; /* bg-orange-700 */
+  border-color: #fdba74; /* border-orange-300 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); /* shadow-lg */
 }
 
 .btn-confirm {
-  @apply bg-blue-600 hover:bg-blue-700 text-white;
-  @apply focus:ring-blue-500;
+  background-color: #2563eb; /* bg-blue-600 */
+  color: white; /* text-white */
+}
+
+.btn-confirm:hover {
+  background-color: #1d4ed8; /* hover:bg-blue-700 */
 }
 
 .btn-cancel {
-  @apply bg-gray-600 hover:bg-gray-700 text-white;
-  @apply focus:ring-gray-500;
+  background-color: #4b5563; /* bg-gray-600 */
+  color: white; /* text-white */
+}
+
+.btn-cancel:hover {
+  background-color: #374151; /* hover:bg-gray-700 */
 }
 
 .btn-quiero {
-  @apply bg-green-600 hover:bg-green-700 text-white;
-  @apply focus:ring-green-500;
+  background-color: #16a34a; /* bg-green-600 */
+  color: white; /* text-white */
+}
+
+.btn-quiero:hover {
+  background-color: #15803d; /* hover:bg-green-700 */
 }
 
 .btn-no-quiero {
-  @apply bg-red-600 hover:bg-red-700 text-white;
-  @apply focus:ring-red-500;
+  background-color: #dc2626; /* bg-red-600 */
+  color: white; /* text-white */
+}
+
+.btn-no-quiero:hover {
+  background-color: #b91c1c; /* hover:bg-red-700 */
 }
 
 .btn-envido {
-  @apply bg-purple-600 hover:bg-purple-700 text-white;
-  @apply focus:ring-purple-500;
+  background-color: #9333ea; /* bg-purple-600 */
+  color: white; /* text-white */
+}
+
+.btn-envido:hover {
+  background-color: #7c3aed; /* hover:bg-purple-700 */
 }
 
 .btn-real-envido {
-  @apply bg-purple-700 hover:bg-purple-800 text-white;
-  @apply focus:ring-purple-500;
+  background-color: #7c3aed; /* bg-purple-700 */
+  color: white; /* text-white */
+}
+
+.btn-real-envido:hover {
+  background-color: #6b21a8; /* hover:bg-purple-800 */
 }
 
 .btn-falta-envido {
-  @apply bg-purple-800 hover:bg-purple-900 text-white;
-  @apply focus:ring-purple-500;
+  background-color: #6b21a8; /* bg-purple-800 */
+  color: white; /* text-white */
+}
+
+.btn-falta-envido:hover {
+  background-color: #581c87; /* hover:bg-purple-900 */
 }
 
 .btn-truco {
-  @apply bg-red-600 hover:bg-red-700 text-white;
-  @apply focus:ring-red-500;
+  background-color: #dc2626; /* bg-red-600 */
+  color: white; /* text-white */
+}
+
+.btn-truco:hover {
+  background-color: #b91c1c; /* hover:bg-red-700 */
 }
 
 .btn-retruco {
-  @apply bg-red-700 hover:bg-red-800 text-white;
-  @apply focus:ring-red-500;
+  background-color: #b91c1c; /* bg-red-700 */
+  color: white; /* text-white */
+}
+
+.btn-retruco:hover {
+  background-color: #991b1b; /* hover:bg-red-800 */
 }
 
 .btn-vale-cuatro {
-  @apply bg-red-800 hover:bg-red-900 text-white;
-  @apply focus:ring-red-500;
+  background-color: #991b1b; /* bg-red-800 */
+  color: white; /* text-white */
+}
+
+.btn-vale-cuatro:hover {
+  background-color: #7f1d1d; /* hover:bg-red-900 */
 }
 
 .btn-mazo {
-  @apply bg-yellow-600 hover:bg-yellow-700 text-white;
-  @apply focus:ring-yellow-500;
+  background-color: #ca8a04; /* bg-yellow-600 */
+  color: white; /* text-white */
+}
+
+.btn-mazo:hover {
+  background-color: #a16207; /* hover:bg-yellow-700 */
 }
 
 /* Grupos de acciones */
 .action-group {
-  @apply bg-slate-700 p-3 rounded-lg;
+  background-color: #334155; /* bg-slate-700 */
+  padding: 0.75rem; /* p-3 */
+  border-radius: 0.5rem; /* rounded-lg */
 }
 
 .group-title {
-  @apply text-white font-semibold text-sm mb-2 block;
+  color: white; /* text-white */
+  font-weight: 600; /* font-semibold */
+  font-size: 0.875rem; /* text-sm */
+  margin-bottom: 0.5rem; /* mb-2 */
+  display: block; /* block */
 }
 
 .action-buttons {
-  @apply flex flex-wrap gap-2;
+  display: flex; /* flex */
+  flex-wrap: wrap; /* flex-wrap */
+  gap: 0.5rem; /* gap-2 */
 }
 
 /* ✅ MEJORA: Organización específica para botones de envido */
 .envido-group .action-buttons {
-  @apply flex flex-col gap-2;
+  display: flex; /* flex */
+  flex-direction: column; /* flex-col */
+  gap: 0.5rem; /* gap-2 */
 }
 
 .envido-group .btn-action {
-  @apply w-full text-center;
+  width: 100%; /* w-full */
+  text-align: center; /* text-center */
 }
 
 /* ✅ MEJORA: Organización específica para botones de truco */
 .truco-group .action-buttons {
-  @apply flex flex-col gap-2;
+  display: flex; /* flex */
+  flex-direction: column; /* flex-col */
+  gap: 0.5rem; /* gap-2 */
 }
 
 .truco-group .btn-action {
-  @apply w-full text-center;
+  width: 100%; /* w-full */
+  text-align: center; /* text-center */
 }
 
 /* ✅ MEJORA: Estilo mejorado para botones de mazo */
 .mazo-group {
-  @apply bg-yellow-900/30 border border-yellow-600;
+  background-color: rgba(113, 63, 18, 0.3); /* bg-yellow-900/30 */
+  border: 1px solid #ca8a04; /* border border-yellow-600 */
 }
 
 .mazo-group .btn-mazo {
-  @apply w-full;
+  width: 100%; /* w-full */
 }
 
 .recantos-envido,
 .recantos-truco {
-  @apply flex flex-col gap-2 mt-3 pt-3 border-t border-slate-600;
+  display: flex; /* flex */
+  flex-direction: column; /* flex-col */
+  gap: 0.5rem; /* gap-2 */
+  margin-top: 0.75rem; /* mt-3 */
+  padding-top: 0.75rem; /* pt-3 */
+  border-top: 1px solid #475569; /* border-t border-slate-600 */
 }
 
 /* ✅ MEJORA: Estilos específicos para recantos de truco en respuestas */
 .recantos-truco .btn-action {
-  @apply w-full text-center;
+  width: 100%; /* w-full */
+  text-align: center; /* text-center */
 }
 
 /* Responsivo */
 @media (max-width: 640px) {
   .actions-panel {
-    @apply p-4;
+    padding: 1rem; /* p-4 */
     min-width: 280px;
   }
   
   .btn-action {
-    @apply px-3 py-2 text-xs min-w-[100px];
+    padding: 0.75rem 0.75rem; /* px-3 py-2 */
+    font-size: 0.75rem; /* text-xs */
+    min-width: 100px; /* min-w-[100px] */
   }
   
   .action-buttons {
-    @apply flex-col;
+    flex-direction: column; /* flex-col */
   }
 }

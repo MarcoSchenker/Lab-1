@@ -3,7 +3,7 @@
  * Este test verifica los casos más importantes del flujo de truco
  */
 
-const RondaTrucoHandler = require('./game-logic/RondaTrucoHandler');
+const RondaTrucoHandler = require('../game-logic/RondaTrucoHandler');
 
 // Mock básico de RondaGame para testing
 class MockRonda {
