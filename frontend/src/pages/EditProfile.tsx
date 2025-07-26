@@ -96,7 +96,6 @@ const EditProfile: React.FC = () => {
           <div className="logo-container">
             <img src="/logo.png" alt="Trucho Logo" className="logo" />
           </div>
-
           {successMessage ? (
             <div className="success-message">
               <h2>{successMessage}</h2>
