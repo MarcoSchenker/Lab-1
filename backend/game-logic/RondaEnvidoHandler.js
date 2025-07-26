@@ -783,6 +783,14 @@ class RondaEnvidoHandler {
         this.puntosEnJuegoCalculados = this._calcularPuntosEnvido(this.nivelActual, true);
         this.ronda.puntosGanadosEnvido = this.puntosEnJuegoCalculados;
         
+        // ✅ NUEVO: Verificar victoria inmediata después de "Son Buenas"
+        const partidaTerminada = this._verificarVictoriaInmediata();
+        if (partidaTerminada) {
+            // La partida terminó, no continuar con la ronda
+            console.log("[ENVIDO] Partida terminada por victoria inmediata (Son Buenas) - no restaurar turno");
+            return true;
+        }
+        
         // Persistir la acción
         this.ronda.persistirAccion({
             tipo_accion: 'SON_BUENAS_ENVIDO',
@@ -804,7 +812,7 @@ class RondaEnvidoHandler {
         
         console.log(`Envido resuelto con "Son Buenas". Equipo ${this.ganadorEnvidoEquipoId} gana ${this.puntosEnJuegoCalculados} puntos.`);
         
-        // Verificar si hay truco pendiente por "Envido Primero"
+        // Solo restaurar turno si la partida no terminó
         this.resolverDependenciaTrucoYRestaurarTurno();
         
         return true;

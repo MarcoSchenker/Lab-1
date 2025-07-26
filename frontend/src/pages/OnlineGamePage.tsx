@@ -166,9 +166,14 @@ const OnlineGamePage: React.FC = () => {
   const partidaTerminada = useCallback((): boolean => {
     if (!gameState || !gameState.equipos) return false;
     
-    // Verificar si algún equipo llegó a los puntos de victoria o si la partida está finalizada
-    return gameState.estadoPartida === 'finalizada' || 
-           gameState.equipos.some(equipo => equipo.puntosPartida >= gameState.puntosVictoria);
+    // Verificar si la partida está marcada como finalizada
+    if (gameState.estadoPartida === 'finalizada') return true;
+    
+    // Verificar si hay abandono
+    if (gameState.motivoFinalizacion === 'abandono' || gameState.tipoFinalizacion === 'abandono') return true;
+    
+    // Verificar si algún equipo llegó a los puntos de victoria
+    return gameState.equipos.some(equipo => equipo.puntosPartida >= gameState.puntosVictoria);
   }, [gameState]);
 
   // ✅ Manejar click en abandonar partida
@@ -181,11 +186,9 @@ const OnlineGamePage: React.FC = () => {
     setShowLeaveGameModal(false);
     abandonarPartida();
     
-    // Navegar de vuelta al lobby después de un breve delay
-    setTimeout(() => {
-      navigate('/salas');
-    }, 500);
-  }, [abandonarPartida, navigate]);
+    // No navegar inmediatamente - esperar a que aparezca el GameEndModal
+    // La navegación se manejará desde el GameEndModal cuando el usuario haga click en "Volver a la Sala"
+  }, [abandonarPartida]);
 
   // ✅ Cancelar abandono de partida
   const cancelarAbandonarPartida = useCallback(() => {
@@ -422,6 +425,7 @@ const OnlineGamePage: React.FC = () => {
         jugadorActualId={jugadorId}
         puntosVictoria={gameState.puntosVictoria}
         recompensas={recompensas}
+        gameState={gameState} // ✅ Pasar gameState para detectar abandono
         onVolverASala={volverASalaPostPartida}
       />
 
@@ -430,6 +434,10 @@ const OnlineGamePage: React.FC = () => {
         isVisible={showLeaveGameModal}
         onConfirm={confirmarAbandonarPartida}
         onCancel={cancelarAbandonarPartida}
+        jugadorActualId={jugadorId}
+        jugadores={gameState.jugadores}
+        equipos={gameState.equipos}
+        codigoSala={codigoSala || ''}
       />
       
       {/* Panel de depuración */}

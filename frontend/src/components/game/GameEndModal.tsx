@@ -39,6 +39,7 @@ interface GameEndModalProps {
   jugadorActualId: number | null;
   puntosVictoria: number;
   recompensas?: { [key: string]: RecompensaJugador } | null;
+  gameState?: any; // ✅ Agregar gameState para detectar abandono
   onVolverASala: () => void;
 }
 
@@ -49,6 +50,7 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
   jugadorActualId,
   puntosVictoria,
   recompensas,
+  gameState,
   onVolverASala
 }) => {
   if (!isVisible || !jugadorActualId) return null;
@@ -57,7 +59,11 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
   const miEquipo = equipos.find(equipo => equipo.jugadoresIds.includes(jugadorActualId));
   
   // Determinar el equipo ganador
-  const equipoGanador = equipos.find(equipo => equipo.puntosPartida >= puntosVictoria); // ✅ Usar puntosPartida
+  const equipoGanador = equipos.find(equipo => equipo.puntosPartida >= puntosVictoria);
+  
+  // Verificar si la partida terminó por abandono
+  const terminoPorAbandono = gameState?.motivoFinalizacion === 'abandono' || 
+                            gameState?.tipoFinalizacion === 'abandono';
   
   // Determinar si gané o perdí
   const gane = miEquipo && equipoGanador && miEquipo.id === equipoGanador.id;
@@ -82,7 +88,10 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
         <div className={`game-end-header ${gane ? 'victory' : 'defeat'}`}>
           <h1>{gane ? '🎉 ¡VICTORIA!' : '💀 DERROTA'}</h1>
           <p className="game-end-subtitle">
-            {gane ? '¡Felicitaciones! Has ganado la partida' : 'Mejor suerte la próxima vez'}
+            {terminoPorAbandono 
+              ? (gane ? '¡Tu oponente abandonó la partida!' : 'Abandonaste la partida')
+              : (gane ? '¡Felicitaciones! Has ganado la partida' : 'Mejor suerte la próxima vez')
+            }
           </p>
         </div>
 
@@ -158,7 +167,6 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
                           >
                             <div className="member-info">
                               {jugador.nombreUsuario} {/* ✅ Usar nombreUsuario */}
-                              {jugador.id === jugadorActualId && <span className="you-indicator">(Tú)</span>}
                             </div>
                             {recompensaJugador && (
                               <div className="member-rewards">
@@ -191,9 +199,18 @@ const GameEndModal: React.FC<GameEndModalProps> = ({
             <div className="stat-item">
               <span className="stat-label">Resultado:</span>
               <span className={`stat-value ${gane ? 'victory-text' : 'defeat-text'}`}>
-                {gane ? 'Victoria' : 'Derrota'}
+                {terminoPorAbandono 
+                  ? (gane ? 'Victoria por Abandono' : 'Derrota por Abandono')
+                  : (gane ? 'Victoria' : 'Derrota')
+                }
               </span>
             </div>
+            {terminoPorAbandono && (
+              <div className="stat-item">
+                <span className="stat-label">Tipo de finalización:</span>
+                <span className="stat-value abandono-indicator">🚪 Abandono de partida</span>
+              </div>
+            )}
           </div>
         </div>
 

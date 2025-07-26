@@ -400,6 +400,131 @@ function crearEquiposSegunTipo(tipoPartida, jugadoresInfo) {
 }
 
 /**
+ * Maneja el abandono de partida por parte de un jugador
+ * @param {string} codigoSala 
+ * @param {number} jugadorId ID del usuario que abandona
+ */
+async function manejarAbandonoPartida(codigoSala, jugadorId) {
+    console.log(`[GAMELOGIC] 🚪 Procesando abandono de jugador ${jugadorId} en sala ${codigoSala}`);
+    
+    const partida = activeGames[codigoSala];
+    if (!partida) {
+        console.warn(`No se encontró partida activa para la sala ${codigoSala}`);
+        return;
+    }
+
+    if (!io) {
+        console.error("Error: Socket.IO no ha sido inicializado en gameLogicHandler al manejar abandono.");
+        return;
+    }
+
+    try {
+        // Obtener información de la partida antes del abandono
+        const jugadorQueAbandona = partida.obtenerJugadorPorId(jugadorId);
+        if (!jugadorQueAbandona) {
+            console.error(`Jugador ${jugadorId} no encontrado en la partida ${codigoSala}`);
+            return;
+        }
+
+        const todosLosJugadores = partida.obtenerTodosLosJugadores();
+        const jugadoresRestantes = todosLosJugadores.filter(j => j.id !== jugadorId);
+        
+        // Obtener información del envido si hubo
+        const huboEnvido = partida.rondaActual?.envidoInfo?.cantado || false;
+        const ganadorEnvidoEquipoId = partida.rondaActual?.envidoInfo?.equipoGanadorId || null;
+
+        // Importar el controlador de recompensas
+        const { procesarRecompensasAbandono, aplicarRecompensas } = require('../controllers/recompensasController');
+
+        // Calcular recompensas por abandono
+        const datosAbandono = {
+            codigoSala,
+            jugadorQueAbandona: {
+                id: jugadorQueAbandona.id,
+                nombreUsuario: jugadorQueAbandona.nombreUsuario,
+                equipoId: jugadorQueAbandona.equipoId
+            },
+            jugadoresRestantes: jugadoresRestantes.map(j => ({
+                id: j.id,
+                nombreUsuario: j.nombreUsuario,
+                equipoId: j.equipoId
+            })),
+            huboEnvido,
+            ganadorEnvidoEquipoId
+        };
+
+        console.log(`[GAMELOGIC] 📊 Datos de abandono preparados:`, datosAbandono);
+
+        let recompensas = {};
+        try {
+            recompensas = await procesarRecompensasAbandono(datosAbandono);
+            console.log(`[GAMELOGIC] 💰 Recompensas calculadas:`, recompensas);
+            
+            await aplicarRecompensas(recompensas);
+            console.log(`[GAMELOGIC] ✅ Recompensas aplicadas exitosamente`);
+        } catch (recompensasError) {
+            console.error(`[GAMELOGIC] ⚠️ Error en recompensas (continuando con abandono):`, recompensasError);
+            // Continuar con el abandono aunque falle el sistema de recompensas
+        }
+
+        // Usar el método interno de PartidaGame para manejar el abandono
+        const abandonoExitoso = partida.manejarAbandonoPartida(jugadorId);
+        console.log(`[GAMELOGIC] 🎯 Resultado del abandono en PartidaGame: ${abandonoExitoso}`);
+        
+        if (!abandonoExitoso) {
+            throw new Error('No se pudo procesar el abandono correctamente en PartidaGame');
+        }
+        
+        // Asegurar campos de abandono en la instancia de partida antes de obtener estado
+        partida.motivoFinalizacion = 'abandono';
+        partida.tipoFinalizacion = 'abandono';
+        partida.jugadorQueAbandonoId = jugadorId;
+
+        // Actualizar estado en la base de datos
+        await pool.query(
+            'UPDATE partidas SET estado = ?, fecha_fin = NOW() WHERE codigo_sala = ?',
+            ['finalizada', codigoSala]
+        );
+
+        // Notificar a todos los jugadores sobre las recompensas
+        console.log(`[GAMELOGIC] 📢 Enviando recompensas por abandono a todos los jugadores de la sala ${codigoSala}`);
+        io.to(codigoSala).emit('recompensas_partida', recompensas);
+
+        // Obtener estado final para mostrar GameEndModal
+        const estadoFinal = partida.obtenerEstadoGlobalParaCliente();
+        
+        // Determinar equipo ganador (el que no tiene al jugador que abandonó)
+        const equipoGanador = partida.equipos.find(equipo => 
+            !equipo.jugadores.some(j => j.id === jugadorId)
+        );
+        
+        if (equipoGanador) {
+            estadoFinal.estadoPartida = 'finalizada';
+            estadoFinal.equipoGanador = equipoGanador.id;
+            estadoFinal.tipoFinalizacion = 'abandono';
+            estadoFinal.jugadorQueAbandono = jugadorId;
+        }
+
+        // Enviar estado final a todos los jugadores
+        io.to(codigoSala).emit('estado_juego_actualizado', estadoFinal);
+
+        // Limpiar la partida activa
+        delete activeGames[codigoSala];
+        
+        console.log(`[GAMELOGIC] ✅ Abandono procesado exitosamente para sala ${codigoSala}`);
+
+    } catch (error) {
+        console.error(`[GAMELOGIC] ❌ Error procesando abandono en sala ${codigoSala}:`, error);
+        
+        // Notificar error a los jugadores
+        io.to(codigoSala).emit('error_estado_juego', {
+            message: 'Error procesando el abandono de la partida',
+            details: error.message
+        });
+    }
+}
+
+/**
  * Maneja una acción enviada por un jugador.
  * @param {string} codigoSala 
  * @param {number} jugadorId ID del usuario que realiza la acción.
@@ -674,6 +799,7 @@ module.exports = {
     initializeGameLogic,
     crearNuevaPartida,
     manejarAccionJugador,
+    manejarAbandonoPartida, // ✅ Nueva función
     obtenerEstadoJuegoParaJugador,
     manejarDesconexionJugador,
     getActiveGame,

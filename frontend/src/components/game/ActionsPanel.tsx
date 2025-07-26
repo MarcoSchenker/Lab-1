@@ -100,15 +100,23 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
       return false;
     }
     
-    // ✅ CORRECCIÓN ADICIONAL: Lógica mejorada para "envido va primero"
+    // ✅ CORRECCIÓN CRÍTICA: Lógica mejorada para "envido va primero"
     if (trucoPendientePorEnvidoPrimero) {
       // Cuando hay truco pendiente por "envido va primero", puedo cantar envido si:
       // 1. Soy del equipo que debe responder al truco
       // 2. No se ha cantado envido aún
       // 3. Es mi turno (esMiTurno debería ser true en este caso)
+      // 4. ✅ CRÍTICO: El nivel sigue siendo TRUCO inicial (NO re-truco NI vale-cuatro)
       return trucoInfo.equipoDebeResponderTrucoId === miEquipo.id && 
              !envidoInfo.cantado && 
+             trucoInfo.nivelActual === 'TRUCO' && // ✅ Solo TRUCO inicial, NO re-truco NI vale-cuatro
              esMiTurno;
+    }
+    
+    // ✅ CORRECCIÓN PROBLEMA 1: Verificar que si hay truco cantado, solo sea nivel TRUCO inicial
+    // No se puede cantar envido si ya hay RE-TRUCO o VALE-CUATRO cantado
+    if (trucoInfo.cantado && (trucoInfo.nivelActual === 'RETRUCO' || trucoInfo.nivelActual === 'VALE_CUATRO')) {
+      return false;
     }
     
     // Caso normal: puedo cantar envido si es mi turno y no hay envido cantado
@@ -161,6 +169,49 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     }
     
     return null;
+  };
+
+  // ✅ NUEVA FUNCIÓN: Verificar si debo esperar respuesta a mi canto
+  const deboEsperarRespuesta = (): boolean => {
+    // Si canté truco y está pendiente de respuesta por el otro equipo
+    if (trucoInfo.cantado &&
+        trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+        trucoInfo.cantadoPorEquipoId === miEquipo.id &&
+        trucoInfo.equipoDebeResponderTrucoId !== miEquipo.id) {
+      return true;
+    }
+    
+    // ✅ CORRECCIÓN: Solo considerar envido pendiente si realmente está esperando respuesta inicial
+    // NO cuando ya fue aceptado y está en declaración de puntos
+    if (envidoInfo.cantado &&
+        envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+        envidoInfo.cantadoPorEquipoId === miEquipo.id &&
+        envidoInfo.equipoRespondedorCantoId !== miEquipo.id &&
+        !envidoInfo.querido) { // ✅ CRÍTICO: Solo si no fue aceptado aún
+      return true;
+    }
+    
+    return false;
+  };
+
+  // ✅ NUEVA FUNCIÓN: Verificar si debo esperar a que otros jugadores declaren puntos
+  const deboEsperarDeclaracionPuntos = (): boolean => {
+    // Si el envido fue aceptado y está en declaración de puntos
+    if (envidoInfo.cantado &&
+        envidoInfo.querido &&
+        envidoInfo.estadoResolucion === 'querido_pendiente_puntos' &&
+        envidoInfo.declaracionEnCurso) {
+      
+      // Si ya declaré mis puntos (estoy en la lista de jugadores que han declarado)
+      const yaDeclareMisPuntos = envidoInfo.jugadoresQueHanDeclarado?.includes(jugadorId!) ?? false;
+      
+      // Si ya declaré pero el proceso de declaración no ha terminado
+      if (yaDeclareMisPuntos && envidoInfo.jugadorTurnoDeclararPuntosId !== jugadorId) {
+        return true; // Debo esperar a que otros declaren
+      }
+    }
+    
+    return false;
   };
 
   // Verificar si debo responder a un canto
@@ -343,11 +394,13 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // Verificar si hay "envido va primero" activo
   const hayEnvidoVaPrimero = (): boolean => {
-    // ✅ CORRECCIÓN ADICIONAL: Lógica simplificada para detectar "envido va primero"
+    // ✅ CORRECCIÓN CRÍTICA: Solo cuando el nivel sigue siendo TRUCO inicial
+    // Si ya se cantó re-truco o vale-cuatro, se acepta implícitamente el truco y envido ya no es posible
     return trucoPendientePorEnvidoPrimero && 
            trucoInfo.cantado && 
            trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
            trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+           trucoInfo.nivelActual === 'TRUCO' && // ✅ CRÍTICO: Solo TRUCO inicial, NO re-truco NI vale-cuatro
            manoActual === 1 &&
            !envidoInfo.cantado;
   };
@@ -584,6 +637,48 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
   }
 
   // Panel normal de acciones
+  // ✅ NUEVA CORRECCIÓN: Verificar si debo esperar a que otros declaren puntos
+  if (deboEsperarDeclaracionPuntos()) {
+    return (
+      <div className="actions-panel">
+        <div className="panel-title">
+          <span>Esperando declaración</span>
+        </div>
+        <div className="text-sm text-gray-400 mt-2 text-center">
+          Espera a que tu oponente declare sus puntos de envido
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ CORRECCIÓN PROBLEMA 2: Verificar si debo esperar respuesta a mi canto
+  if (deboEsperarRespuesta()) {
+    return (
+      <div className="actions-panel">
+        <div className="panel-title">
+          <span>Esperando respuesta</span>
+        </div>
+        <div className="text-sm text-gray-400 mt-2 text-center">
+          Espera a que tu oponente responda a tu canto
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ MEJORA: Solo mostrar acciones generales si es mi turno
+  if (!esMiTurno) {
+    return (
+      <div className="actions-panel">
+        <div className="panel-title">
+          <span>No es tu turno</span>
+        </div>
+        <div className="text-sm text-gray-400 mt-2 text-center">
+          Espera a que tu oponente termine su jugada
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="actions-panel normal-actions">
       <div className="panel-title">

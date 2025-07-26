@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -14,16 +14,37 @@
 }
 
 .leave-game-modal {
-  background: linear-gradient(135deg, #2a1a1a, #3a2a2a);
-  border-radius: 20px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 90%;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 24px;
+  padding: 2.5rem;
+  max-width: 650px;
+  width: 95%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-  border: 2px solid #d9534f;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  border: 3px solid #dc3545;
   animation: modalSlideIn 0.4s ease-out;
+  position: relative;
+}
+
+.leave-game-modal.professional {
+  background: linear-gradient(135deg, #0f1419, #1a1f36);
+  border: 3px solid #e74c3c;
+}
+
+.leave-game-modal::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #e74c3c, #c0392b, #e74c3c);
+  border-radius: 26px;
+  z-index: -1;
+  opacity: 0.6;
 }
 
 @keyframes fadeIn {
@@ -33,7 +54,7 @@
 
 @keyframes modalSlideIn {
   from { 
-    transform: translateY(-50px) scale(0.9);
+    transform: translateY(-60px) scale(0.85);
     opacity: 0;
   }
   to { 
@@ -45,76 +66,276 @@
 /* Header del modal */
 .leave-game-header {
   text-align: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #d9534f;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(231, 76, 60, 0.3);
 }
 
 .leave-game-header h2 {
   color: #fff;
   font-size: 1.8rem;
-  margin: 0;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Contenido del modal */
+.modal-subtitle {
+  color: #bbb;
+  font-size: 1rem;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Sección de contenido */
 .leave-game-content {
   margin-bottom: 2rem;
 }
 
-.warning-message {
-  color: #fff;
+.warning-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .main-warning {
-  font-size: 1.1rem;
-  text-align: center;
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(192, 57, 43, 0.2));
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 12px;
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
-  color: #ffdddd;
 }
 
-.consequences {
-  background: rgba(217, 83, 79, 0.1);
-  border: 1px solid #d9534f;
+.main-warning h3 {
+  color: #e74c3c;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.main-warning p {
+  color: #fff;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Carga de consecuencias */
+.consequences-loading {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid #e74c3c;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.consequences-loading p {
+  color: #bbb;
+  margin: 0;
+}
+
+/* Preview de consecuencias */
+.consequences-preview {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.consequences-preview h4 {
+  color: #fff;
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.consequence-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.consequence-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 10px;
   padding: 1rem;
-  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.consequences h4 {
-  color: #ff6b6b;
-  margin: 0 0 0.75rem 0;
+.consequence-icon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  min-width: 40px;
+  text-align: center;
+}
+
+.consequence-details {
+  flex: 1;
+}
+
+.consequence-label {
+  display: block;
+  color: #bbb;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.consequence-value {
+  color: #fff;
+  font-weight: 600;
   font-size: 1rem;
 }
 
-.consequences ul {
-  margin: 0;
-  padding-left: 1.5rem;
+.elo-change.negative {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+/* Advertencias adicionales */
+.additional-warnings {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.additional-warnings h4 {
+  color: #ffc107;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.warning-list {
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.consequences li {
-  margin-bottom: 0.5rem;
+.warning-list li {
+  color: #fff;
+  margin-bottom: 0.75rem;
+  padding-left: 0;
   line-height: 1.4;
-  color: #ffcccc;
-  position: relative;
 }
 
-.consequences li:last-child {
+.warning-list li:last-child {
   margin-bottom: 0;
 }
 
-.recommendation {
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid #ffc107;
-  border-radius: 10px;
-  padding: 1rem;
+/* Caja de recomendación */
+.recommendation-box {
+  display: flex;
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.2), rgba(32, 201, 151, 0.2));
+  border: 1px solid rgba(23, 162, 184, 0.4);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
-.recommendation p {
-  margin: 0;
-  color: #fff3cd;
-  line-height: 1.4;
+.recommendation-icon {
+  font-size: 2rem;
+  margin-right: 1rem;
+  color: #17a2b8;
+}
+
+.recommendation-text {
+  color: #fff;
+  line-height: 1.6;
+}
+
+/* Botones de acción */
+.leave-game-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.btn-cancel-leave,
+.btn-confirm-leave {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 180px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-cancel-leave.primary {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-cancel-leave.primary:hover {
+  background: linear-gradient(135deg, #218838, #1e7e34);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-confirm-leave.danger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.btn-confirm-leave.danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c82333, #bd2130);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-confirm-leave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .leave-game-modal {
+    padding: 1.5rem;
+    max-width: 95%;
+  }
+  
+  .leave-game-actions {
+    flex-direction: column;
+  }
+  
+  .btn-cancel-leave,
+  .btn-confirm-leave {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .consequence-grid {
+    gap: 0.75rem;
+  }
+  
+  .consequence-item {
+    padding: 0.75rem;
+  }
 }
 
 /* Acciones del modal */

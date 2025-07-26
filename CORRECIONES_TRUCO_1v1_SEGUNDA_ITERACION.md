@@ -141,6 +141,69 @@ const deboResponderCanto = (): boolean => {
 
 ---
 
+### **PROBLEMA 11: Opciones de envido persisten después de re-truco/vale-cuatro en "envido va primero" - ✅ CORREGIDO**
+
+**Descripción:** Cuando se cantaba re-truco o vale-cuatro durante "envido va primero", las opciones de envido seguían apareciendo incorrectamente, cuando deberían desaparecer al aceptarse implícitamente el truco.
+
+**Archivos modificados:**
+- `ActionsPanel.tsx`: Funciones `hayEnvidoVaPrimero()` y `puedoCantarEnvido()` - Validación estricta de nivel de truco
+
+**Solución implementada:**
+```tsx
+const hayEnvidoVaPrimero = (): boolean => {
+    return trucoPendientePorEnvidoPrimero && 
+           trucoInfo.cantado && 
+           trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
+           trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
+           trucoInfo.nivelActual === 'TRUCO' && // ✅ CRÍTICO: Solo TRUCO inicial
+           manoActual === 1 &&
+           !envidoInfo.cantado;
+};
+
+const puedoCantarEnvido = (): boolean => {
+    if (trucoPendientePorEnvidoPrimero) {
+        return trucoInfo.equipoDebeResponderTrucoId === miEquipo.id && 
+               !envidoInfo.cantado && 
+               trucoInfo.nivelActual === 'TRUCO' && // ✅ Solo TRUCO inicial
+               esMiTurno;
+    }
+    // ... resto de la lógica
+};
+```
+
+**Resultado:** Las opciones de envido desaparecen inmediatamente cuando se canta re-truco O vale-cuatro, respetando que al elevar la apuesta se acepta implícitamente el truco original.
+
+---
+
+### **PROBLEMA 12: Mensaje inadecuado cuando no es el turno del jugador - ✅ CORREGIDO**
+
+**Descripción:** Cuando no era el turno del jugador, aparecía el botón "Irse al Mazo" en lugar de un mensaje claro indicando que debe esperar.
+
+**Archivos modificados:**
+- `ActionsPanel.tsx`: Lógica de acciones normales - Verificación de turno mejorada
+
+**Solución implementada:**
+```tsx
+// Panel normal de acciones
+// ✅ MEJORA: Solo mostrar acciones generales si es mi turno
+if (!esMiTurno) {
+  return (
+    <div className="actions-panel">
+      <div className="panel-title">
+        <span>No es tu turno</span>
+      </div>
+      <div className="text-sm text-gray-400 mt-2 text-center">
+        Espera a que tu oponente termine su jugada
+      </div>
+    </div>
+  );
+}
+```
+
+**Resultado:** Los jugadores ven un mensaje claro "No es tu turno" con instrucciones, en lugar de botones inapropiados cuando deben esperar.
+
+---
+
 ## 📊 **RESUMEN DE PROBLEMAS CORREGIDOS**
 
 ### Primera Iteración (5 problemas originales):
@@ -150,12 +213,14 @@ const deboResponderCanto = (): boolean => {
 4. ✅ **Restauración incorrecta del turno** - Sistema robusto de guardado/restauración
 5. ✅ **Cálculo de envido sin cartas jugadas** - Cálculo preciso con todas las cartas
 
-### Segunda Iteración (5 problemas adicionales):
+### Segunda Iteración (7 problemas adicionales):
 6. ✅ **Botones de envido no clickeables** - Lógica de validación corregida
 7. ✅ **Mostrar niveles de truco ya cantados** - Solo próximo nivel válido
 8. ✅ **Turno incorrecto después de envido** - Restauración mejorada con logging
 9. ✅ **Opciones de envido después de resolución** - Validaciones adicionales
 10. ✅ **Recantos de truco en "envido va primero"** - Funcionalidad completa
+11. ✅ **Opciones de envido persisten después de re-truco/vale-cuatro** - Validación estricta de nivel
+12. ✅ **Mensaje inadecuado cuando no es el turno** - Mensaje claro en lugar de botones
 
 ---
 
@@ -184,6 +249,7 @@ npm run build
 - ✅ Panel visual distintivo con animaciones
 - ✅ Opciones de envido Y respuesta a truco
 - ✅ Recantos de truco disponibles
+- ✅ **Desaparecen opciones de envido al cantar re-truco O vale-cuatro**
 
 ### **Sistema de truco**:
 - ✅ Solo muestra niveles disponibles (no duplicados)
@@ -206,6 +272,7 @@ npm run build
 - ✅ No aparecen opciones inválidas
 - ✅ Feedback visual apropiado
 - ✅ Reglas oficiales del truco implementadas
+- ✅ **Mensajes claros cuando no es el turno del jugador**
 
 ---
 
@@ -247,7 +314,7 @@ npm run build
 
 El juego 1v1 de Truco está ahora completamente funcional según las reglas oficiales del truco argentino. Todas las correcciones han sido implementadas y verificadas:
 
-- ✅ **10 problemas identificados y corregidos**
+- ✅ **12 problemas identificados y corregidos**
 - ✅ **Backend robusto con tests pasando**
 - ✅ **Frontend intuitivo y funcional**
 - ✅ **Reglas oficiales implementadas correctamente**

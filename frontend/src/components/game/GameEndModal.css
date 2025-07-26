@@ -117,6 +117,10 @@
 
 .member-info {
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .member-rewards {
@@ -292,6 +296,9 @@
   color: #ffd700;
   font-size: 0.8rem;
   margin-left: 0.5rem;
+  position: relative;
+  display: inline;
+  white-space: nowrap;
 }
 
 /* Estadísticas del juego */
@@ -330,6 +337,12 @@
 
 .stat-value.defeat-text {
   color: #d9534f;
+}
+
+.stat-value.abandono-indicator {
+  color: #ffc107;
+  font-weight: 600;
+  font-style: italic;
 }
 
 /* Acciones del modal */

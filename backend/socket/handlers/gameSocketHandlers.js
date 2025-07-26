@@ -478,19 +478,24 @@ function setupGameHandlers(socket, io) {
   });
 
   // ✅ Manejador para abandonar partida
-  socket.on('abandonar_partida_ws', () => {
+  socket.on('abandonar_partida_ws', async () => {
     try {
       if (socket.currentRoom && socket.currentUserId) {
         debugLog('gameSocketHandlers', `🚪 Abandono de partida - Usuario ${socket.currentUserId} en sala ${socket.currentRoom}`);
         
-        // Manejar el abandono como una acción especial
-        gameLogicHandler.manejarAccionJugador(socket.currentRoom, socket.currentUserId, 'ABANDONAR_PARTIDA', {});
+        const roomToLeave = socket.currentRoom;
         
-        // Opcional: Desconectar al jugador de la sala inmediatamente
-        socket.leave(socket.currentRoom);
-        socket.currentRoom = null;
+        // Usar la nueva función específica para abandono
+        await gameLogicHandler.manejarAbandonoPartida(socket.currentRoom, socket.currentUserId);
         
-        debugLog('gameSocketHandlers', `✅ Usuario ${socket.currentUserId} abandonó la partida y salió de la sala`);
+        // Delay antes de desconectar para que el jugador reciba el estado final
+        setTimeout(() => {
+          socket.leave(roomToLeave);
+          socket.currentRoom = null;
+          debugLog('gameSocketHandlers', `✅ Usuario ${socket.currentUserId} salió de la sala ${roomToLeave} después del abandono`);
+        }, 1000); // 1 second delay
+        
+        debugLog('gameSocketHandlers', `✅ Abandono procesado para usuario ${socket.currentUserId}`);
       } else {
         socket.emit('error_juego', { message: 'No estás en una sala válida.' });
       }

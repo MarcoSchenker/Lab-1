@@ -103,6 +103,11 @@ interface EstadoJuego {
   indiceJugadorManoGlobal: number;
   rondaActual: EstadoRonda;
   historialRondas: any[];
+  // ✅ Nuevos campos para abandono
+  motivoFinalizacion?: string;
+  tipoFinalizacion?: string;
+  jugadorQueAbandonoId?: number;
+  equipoGanador?: number;
 }
 
 interface UseGameSocketReturn {
@@ -530,6 +535,13 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
       
       // También podrías emitir un evento de notificación personalizada aquí
       console.log('[CLIENT] ✨ Mensaje: ' + mensaje);
+    });
+
+    // === EVENTOS DE RECOMPENSAS ===
+    newSocket.on('recompensas_partida', (recompensas) => {
+      console.log('[CLIENT] 🏆 Recompensas recibidas:', recompensas);
+      // Las recompensas se manejan normalmente en el contexto del GameEndModal
+      // que las recibe junto con el estado final del juego
     });
 
     newSocket.on('error_estado_juego', (data) => {
