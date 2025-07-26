@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUser, FaLock } from 'react-icons/fa';
+import { FaUser, FaLock, FaArrowLeft, FaEdit, FaShieldAlt } from 'react-icons/fa';
+import { AiFillEye, AiFillEyeInvisible } from 'react-icons/ai';
 import api from '../services/api';
+import './EditProfile.css';
 
 const EditProfile: React.FC = () => {
   const [nombre_usuario, setNombreUsuario] = useState('');
@@ -9,6 +11,8 @@ const EditProfile: React.FC = () => {
   const [nuevaContraseña, setNuevaContraseña] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const navigate = useNavigate();
 
   const loggedInUser = localStorage.getItem('username'); // Obtener el ID del usuario desde localStorage
@@ -78,78 +82,121 @@ const EditProfile: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-[url('/Fondo.png')] bg-cover bg-center relative flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/10 z-0" />
-      <div className="relative z-10 w-full h-full flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className='flechita' onClick={() => navigate("/dashboard")}>
-        <img src= "/flecha.png"/>
-      </div>
-        <div className="bg-[#1a1a1a] rounded-xl shadow-xl w-full max-w-md p-8 text-gray-200">
+    <div className="edit-profile-container">
+      <div className="edit-profile-content">
+        <div className="edit-profile-header">
+          <button className="back-button" onClick={() => navigate("/dashboard")}>
+            <FaArrowLeft />
+            Volver
+          </button>
+        </div>
+        
+        <div className="edit-profile-card">
+          {/* Logo */}
+          <div className="logo-container">
+            <img src="/logo.png" alt="Trucho Logo" className="logo" />
+          </div>
+
           {successMessage ? (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4 text-green-400">{successMessage}</h2>
-              <p className="text-gray-300">Redirigiendo...</p>
+            <div className="success-message">
+              <h2>{successMessage}</h2>
+              <p>Redirigiendo...</p>
             </div>
           ) : (
             <>
-              <h2 className="text-3xl font-bold mb-2 text-gray-100">Editar Perfil</h2>
-              <p className="text-gray-300 mb-6">Actualizá tus datos personales</p>
+              <h1 className="edit-profile-title">
+                <FaEdit className="title-icon" />
+                Editar Perfil
+              </h1>
+              <p className="edit-profile-subtitle">
+                <FaShieldAlt className="subtitle-icon" />
+                Actualizá tus datos personales
+              </p>
 
-              {/* Formulario para cambiar nombre de usuario */}
-              <form onSubmit={handleUsernameChange}>
-                <div className="mb-4 flex items-center border-b border-gray-500">
-                  <input
-                    type="text"
-                    placeholder="Nombre de usuario"
-                    value={nombre_usuario}
-                    onChange={(e) => setNombreUsuario(e.target.value)}
-                    className="w-full py-2 bg-transparent text-white focus:outline-none"
-                  />
-                  <FaUser className="text-gray-400 ml-2" />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-transparent border border-white text-white my-2 font-semibold rounded-md p-4 text-center flex items-center justify-center cursor-pointer"
-                >
-                  {loading ? 'Actualizando...' : 'Actualizar Nombre de Usuario'}
-                </button>
-              </form>
+             {/* Formulario para cambiar nombre de usuario */}
+              <div className="form-section">
+                <form onSubmit={handleUsernameChange}>
+                  <div className="form-group">
+                    <div className="mb-4 flex items-center border-b border-gray-500">
+                      <input
+                        type="text"
+                        placeholder="Nuevo nombre de usuario"
+                        value={nombre_usuario}
+                        onChange={(e) => setNombreUsuario(e.target.value)}
+                        className="w-full py-2 bg-transparent text-white focus:outline-none"
+                      />
+                      <FaUser className="text-gray-400 ml-2" />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="form-button"
+                  >
+                    {loading ? 'Actualizando...' : 'Actualizar Nombre de Usuario'}
+                  </button>
+                </form>
+              </div>
 
-              <hr className="my-6 border-gray-500" />
+              <hr className="form-divider" />
 
-              {/* Formulario para cambiar contraseña */}
-              <form onSubmit={handlePasswordChange}>
-                <div className="mb-4 flex items-center border-b border-gray-500">
-                  <input
-                    type="password"
-                    placeholder="Contraseña actual"
-                    value={contraseñaActual}
-                    onChange={(e) => setContraseñaActual(e.target.value)}
-                    className="w-full py-2 bg-transparent text-white focus:outline-none"
-                  />
-                  <FaLock className="text-gray-400 ml-2" />
-                </div>
+                {/* Formulario para cambiar contraseña */}
+              <div className="form-section">
+                <form onSubmit={handlePasswordChange}>
+                  <div className="form-group">
+                    <div className="mb-4 flex items-center border-b border-gray-500 relative">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        placeholder="Contraseña actual"
+                        value={contraseñaActual}
+                        onChange={(e) => setContraseñaActual(e.target.value)}
+                        className="w-full py-2 bg-transparent text-white focus:outline-none"
+                      />
+                      <FaLock className="text-gray-400 ml-2" />
+                      <div
+                        className="absolute right-10 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? (
+                          <AiFillEye className="text-gray-400" />
+                        ) : (
+                          <AiFillEyeInvisible className="text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <div className="mb-4 flex items-center border-b border-gray-500 relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        placeholder="Nueva contraseña"
+                        value={nuevaContraseña}
+                        onChange={(e) => setNuevaContraseña(e.target.value)}
+                        className="w-full py-2 bg-transparent text-white focus:outline-none"
+                      />
+                      <FaLock className="text-gray-400 ml-2" />
+                      <div
+                        className="absolute right-10 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? (
+                          <AiFillEye className="text-gray-400" />
+                        ) : (
+                          <AiFillEyeInvisible className="text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="mb-4 flex items-center border-b border-gray-500">
-                  <input
-                    type="password"
-                    placeholder="Nueva contraseña"
-                    value={nuevaContraseña}
-                    onChange={(e) => setNuevaContraseña(e.target.value)}
-                    className="w-full py-2 bg-transparent text-white focus:outline-none"
-                  />
-                  <FaLock className="text-gray-400 ml-2" />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-transparent border border-white text-white my-2 font-semibold rounded-md p-4 text-center flex items-center justify-center cursor-pointer"
-                >
-                  {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="form-button"
+                  >
+                    {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
+                  </button>
+                </form>
+              </div>
             </>
           )}
         </div>

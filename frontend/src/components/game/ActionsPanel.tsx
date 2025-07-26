@@ -214,6 +214,25 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     return false;
   };
 
+  // ✅ NUEVA FUNCIÓN: Convertir nombres largos de envido a versiones cortas para UI
+  const formatearNivelEnvido = (nivelEnvido: string): string => {
+    const formatosCortos: { [key: string]: string } = {
+      'ENVIDO': 'Envido',
+      'REAL_ENVIDO': 'Real Envido',
+      'FALTA_ENVIDO': 'Falta Envido',
+      'ENVIDO_ENVIDO': 'Envido Envido',
+      'ENVIDO_REAL_ENVIDO': 'Envido Real Envido',
+      'ENVIDO_FALTA_ENVIDO': 'Envido + Falta Envido',
+      'REAL_ENVIDO_FALTA_ENVIDO': 'Real + Falta Envido',
+      'ENVIDO_ENVIDO_REAL_ENVIDO': 'Envido Envido + Real Envido',
+      'ENVIDO_ENVIDO_FALTA_ENVIDO': 'Envido Envido + Falta Envido',
+      'ENVIDO_REAL_ENVIDO_FALTA_ENVIDO': 'Envido + Real + Falta Envido',
+      'ENVIDO_ENVIDO_REAL_ENVIDO_FALTA_ENVIDO': 'Envido Envido + Real + Falta Envido'
+    };
+
+    return formatosCortos[nivelEnvido] || nivelEnvido;
+  };
+
   // Verificar si debo responder a un canto
   const deboResponderCanto = (): boolean => {
     // ✅ CORRECCIÓN MEJORADA: Priorizar envido durante "envido va primero", truco en situaciones normales
@@ -530,7 +549,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     return (
       <div className="actions-panel response-panel">
         <div className="panel-title">
-          <span>Responder {cantadoTipo}: {nivelActual}</span>
+          <span>Responder {cantadoTipo}: {esEnvido ? formatearNivelEnvido(nivelActual) : nivelActual}</span>
         </div>
         
         <div className="response-actions">
