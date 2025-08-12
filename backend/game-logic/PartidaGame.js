@@ -438,32 +438,35 @@ class PartidaGame {
             let envidoInfo = null;
             let trucoInfo = null;
             let trucoPendientePorEnvidoPrimero = false;
+            let rondaActualInfo = null;
             
-            try {
-                console.log(`[PARTIDA] 2. Obteniendo información turno...`);
-                turnoInfo = this.rondaActual?.turnoHandler?.getEstado() || {
-                    jugadorTurnoActualId: null,
-                    manoActualNumero: 1,
-                    cartasEnMesaManoActual: [],
-                    manosJugadas: []
-                };
-                console.log(`[PARTIDA] 2.1 Turno info obtenido:`, {
-                    jugadorTurnoActualId: turnoInfo.jugadorTurnoActualId,
-                    manoActualNumero: turnoInfo.manoActualNumero,
-                    cartasEnMesa: turnoInfo.cartasEnMesaManoActual?.length || 0
-                });
-            } catch (turnoError) {
-                console.error(`[PARTIDA] Error obteniendo turno info:`, turnoError);
-                turnoInfo = {
-                    jugadorTurnoActualId: null,
-                    manoActualNumero: 1,
-                    cartasEnMesaManoActual: [],
-                    manosJugadas: []
-                };
-            }
-            
-            try {
-                console.log(`[PARTIDA] 3. Obteniendo información envido...`);
+            // ✅ Solo construir rondaActualInfo si efectivamente tenemos una ronda válida
+            if (this.rondaActual && this.estadoPartida === 'en_juego') {
+                try {
+                    console.log(`[PARTIDA] 2. Obteniendo información turno...`);
+                    turnoInfo = this.rondaActual?.turnoHandler?.getEstado() || {
+                        jugadorTurnoActualId: null,
+                        manoActualNumero: 1,
+                        cartasEnMesaManoActual: [],
+                        manosJugadas: []
+                    };
+                    console.log(`[PARTIDA] 2.1 Turno info obtenido:`, {
+                        jugadorTurnoActualId: turnoInfo.jugadorTurnoActualId,
+                        manoActualNumero: turnoInfo.manoActualNumero,
+                        cartasEnMesa: turnoInfo.cartasEnMesaManoActual?.length || 0
+                    });
+                } catch (turnoError) {
+                    console.error(`[PARTIDA] Error obteniendo turno info:`, turnoError);
+                    turnoInfo = {
+                        jugadorTurnoActualId: null,
+                        manoActualNumero: 1,
+                        cartasEnMesaManoActual: [],
+                        manosJugadas: []
+                    };
+                }
+                
+                try {
+                    console.log(`[PARTIDA] 3. Obteniendo información envido...`);
                 const envidoState = this.rondaActual?.envidoHandler?.getEstado() || {};
                 envidoInfo = {
                     cantado: envidoState.cantado || false,
@@ -537,6 +540,39 @@ class PartidaGame {
                 console.error(`[PARTIDA] Error obteniendo trucoPendientePorEnvidoPrimero:`, trucoPendienteError);
                 trucoPendientePorEnvidoPrimero = false;
             }
+        } else {
+            // No hay ronda actual o partida no está en juego - devolver valores por defecto
+            console.log(`[PARTIDA] 2-5. No hay ronda actual o partida no en juego, usando valores por defecto`);
+            turnoInfo = {
+                jugadorTurnoActualId: null,
+                manoActualNumero: 1,
+                cartasEnMesaManoActual: [],
+                manosJugadas: []
+            };
+            envidoInfo = {
+                cantado: false,
+                querido: false,
+                nivelActual: '',
+                estadoResolucion: '',
+                cantadoPorJugadorId: null,
+                cantadoPorEquipoId: null,
+                puntosEnJuego: 0,
+                equipoGanadorId: null,
+                puntosDeclarados: {}
+            };
+            trucoInfo = {
+                cantado: false,
+                querido: false,
+                nivelActual: '',
+                puntosEnJuego: 1,
+                cantadoPorJugadorId: null,
+                cantadoPorEquipoId: null,
+                estadoResolucion: '',
+                equipoDebeResponderTrucoId: null,
+                jugadorTurnoAlMomentoDelCantoId: null
+            };
+            trucoPendientePorEnvidoPrimero = false;
+        }
             
             console.log(`[PARTIDA] 6. Construyendo estado global...`);
             
@@ -569,11 +605,12 @@ class PartidaGame {
                 numeroRondaActual: this.numeroRondaActual,
                 indiceJugadorManoGlobal: this.indiceJugadorManoGlobal, // Quién será mano en la siguiente ronda
                 estadoRondaActual: this.rondaActual ? this.rondaActual.obtenerEstadoRonda() : null,
-                historialRondas: this.historialRondas || [],
-                // Información adicional que el cliente necesite
-                
-                // Estado de la ronda actual
-                rondaActual: {
+                historialRondas: this.historialRondas || []
+            };
+            
+            // ✅ Solo agregar rondaActual si tenemos una ronda válida y datos completos
+            if (this.rondaActual && this.estadoPartida === 'en_juego' && turnoInfo && envidoInfo && trucoInfo) {
+                estadoGlobal.rondaActual = {
                     numeroRonda: this.numeroRondaActual,
                     jugadorManoId: this.rondaActual?.jugadorManoRonda?.id || null,
                     ganadorRondaEquipoId: this.rondaActual?.ganadorRondaEquipoId || null,
@@ -587,8 +624,11 @@ class PartidaGame {
                     envidoInfo: envidoInfo,
                     trucoInfo: trucoInfo,
                     trucoPendientePorEnvidoPrimero: trucoPendientePorEnvidoPrimero
-                }
-            };
+                };
+            } else {
+                // Sin ronda actual, no incluir el objeto rondaActual para evitar errores frontend
+                console.log(`[PARTIDA] 6.1 No se incluye rondaActual en estado - ronda no válida o partida no en juego`);
+            }
             
             console.log(`[PARTIDA] 7. Estado global base construido`);
             

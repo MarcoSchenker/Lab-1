@@ -29,12 +29,12 @@ const TeamsPanel: React.FC<TeamsPanelProps> = ({
 }) => {
   // Obtener jugadores de un equipo específico
   const getJugadoresEquipo = (equipoId: number) => {
-    return jugadores.filter(jugador => jugador.equipoId === equipoId);
+    return jugadores?.filter(jugador => jugador.equipoId === equipoId) || [];
   };
 
   // Determinar si un equipo es el del jugador actual
   const esMiEquipo = (equipoId: number) => {
-    return jugadorActualId && jugadores.find(j => j.id === jugadorActualId)?.equipoId === equipoId;
+    return jugadorActualId && jugadores?.find(j => j.id === jugadorActualId)?.equipoId === equipoId;
   };
 
   return (
@@ -44,7 +44,7 @@ const TeamsPanel: React.FC<TeamsPanelProps> = ({
       </div>
 
       <div className="teams-content">
-        {equipos.map(equipo => {
+        {equipos?.map(equipo => {
           const jugadoresEquipo = getJugadoresEquipo(equipo.id);
           const miEquipo = esMiEquipo(equipo.id);
           

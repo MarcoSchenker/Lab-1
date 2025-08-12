@@ -70,7 +70,7 @@ const OnlineGamePage: React.FC = () => {
 
   // Actualizar preferencias de skins basado en el estado del juego
   useEffect(() => {
-    if (!gameState) return;
+    if (!gameState || !gameState.jugadores) return;
     
     const nuevasSkins: Record<number, string> = {};
     gameState.jugadores.forEach(jugador => {
@@ -118,7 +118,15 @@ const OnlineGamePage: React.FC = () => {
 
   // Verificar si es el turno del jugador actual
   const esMiTurno = useCallback((): boolean => {
-    if (!gameState || !jugadorId || !gameState.rondaActual?.turnoInfo) return false;
+    if (!gameState || !jugadorId) {
+      return false;
+    }
+    
+    // Verificar que rondaActual y turnoInfo existan
+    if (!gameState.rondaActual?.turnoInfo?.jugadorTurnoActualId) {
+      return false;
+    }
+    
     return gameState.rondaActual.turnoInfo.jugadorTurnoActualId === jugadorId;
   }, [gameState, jugadorId]);
 
@@ -351,10 +359,10 @@ const OnlineGamePage: React.FC = () => {
       <div className="game-main-content">
         {/* Header del juego con puntajes */}
         <GameHeader 
-          equipos={gameState.equipos} 
+          equipos={gameState.equipos || []} 
           codigoSala={codigoSala || ''} 
-          puntosVictoria={gameState.puntosVictoria}
-          numeroRondaActual={gameState.numeroRondaActual}
+          puntosVictoria={gameState.puntosVictoria || 15}
+          numeroRondaActual={gameState.numeroRondaActual || 1}
           onAbandonarPartida={handleAbandonarPartida} // ✅ Manejar abandono
         />
         
@@ -365,44 +373,78 @@ const OnlineGamePage: React.FC = () => {
             {/* Panel lateral izquierdo - Teams */}
             <div className="left-panel">
               <TeamsPanel
-                equipos={gameState.equipos}
-                jugadores={gameState.jugadores}
+                equipos={gameState.equipos || []}
+                jugadores={gameState.jugadores || []}
                 jugadorActualId={jugadorId}
               />
             </div>
 
             {/* Tablero de juego centrado */}
             <div className="game-board-container">
-              <GameBoard 
-                jugadores={gameState.jugadores} 
-                jugadorActualId={jugadorId}
-                jugadorEnTurnoId={gameState.rondaActual?.turnoInfo?.jugadorTurnoActualId}
-                cartasEnMesa={gameState.rondaActual?.turnoInfo?.cartasEnMesaManoActual || []}
-                manosJugadas={transformManosJugadas(gameState.rondaActual?.turnoInfo?.manosJugadas || [])}
-                jugadorSkins={jugadorSkins}
-                manoActual={(gameState.rondaActual?.turnoInfo?.manoActualNumero || 1) - 1}
-                ordenJugadoresRonda={gameState.rondaActual?.ordenJugadoresRonda || []}
-              />
+              {gameState.rondaActual && gameState.rondaActual.turnoInfo ? (
+                <GameBoard 
+                  jugadores={gameState.jugadores || []} 
+                  jugadorActualId={jugadorId}
+                  jugadorEnTurnoId={gameState.rondaActual.turnoInfo.jugadorTurnoActualId}
+                  cartasEnMesa={gameState.rondaActual.turnoInfo.cartasEnMesaManoActual || []}
+                  manosJugadas={transformManosJugadas(gameState.rondaActual.turnoInfo.manosJugadas || [])}
+                  jugadorSkins={jugadorSkins}
+                  manoActual={(gameState.rondaActual.turnoInfo.manoActualNumero || 1) - 1}
+                  ordenJugadoresRonda={gameState.rondaActual.ordenJugadoresRonda || []}
+                />
+              ) : (
+                <div className="loading-board">
+                  <p>Preparando tablero de juego...</p>
+                  {/* Debug info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '10px' }}>
+                      <p>Debug tablero:</p>
+                      <p>- Estado partida: {gameState.estadoPartida}</p>
+                      <p>- Ronda actual: {gameState.rondaActual ? 'EXISTS' : 'NULL'}</p>
+                      <p>- Turno info: {gameState.rondaActual?.turnoInfo ? 'EXISTS' : 'NULL'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Panel lateral derecho - Actions */}
             <div className="right-panel">
-              <ActionsPanel
-                jugadorId={jugadorId}
-                equipos={gameState.equipos}
-                envidoInfo={gameState.rondaActual.envidoInfo}
-                trucoInfo={gameState.rondaActual.trucoInfo}
-                esMiTurno={esMiTurno()}
-                trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero}
-                manoActual={gameState.rondaActual.turnoInfo.manoActualNumero}
-                cartasJugador={gameState.jugadores.find(j => j.id === jugadorId)?.cartasMano || []}
-                cartasJugadas={gameState.jugadores.find(j => j.id === jugadorId)?.cartasJugadasRonda || []}
-                onCantar={cantar}
-                onResponderCanto={responderCanto}
-                onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
-                onDeclararSonBuenas={declararSonBuenas}
-                onIrseAlMazo={irseAlMazo}
-              />
+              {gameState.rondaActual && 
+               gameState.rondaActual.envidoInfo && 
+               gameState.rondaActual.trucoInfo && 
+               gameState.rondaActual.turnoInfo ? (
+                <ActionsPanel
+                  jugadorId={jugadorId}
+                  equipos={gameState.equipos}
+                  envidoInfo={gameState.rondaActual.envidoInfo}
+                  trucoInfo={gameState.rondaActual.trucoInfo}
+                  esMiTurno={esMiTurno()}
+                  trucoPendientePorEnvidoPrimero={gameState.rondaActual.trucoPendientePorEnvidoPrimero || false}
+                  manoActual={gameState.rondaActual.turnoInfo.manoActualNumero || 1}
+                  cartasJugador={gameState.jugadores?.find(j => j.id === jugadorId)?.cartasMano || []}
+                  cartasJugadas={gameState.jugadores?.find(j => j.id === jugadorId)?.cartasJugadasRonda || []}
+                  onCantar={cantar}
+                  onResponderCanto={responderCanto}
+                  onDeclararPuntosEnvido={handleDeclararPuntosEnvido}
+                  onDeclararSonBuenas={declararSonBuenas}
+                  onIrseAlMazo={irseAlMazo}
+                />
+              ) : (
+                <div className="loading-panel">
+                  <p>Esperando inicio de ronda...</p>
+                  {/* Debug info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '10px' }}>
+                      <p>Debug:</p>
+                      <p>- rondaActual: {gameState.rondaActual ? 'EXISTS' : 'NULL'}</p>
+                      <p>- envidoInfo: {gameState.rondaActual?.envidoInfo ? 'EXISTS' : 'NULL'}</p>
+                      <p>- trucoInfo: {gameState.rondaActual?.trucoInfo ? 'EXISTS' : 'NULL'}</p>
+                      <p>- turnoInfo: {gameState.rondaActual?.turnoInfo ? 'EXISTS' : 'NULL'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -410,7 +452,7 @@ const OnlineGamePage: React.FC = () => {
         {/* Mano del jugador - vuelve a estar fija en la parte inferior */}
         <PlayerHand 
           jugadorActualId={jugadorId}
-          jugadores={gameState.jugadores}
+          jugadores={gameState.jugadores || []}
           jugadorSkins={jugadorSkins}
           esMiTurno={esMiTurno()}
           onJugarCarta={jugarCarta}
@@ -420,10 +462,10 @@ const OnlineGamePage: React.FC = () => {
       {/* ✅ Modal de Fin de Partida */}
       <GameEndModal
         isVisible={partidaTerminada()}
-        equipos={gameState.equipos}
-        jugadores={gameState.jugadores}
+        equipos={gameState.equipos || []}
+        jugadores={gameState.jugadores || []}
         jugadorActualId={jugadorId}
-        puntosVictoria={gameState.puntosVictoria}
+        puntosVictoria={gameState.puntosVictoria || 15}
         recompensas={recompensas}
         gameState={gameState} // ✅ Pasar gameState para detectar abandono
         onVolverASala={volverASalaPostPartida}
@@ -435,8 +477,8 @@ const OnlineGamePage: React.FC = () => {
         onConfirm={confirmarAbandonarPartida}
         onCancel={cancelarAbandonarPartida}
         jugadorActualId={jugadorId}
-        jugadores={gameState.jugadores}
-        equipos={gameState.equipos}
+        jugadores={gameState.jugadores || []}
+        equipos={gameState.equipos || []}
         codigoSala={codigoSala || ''}
       />
       

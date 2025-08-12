@@ -2,12 +2,82 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaGamepad, FaUsers, FaPalette } from 'react-icons/fa';;
 import Header from '../components/HeaderDashboard';
+import AuthDiagnostic from '../components/AuthDiagnostic';
+import { useAuthValidation } from '../hooks/useAuthValidation';
 import './DashboardPage.css';
 
 const DashboardPage: React.FC = () => {
+  // ✅ Validación de autenticación con diagnóstico
+  const { 
+    isAuthenticated, 
+    isLoading: authLoading, 
+    showDiagnostic, 
+    setShowDiagnostic 
+  } = useAuthValidation();
+
+  // ✅ Mostrar loading mientras se valida la autenticación
+  if (authLoading) {
+    return (
+      <div className="dashboard-container">
+        <Header />
+        <div className="dashboard-content">
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '50vh'
+          }}>
+            <div style={{
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #3498db',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              animation: 'spin 2s linear infinite'
+            }}></div>
+            <p style={{ marginTop: '20px', color: '#666' }}>Validando autenticación...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Si no está autenticado y no hay diagnóstico que mostrar, mostrar loading de redirección
+  if (!isAuthenticated && !showDiagnostic) {
+    return (
+      <div className="dashboard-container">
+        <Header />
+        <div className="dashboard-content">
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '50vh'
+          }}>
+            <div style={{
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #3498db',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              animation: 'spin 2s linear infinite'
+            }}></div>
+            <p style={{ marginTop: '20px', color: '#666' }}>Redirigiendo...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container">{/* Diagnóstico de Autenticación */}
+      <AuthDiagnostic
+        isVisible={showDiagnostic}
+        onClose={() => setShowDiagnostic(false)}
+      />
+      
       <Header />
       <div className="dashboard-content">
         <div className="dashboard-header">
