@@ -1,5 +1,5 @@
 const { initializeDatabase } = require('./dbInit');
-
+const back_url = process.env.BACKEND_URL || 'http://localhost';
 /**
  * Inicializa la base de datos y otros servicios necesarios
  */
@@ -20,7 +20,7 @@ async function initializeServices() {
  */
 function startServer(server, port = 3001) {
   server.listen(port, () => {
-    console.log(`🔥 Servidor escuchando en http://localhost:${port}`);
+    console.log(`🔥 Servidor escuchando en ${back_url}:${port}`);
   });
 }
 

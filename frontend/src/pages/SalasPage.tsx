@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import './SalasPage.css';
 import Header from '../components/HeaderDashboard';
 
+const backendUrl = process.env.VITE_API_URL || 'http://localhost:3001';
+
 // Interfaces
 interface Sala {
   codigo_sala: string;
@@ -60,7 +62,7 @@ const SalasPage: React.FC = () => {
     if (!token) return;
 
     // Connect socket for lobby events
-    const socket = io('http://localhost:3001', {
+    const socket = io(backendUrl, {
       auth: { token }
     });
 

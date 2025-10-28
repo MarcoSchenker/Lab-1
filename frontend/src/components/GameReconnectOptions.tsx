@@ -3,6 +3,8 @@ import { Socket } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import gameStateDebugger from '../utils/gameStateDebugger';
 
+const backendUrl = process.env.VITE_API_URL || 'http://localhost:3001';
+
 interface GameReconnectOptionsProps {
   socket: Socket | null;
   codigoSala: string;
@@ -125,7 +127,7 @@ const GameReconnectOptions: React.FC<GameReconnectOptionsProps> = ({
     const pingServer = async () => {
       try {
         const pingStart = Date.now();
-        const response = await fetch('http://localhost:3001/api/ping', {
+        const response = await fetch(`${backendUrl}/api/ping`, {
           method: 'HEAD',
           mode: 'no-cors',
           cache: 'no-store'

@@ -1,3 +1,16 @@
+if (typeof global.SlowBuffer === 'undefined' && typeof Buffer !== 'undefined') {
+  global.SlowBuffer = Buffer;
+  if (!global.SlowBuffer.prototype.equal && typeof Buffer.prototype.equals === 'function') {
+    global.SlowBuffer.prototype.equal = Buffer.prototype.equals;
+  } else if (!global.SlowBuffer.prototype.equal) {
+    global.SlowBuffer.prototype.equal = function (other) {
+      if (!Buffer.isBuffer(this) || !Buffer.isBuffer(other)) return false;
+      if (this.length !== other.length) return false;
+      return this.equals ? this.equals(other) : this.compare(other) === 0;
+    };
+  }
+}
+
 // Importar módulos principales
 const express = require('express');
 const http = require('http');
