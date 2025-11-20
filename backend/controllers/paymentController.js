@@ -53,9 +53,9 @@ console.log('Pending URL:', `${process.env.FRONTEND_URL}/store?status=pending&pa
                 }
             ],
             back_urls: {
-                success: `${process.env.FRONTEND_URL}/store?status=approved&package=${packageId}`,
-                failure: `${process.env.FRONTEND_URL}/store?status=rejected&package=${packageId}`,
-                pending: `${process.env.FRONTEND_URL}/store?status=pending&package=${packageId}`
+                success: `google.com`, // `${process.env.FRONTEND_URL}/store?status=approved&package=${packageId}`,
+                failure: `google.com`, // `${process.env.FRONTEND_URL}/store?status=rejected&package=${packageId}`,
+                pending: `google.com` // `${process.env.FRONTEND_URL}/store?status=pending&package=${packageId}`
             },
             auto_return: 'approved',
             external_reference: `${userId}-${packageId}`,
