@@ -1,3 +1,37 @@
+.loading-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background: rgba(22, 22, 35, 0.8);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.loading-panel p {
+  color: #fff;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.loading-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  background: rgba(22, 22, 35, 0.8);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.loading-board p {
+  color: #fff;
+  font-size: 16px;
+  opacity: 0.8;
+}
+
 .game-container {
   display: flex;
   flex-direction: column; /* ✅ Volver a column ya que no hay panel lateral */
