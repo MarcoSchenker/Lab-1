@@ -160,7 +160,7 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   
   const maxReconnectAttempts = 5;
   const initialLoadTimeout = 15000; // 15 segundos para timeout inicial
-  const SERVER_URL = 'http://localhost:3001';
+  const SERVER_URL = process.env.VITE_API_URL || 'http://localhost:3001';
 
   // ✅ Función para limpiar timeouts - sin dependencias para evitar recreación
   const clearTimeouts = useCallback(() => {

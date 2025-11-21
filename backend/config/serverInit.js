@@ -20,7 +20,7 @@ async function initializeServices() {
  */
 function startServer(server, port = 3001) {
   server.listen(port, () => {
-    console.log(`🔥 Servidor escuchando en http://localhost:${port}`);
+    console.log(`🔥 Servidor escuchando en ${process.env.BACKEND_URL}`);
   });
 }
 

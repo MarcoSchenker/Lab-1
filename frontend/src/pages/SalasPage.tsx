@@ -71,7 +71,7 @@ const SalasPage: React.FC = () => {
     if (!token) return;
 
     // Connect socket for lobby events
-    const socket = io('http://localhost:3001', {
+    const socket = io(process.env.VITE_API_URL, {
       auth: { token }
     });
 

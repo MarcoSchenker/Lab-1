@@ -2,6 +2,7 @@ const { Server } = require('socket.io');
 const { setupAuthHandlers } = require('./socketMiddleware');
 const { setupGameHandlers, lastPlayerStates } = require('./handlers/gameSocketHandlers');
 const gameLogicHandler = require('../game-logic/gameLogicHandler');
+require('dotenv').config();
 
 /**
  * Configura y inicializa el servidor Socket.IO
@@ -9,9 +10,10 @@ const gameLogicHandler = require('../game-logic/gameLogicHandler');
  * @returns {SocketIO.Server} - Instancia del servidor Socket.IO
  */
 function setupSocketServer(server) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const io = new Server(server, { 
     cors: { 
-      origin: ["*", "https://localhost:5173", "http://localhost:5173"],
+      origin: ["*", frontendUrl, frontendUrl],
       methods: ["GET", "POST"],
       credentials: true,
     } 

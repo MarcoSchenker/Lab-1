@@ -125,7 +125,7 @@ const GameReconnectOptions: React.FC<GameReconnectOptionsProps> = ({
     const pingServer = async () => {
       try {
         const pingStart = Date.now();
-        const response = await fetch('http://localhost:3001/api/ping', {
+        const response = await fetch(`${process.env.VITE_API_URL}/api/ping`, {
           method: 'HEAD',
           mode: 'no-cors',
           cache: 'no-store'
