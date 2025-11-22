@@ -32,6 +32,13 @@ interface EstadoEnvido {
   puedeDeclararSonBuenas?: boolean; // Helper calculado por el backend
   declaracionEnCurso?: boolean; // Si hay una declaración de puntos en curso
   jugadorTurnoDeclararPuntosId?: number | null; // Jugador cuyo turno es declarar puntos
+  cantosRealizados?: Array<{
+    tipoOriginal: string;
+    tipoNormalizado: string;
+    jugadorId: number;
+    equipoId: number;
+  }>;
+  puedeCantarEnvidoGeneral?: boolean;
 }
 
 interface EstadoTruco {
@@ -49,6 +56,12 @@ interface EstadoTruco {
 interface ActionsPanelProps {
   jugadorId: number | null;
   equipos: any[];
+  jugadores?: Array<{
+    id: number;
+    nombreUsuario: string;
+    equipoId: number;
+    esPie?: boolean;
+  }>;
   envidoInfo: EstadoEnvido;
   trucoInfo: EstadoTruco;
   esMiTurno: boolean;
@@ -66,6 +79,7 @@ interface ActionsPanelProps {
 const ActionsPanel: React.FC<ActionsPanelProps> = ({
   jugadorId,
   equipos,
+  jugadores = [],
   envidoInfo,
   trucoInfo,
   esMiTurno,
@@ -87,8 +101,21 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     return calcularEnvido(cartasJugador, cartasJugadas);
   }, [cartasJugador, cartasJugadas]);
 
+  const jugadorActualData = useMemo(() => {
+    if (!jugadorId) return null;
+    return jugadores.find(j => j.id === jugadorId) || null;
+  }, [jugadores, jugadorId]);
+
+  const totalJugadores = jugadores.length;
+  const esPartidaEquipos = totalJugadores > 2;
+  const jugadorEsPie = esPartidaEquipos ? Boolean(jugadorActualData?.esPie) : true;
+  const puedeIniciarEnvidoPorRol = !esPartidaEquipos || jugadorEsPie;
+  const envidoGeneralHabilitado = envidoInfo.puedeCantarEnvidoGeneral !== false;
+
   const envidoEnCurso = envidoInfo.cantado && envidoInfo.estadoResolucion !== 'resuelto';
   const trucoAceptado = trucoInfo.querido === true || trucoInfo.estadoResolucion === 'querido';
+  const manoEsPrimera = manoActual === 1;
+  const mostrarAvisoSoloPie = esPartidaEquipos && !jugadorEsPie;
 
   // Early returns AFTER hooks
   if (!jugadorId) return null;
@@ -98,8 +125,15 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // Verificar si puedo cantar envido (solo en la primera mano)
   const puedoCantarEnvido = (): boolean => {
-    // El envido solo se puede cantar en la primera mano
-    if (manoActual !== 1) {
+    if (!envidoGeneralHabilitado) {
+      return false;
+    }
+
+    if (!puedeIniciarEnvidoPorRol) {
+      return false;
+    }
+
+    if (!manoEsPrimera) {
       return false;
     }
 
@@ -107,27 +141,17 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
       return false;
     }
     
-    // ✅ CORRECCIÓN CRÍTICA: Lógica mejorada para "envido va primero"
     if (trucoPendientePorEnvidoPrimero) {
-      // Cuando hay truco pendiente por "envido va primero", puedo cantar envido si:
-      // 1. Soy del equipo que debe responder al truco
-      // 2. No se ha cantado envido aún
-      // 3. Es mi turno (esMiTurno debería ser true en este caso)
-      // 4. ✅ CRÍTICO: El nivel sigue siendo TRUCO inicial (NO re-truco NI vale-cuatro)
       return trucoInfo.equipoDebeResponderTrucoId === miEquipo.id && 
              !envidoInfo.cantado && 
-             trucoInfo.nivelActual === 'TRUCO' && // ✅ Solo TRUCO inicial, NO re-truco NI vale-cuatro
+             trucoInfo.nivelActual === 'TRUCO' &&
              esMiTurno;
     }
     
-    // ✅ CORRECCIÓN PROBLEMA 1: Verificar que si hay truco cantado, solo sea nivel TRUCO inicial
-    // No se puede cantar envido si ya hay RE-TRUCO o VALE-CUATRO cantado
     if (trucoInfo.cantado && (trucoInfo.nivelActual === 'RETRUCO' || trucoInfo.nivelActual === 'VALE_CUATRO')) {
       return false;
     }
     
-    // Caso normal: puedo cantar envido si es mi turno y no hay envido cantado
-    // Y no hay truco cantado Y pendiente de respuesta (porque entonces debería responder al truco)
     const noHayTrucoQueResponder = !trucoInfo.cantado || 
                                    trucoInfo.estadoResolucion !== 'cantado_pendiente_respuesta' ||
                                    trucoInfo.equipoDebeResponderTrucoId !== miEquipo.id;
@@ -448,12 +472,14 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
   const hayEnvidoVaPrimero = (): boolean => {
     // ✅ CORRECCIÓN CRÍTICA: Solo cuando el nivel sigue siendo TRUCO inicial
     // Si ya se cantó re-truco o vale-cuatro, se acepta implícitamente el truco y envido ya no es posible
-    return trucoPendientePorEnvidoPrimero && 
+      return envidoGeneralHabilitado &&
+        puedeIniciarEnvidoPorRol &&
+        trucoPendientePorEnvidoPrimero && 
            trucoInfo.cantado && 
            trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
            trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
            trucoInfo.nivelActual === 'TRUCO' && // ✅ CRÍTICO: Solo TRUCO inicial, NO re-truco NI vale-cuatro
-           manoActual === 1 &&
+        manoEsPrimera &&
            !envidoInfo.cantado;
   };
 
@@ -727,6 +753,11 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
       <div className="panel-title">
         <span>Acciones disponibles</span>
       </div>
+      {mostrarAvisoSoloPie && manoEsPrimera && !envidoInfo.cantado && envidoGeneralHabilitado && (
+        <div className="text-xs text-yellow-300 mt-1 text-center">
+          Solo el pie de tu equipo puede iniciar el envido en partidas 2v2/3v3.
+        </div>
+      )}
       
       <div className="action-groups">
         {/* Acciones de Envido */}

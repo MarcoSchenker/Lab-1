@@ -772,7 +772,38 @@ class RondaEnvidoHandler {
             return false;
         }
 
-        // El jugador acepta que tiene menos puntos, el otro equipo gana
+        // Determinar si quedan compañeros pendientes de declarar
+        const jugadoresDelEquipoDeclarante = this.jugadoresOrdenadosPorEquipo[jugadorDeclarante.equipoId] || [];
+        const indiceJugadorActualEnSuEquipo = jugadoresDelEquipoDeclarante.findIndex(j => j.id === jugadorId);
+        const siguienteJugadorDelMismoEquipo = jugadoresDelEquipoDeclarante
+            .slice(indiceJugadorActualEnSuEquipo + 1)
+            .find(j => !this.jugadoresQueHanDeclarado.has(j.id));
+
+        if (siguienteJugadorDelMismoEquipo) {
+            console.log(`[ENVIDO] Jugador ${jugadorId} dice "Son Buenas" pero queda compañero (${siguienteJugadorDelMismoEquipo.id}) por declarar.`);
+            this.puntosDeclaradosPorJugador[jugadorId] = { puntos: -1, esPaso: true, esSonBuenas: true };
+            this.jugadoresQueHanDeclarado.add(jugadorId);
+            this.jugadorTurnoDeclararPuntosId = siguienteJugadorDelMismoEquipo.id;
+
+            this.ronda.persistirAccion({
+                tipo_accion: 'SON_BUENAS_ENVIDO',
+                usuario_id_accion: jugadorId,
+                detalle_accion: {
+                    parcial: true,
+                    siguienteJugadorId: siguienteJugadorDelMismoEquipo.id
+                }
+            });
+
+            this.ronda._actualizarEstadoParaNotificar('envido_puntos_declarados', {
+                estadoEnvido: this.getEstado(),
+                turnoDeclararId: this.jugadorTurnoDeclararPuntosId,
+                puntosDeclaradosPorJugador: this.puntosDeclaradosPorJugador
+            });
+
+            return true;
+        }
+
+        // El jugador acepta que tiene menos puntos y es el último de su equipo, el otro equipo gana
         this.ganadorEnvidoEquipoId = this.maxPuntosDeclaradosInfo.equipoId;
         
         // Marcar el envido como resuelto completamente

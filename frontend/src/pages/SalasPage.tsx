@@ -58,7 +58,6 @@ const SalasPage: React.FC = () => {
     }
     return storedToken.startsWith('Bearer ') ? storedToken : `Bearer ${storedToken}`;
   };
-  
   // Estado para nueva sala
   const [nuevaSala, setNuevaSala] = useState({
     tipo: 'publica',
@@ -66,6 +65,16 @@ const SalasPage: React.FC = () => {
     max_jugadores: 4,
     codigo_acceso: ''
   });
+
+  useEffect(() => {
+    if (isAnonymous) {
+      setNuevaSala(prev => prev.tipo === 'publica' ? prev : {
+        ...prev,
+        tipo: 'publica',
+        codigo_acceso: ''
+      });
+    }
+  }, [isAnonymous]);
 
   // Cargar salas desde el servidor
   useEffect(() => {
@@ -116,17 +125,18 @@ const SalasPage: React.FC = () => {
       socketRef.current = null;
     };
   }, [navigate]);
-  const fetchSalas = async () => {
+  const fetchSalas = async (pageOverride?: number) => {
     try {
       setLoading(true);
       setError(null);
       const formattedToken = getFormattedToken();
       const isGuest = isAnonymous || !formattedToken;
+      const pageToLoad = pageOverride ?? paginaActual;
       
       // Agregar parámetros de paginación y filtro de salas llenas
       const params = new URLSearchParams({
         filtro: isGuest ? 'publicas' : filtro,
-        pagina: paginaActual.toString(),
+        pagina: pageToLoad.toString(),
         limite: salasPerPage.toString(),
         excluir_llenas: 'true'
       });
@@ -261,6 +271,8 @@ const SalasPage: React.FC = () => {
   
       setShowModal(false);
       setWaitingForPlayers(data.codigo_sala);
+      setPaginaActual(1);
+      await fetchSalas(1);
       // ✅ Don't navigate immediately - wait for iniciar_redireccion_juego event
       // The event listener above will handle the navigation when the room is full
       console.log(`[SalasPage] Sala creada: ${data.codigo_sala}. Esperando a que se una otro jugador...`);
@@ -637,7 +649,7 @@ const SalasPage: React.FC = () => {
                 </button>
                 <button 
                   className="bg-black"
-                  onClick={fetchSalas}
+                  onClick={() => fetchSalas()}
                   title="Actualizar lista de salas"
                 >
                   <IoRefreshOutline />
@@ -651,13 +663,21 @@ const SalasPage: React.FC = () => {
               </>
             )}
             {isAnonymous && (
-              <button 
-                className="bg-black"
-                onClick={fetchSalas}
-                title="Actualizar lista de salas"
-              >
-                <IoRefreshOutline />
-              </button>
+              <>
+                <button 
+                  className="bg-black"
+                  onClick={() => fetchSalas()}
+                  title="Actualizar lista de salas"
+                >
+                  <IoRefreshOutline />
+                </button>
+                <button 
+                  className="create-room-button"
+                  onClick={() => setShowModal(true)}
+                >
+                  <IoAddCircleOutline /> Crear Sala Pública
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -805,8 +825,8 @@ const SalasPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal para crear sala - Solo para usuarios registrados */}
-      {showModal && !isAnonymous && (
+      {/* Modal para crear sala */}
+      {showModal && (
       <div className="modal-backdrop" onClick={() => setShowModal(false)}>
         <div className="modal-content" onClick={e => e.stopPropagation()}>
           <h2>Crear Nueva Sala</h2>

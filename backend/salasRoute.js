@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const { authenticateToken } = require('./middleware/authMiddleware');
 const gameLogicHandler = require('./game-logic/gameLogicHandler'); // Importar gameLogicHandler
+const { normalizeSkinName } = require('./utils/skinUtils');
 
 // Middleware de diagnóstico para ver todas las solicitudes
 router.use((req, res, next) => {
@@ -198,6 +199,7 @@ router.post('/crear', authenticateToken, async (req, res) => {
     const { tipo, puntos_victoria, max_jugadores, codigo_acceso } = req.body;
     const usuarioId = req.user.id;
     const usuarioNombre = req.user.nombre_usuario;
+    const usuarioEsAnonimo = Boolean(req.user.es_anonimo);
     const codigoSala = uuidv4().substring(0, 8);
 
     // Tiempo de expiración para TODAS las salas (30 minutos)
@@ -217,6 +219,11 @@ router.post('/crear', authenticateToken, async (req, res) => {
     if (!tipo || (tipo !== 'publica' && tipo !== 'privada')) {
       await connection.rollback();
       return res.status(400).json({ error: 'Tipo de sala inválido' });
+    }
+
+    if (usuarioEsAnonimo && tipo === 'privada') {
+      await connection.rollback();
+      return res.status(403).json({ error: 'Los usuarios invitados solo pueden crear salas públicas' });
     }
 
     if (tipo === 'privada' && (!codigo_acceso || codigo_acceso.length < 4)) {
@@ -337,9 +344,11 @@ router.post('/unirse', authenticateToken, async (req, res) => {
       
       // Obtener todos los jugadores de la sala
       const [jugadores] = await connection.query(
-        `SELECT jp.usuario_id, u.nombre_usuario 
+        `SELECT jp.usuario_id, u.nombre_usuario, COALESCE(s.codigo, 'Original') AS skin_codigo
          FROM jugadores_partidas jp 
          JOIN usuarios u ON jp.usuario_id = u.id 
+         LEFT JOIN perfiles p ON p.usuario_id = u.id
+         LEFT JOIN skins s ON p.skin_id = s.id
          WHERE jp.partida_id = ?`,
         [codigo_sala]
       );
@@ -349,7 +358,8 @@ router.post('/unirse', authenticateToken, async (req, res) => {
       // Crear jugadoresInfo para gameLogicHandler
       const jugadoresInfo = jugadores.map(j => ({
         id: j.usuario_id,
-        nombre_usuario: j.nombre_usuario
+        nombre_usuario: j.nombre_usuario,
+        skin_preferida: normalizeSkinName(j.skin_codigo)
       }));
       
       // Iniciar la partida con gameLogicHandler
@@ -579,9 +589,11 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
       
       // Obtener todos los jugadores de la sala
       const [jugadores] = await connection.query(
-        `SELECT jp.usuario_id, u.nombre_usuario 
+        `SELECT jp.usuario_id, u.nombre_usuario, COALESCE(s.codigo, 'Original') AS skin_codigo
          FROM jugadores_partidas jp 
          JOIN usuarios u ON jp.usuario_id = u.id 
+         LEFT JOIN perfiles p ON p.usuario_id = u.id
+         LEFT JOIN skins s ON p.skin_id = s.id
          WHERE jp.partida_id = ?`,
         [codigo_sala]
       );
@@ -591,7 +603,8 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
       // Crear jugadoresInfo para gameLogicHandler
       const jugadoresInfo = jugadores.map(j => ({
         id: j.usuario_id,
-        nombre_usuario: j.nombre_usuario
+        nombre_usuario: j.nombre_usuario,
+        skin_preferida: normalizeSkinName(j.skin_codigo)
       }));
       
       // Iniciar la partida con gameLogicHandler

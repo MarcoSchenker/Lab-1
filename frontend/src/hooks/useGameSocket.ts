@@ -342,6 +342,59 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
     currentRoomRef.current = codigoSala || null;
     newSocket.connect();
 
+    const updateJugadorConexion = (jugadorId: number, nuevoEstado: 'conectado' | 'desconectado') => {
+      if (!jugadorId) return;
+
+      setGameState(prevState => {
+        if (!prevState || !Array.isArray(prevState.jugadores)) {
+          return prevState;
+        }
+
+        let huboCambio = false;
+        const jugadoresActualizados = prevState.jugadores.map(jugador => {
+          if (jugador.id === jugadorId && jugador.estadoConexion !== nuevoEstado) {
+            huboCambio = true;
+            return { ...jugador, estadoConexion: nuevoEstado };
+          }
+          return jugador;
+        });
+
+        if (!huboCambio) {
+          return prevState;
+        }
+
+        const nextState = {
+          ...prevState,
+          jugadores: jugadoresActualizados
+        };
+
+        if (codigoSala) {
+          try {
+            localStorage.setItem(`gameState_${codigoSala}`, JSON.stringify(nextState));
+          } catch (storageError) {
+            console.error('[CLIENT] Error guardando estado tras actualización de conexión:', storageError);
+          }
+        }
+
+        return nextState;
+      });
+    };
+
+    newSocket.on('jugador_desconectado', ({ jugadorId }) => {
+      console.log('[CLIENT] ⚠️ Evento jugador_desconectado recibido:', jugadorId);
+      updateJugadorConexion(jugadorId, 'desconectado');
+    });
+
+    newSocket.on('jugador_reconectado', ({ jugadorId }) => {
+      console.log('[CLIENT] ✅ Evento jugador_reconectado recibido:', jugadorId);
+      updateJugadorConexion(jugadorId, 'conectado');
+    });
+
+    newSocket.on('jugador_desconectado_broadcast', ({ usuario_id }) => {
+      console.log('[CLIENT] ⚠️ Broadcast de desconexión recibido:', usuario_id);
+      updateJugadorConexion(usuario_id, 'desconectado');
+    });
+
     // === EVENTOS DE CONEXIÓN ===
     newSocket.on('connect', () => {
       console.log(`[CLIENT] ✅ Socket conectado: ${newSocket.id}`);

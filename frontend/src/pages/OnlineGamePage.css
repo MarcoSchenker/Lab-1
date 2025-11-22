@@ -79,7 +79,7 @@
 .game-main-area-with-panels {
   display: flex;
   gap: 8px; /* Reducir aún más el gap para dar más espacio a la mesa */
-  align-items: center; /* Centrar verticalmente ambos paneles */
+  align-items: flex-start; /* Empujar el tablero hacia la parte superior */
   min-height: 500px;
   height: 100%;
 }
@@ -97,7 +97,8 @@
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 10px;
   min-width: 900px; /* Aumentar mucho más el ancho mínimo para una mesa muy amplia */
 }
 

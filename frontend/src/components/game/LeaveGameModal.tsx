@@ -249,7 +249,7 @@ const LeaveGameModal: React.FC<LeaveGameModalProps> = ({
           <button 
             className="btn-confirm-leave danger"
             onClick={onConfirm}
-            disabled={cargandoConsecuencias}
+            aria-busy={cargandoConsecuencias}
           >
             🚪 Confirmar Abandono
           </button>

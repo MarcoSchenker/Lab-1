@@ -55,6 +55,16 @@ function setupGameHandlers(socket, io) {
       mensaje: 'Unido a la sala exitosamente' 
     });
 
+    const partidaActiva = gameLogicHandler.getActiveGame(codigo_sala);
+
+    if (partidaActiva && typeof partidaActiva.manejarReconexionJugador === 'function') {
+      const jugadorInterno = partidaActiva.jugadores?.find(j => j.id === socket.currentUserId);
+      if (jugadorInterno && jugadorInterno.estadoConexion === 'desconectado') {
+        console.log(`[gameSocketHandlers] ♻️ Marcando reconexión del jugador ${socket.currentUserId} en sala ${codigo_sala}`);
+        partidaActiva.manejarReconexionJugador(socket.currentUserId);
+      }
+    }
+
     // ✅ 1. Verificar si tenemos un estado guardado en caché para este jugador
     const estadoCache = obtenerEstadoDesdeCache(codigo_sala, socket.currentUserId);
     if (estadoCache) {
@@ -62,9 +72,6 @@ function setupGameHandlers(socket, io) {
       socket.emit('estado_juego_actualizado', estadoCache);
       return;
     }
-
-    // ✅ 2. Si no hay caché, intentar obtener de la partida activa
-    const partidaActiva = gameLogicHandler.getActiveGame(codigo_sala);
 
     if (partidaActiva) {
       console.log(`[gameSocketHandlers] Partida para ${codigo_sala} ya está activa. Obteniendo estado para jugador ${socket.currentUserId}.`);

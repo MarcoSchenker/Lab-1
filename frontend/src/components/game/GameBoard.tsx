@@ -330,6 +330,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       const isOnTurn = jugador.id === jugadorEnTurnoId;
       const isTeammate = !isCurrentPlayer && jugador.equipoId === jugadorActual.equipoId;
       const isOpponent = !isCurrentPlayer && jugador.equipoId !== jugadorActual.equipoId;
+      const connectionStatus = jugador.estadoConexion === 'conectado' ? 'conectado' : 'desconectado';
       
       return (
         <div 
@@ -343,8 +344,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
             <div className="avatar-info">
               <div className="player-name-horizontal">{jugador.nombreUsuario}</div>
               <div className="player-status">
-                <span className={`connection-dot ${jugador.estadoConexion}`}></span>
-                <span className="status-text">{jugador.estadoConexion === 'conectado' ? 'Conectado' : 'Desconectado'}</span>
+                <span className={`connection-dot ${connectionStatus}`}></span>
+                <span className="status-text">{connectionStatus === 'conectado' ? 'Conectado' : 'Desconectado'}</span>
               </div>
               <div className="cards-count">
                 {jugador.cartasMano ? jugador.cartasMano.filter(c => !c.estaJugada).length : 0} cartas

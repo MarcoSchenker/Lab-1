@@ -1,6 +1,7 @@
 const EquipoGame = require('./EquipoGame');
 const JugadorGame = require('./JugadorGame');
 const RondaGame = require('./RondaGame');
+const { normalizeSkinName } = require('../utils/skinUtils');
 
 /**
  * Representa una partida completa de Truco.
@@ -56,7 +57,12 @@ class PartidaGame {
                     throw new Error(`Información de jugador incompleta: ${JSON.stringify(info)}`);
                 }
                 console.log(`[PARTIDA] Creando jugador: ${info.nombre_usuario} (ID: ${info.id})`);
-                this.jugadores.push(new JugadorGame(info.id, info.nombre_usuario, null)); // equipoId se asigna después
+                this.jugadores.push(new JugadorGame(
+                    info.id,
+                    info.nombre_usuario,
+                    null,
+                    normalizeSkinName(info.skin_preferida || info.skinPreferida)
+                )); // equipoId se asigna después
             });
 
             // 2. Crear Equipos y Asignar Jugadores
@@ -484,7 +490,11 @@ class PartidaGame {
                     equipoRespondedorCantoId: envidoState.equipoRespondedorCantoId || null, // ✅ Agregado campo faltante
                     puedeDeclararSonBuenas: envidoState.puedeDeclararSonBuenas || false,
                     declaracionEnCurso: envidoState.declaracionEnCurso || false,
-                    jugadorTurnoDeclararPuntosId: envidoState.jugadorTurnoDeclararPuntosId || null
+                    jugadorTurnoDeclararPuntosId: envidoState.jugadorTurnoDeclararPuntosId || null,
+                    cantosRealizados: envidoState.cantosRealizados || [],
+                    puedeCantarEnvidoGeneral: typeof envidoState.puedeCantarEnvidoGeneral === 'boolean'
+                        ? envidoState.puedeCantarEnvidoGeneral
+                        : true
                 };
                 console.log(`[PARTIDA] 3.1 Envido info obtenido`);
             } catch (envidoError) {
@@ -636,7 +646,7 @@ class PartidaGame {
             const jugadoresSkins = {};
             for (const jugador of this.jugadores) {
                 // Recuperar de la base de datos la skin preferida para este jugador
-                jugadoresSkins[jugador.id] = jugador.skinPreferida || 'Original'; // Default si no hay preferencia
+                jugadoresSkins[jugador.id] = normalizeSkinName(jugador.skinPreferida);
             }
             
             console.log(`[PARTIDA] 8. Skins obtenidas`);

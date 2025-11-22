@@ -29,6 +29,7 @@ Manejar Callbacks: Implementar las funciones de callback que PartidaGame necesit
 const PartidaGame = require('./PartidaGame');
 const pool = require('../config/db'); // Acceso a la base de datos
 const { getIoInstance } = require('../server'); 
+const { normalizeSkinName } = require('../utils/skinUtils');
 
 let activeGames = {};
 let io;
@@ -127,7 +128,44 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         return activeGames[codigoSala];
     }
 
+    // Asegurar que cada jugador tenga su skin normalizada
+    let jugadoresInfoConSkins = jugadoresInfo.map(jugador => ({
+        ...jugador,
+        skin_preferida: normalizeSkinName(jugador.skin_preferida || jugador.skinPreferida)
+    }));
+
+    try {
+        const userIds = [...new Set(jugadoresInfo.map(j => j.id).filter(Boolean))];
+        if (userIds.length > 0) {
+            const [skinRows] = await pool.query(
+                `SELECT u.id AS usuario_id, COALESCE(s.codigo, 'Original') AS skin_codigo
+                 FROM usuarios u
+                 LEFT JOIN perfiles p ON p.usuario_id = u.id
+                 LEFT JOIN skins s ON p.skin_id = s.id
+                 WHERE u.id IN (?)`,
+                [userIds]
+            );
+            const skinMap = {};
+            skinRows.forEach(row => {
+                skinMap[row.usuario_id] = normalizeSkinName(row.skin_codigo);
+            });
+            jugadoresInfoConSkins = jugadoresInfoConSkins.map(jugador => ({
+                ...jugador,
+                skin_preferida: normalizeSkinName(
+                    jugador.skin_preferida || jugador.skinPreferida || skinMap[jugador.id]
+                )
+            }));
+        }
+    } catch (skinError) {
+        console.error('[gameLogicHandler] Error obteniendo skins para jugadores:', skinError);
+        jugadoresInfoConSkins = jugadoresInfoConSkins.map(jugador => ({
+            ...jugador,
+            skin_preferida: normalizeSkinName(jugador.skin_preferida || jugador.skinPreferida)
+        }));
+    }
+
     console.log(`Creando nueva partida para la sala ${codigoSala}`);
+    const totalJugadores = jugadoresInfoConSkins.length;
 
     // 1. Persistir la creación de la partida en la DB (tabla partidas_estado)
     let partidaDBId;
@@ -146,7 +184,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
             await connection.execute(
                 `INSERT INTO partidas (codigo_sala, estado, fecha_inicio, puntos_victoria, max_jugadores, creador) 
                  VALUES (?, 'en_juego', NOW(), ?, ?, 'gameLogicHandler')`,
-                [codigoSala, puntosVictoria, jugadoresInfo.length]
+                [codigoSala, puntosVictoria, totalJugadores]
             );
             console.log(`✅ Registro creado en 'partidas' para ${codigoSala}`);
         } else {
@@ -157,12 +195,12 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         const [result] = await connection.execute(
             `INSERT INTO partidas_estado (codigo_sala, tipo_partida, jugadores_configurados, puntaje_objetivo, estado_partida) 
              VALUES (?, ?, ?, ?, ?)`,
-            [codigoSala, tipoPartida, jugadoresInfo.length, puntosVictoria, 'en_juego']
+            [codigoSala, tipoPartida, totalJugadores, puntosVictoria, 'en_juego']
         );
         partidaDBId = result.insertId;
         
         // 2. Insertar equipos usando la estructura real de la DB
-        const equiposData = crearEquiposSegunTipo(tipoPartida, jugadoresInfo);
+        const equiposData = crearEquiposSegunTipo(tipoPartida, jugadoresInfoConSkins);
         
         for (const equipo of equiposData) {
             const [equipoResult] = await connection.execute(
@@ -176,7 +214,7 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         }
         
         // 3. Insertar jugadores usando la estructura real de la DB
-        for (const jugador of jugadoresInfo) {
+        for (const jugador of jugadoresInfoConSkins) {
             const equipoData = equiposData.find(e => e.jugadores.includes(jugador.id));
             
             await connection.execute(
@@ -349,10 +387,10 @@ async function crearNuevaPartida(codigoSala, jugadoresInfo, tipoPartida, puntosV
         io.to(sala).emit('partida_terminada_en_servidor', { codigoSala: sala, ganadorEquipoId });
     };
 
-    console.log(`Creando instancia PartidaGame para sala ${codigoSala} con ${jugadoresInfo.length} jugadores...`);
+    console.log(`Creando instancia PartidaGame para sala ${codigoSala} con ${totalJugadores} jugadores...`);
     const partida = new PartidaGame(
         codigoSala,
-        jugadoresInfo,
+        jugadoresInfoConSkins,
         tipoPartida,
         puntosVictoria,
         notificarEstadoGlobalCallback,

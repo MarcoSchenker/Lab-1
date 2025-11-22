@@ -39,6 +39,46 @@ const create1v1Ronda = () => {
   return { ronda, jugador1, jugador2 };
 };
 
+const create2v2Ronda = () => {
+  const equipo1 = new EquipoGame('equipo_1', 'Equipo 1');
+  const equipo2 = new EquipoGame('equipo_2', 'Equipo 2');
+  const jugador1 = new JugadorGame(1, 'Jugador 1', 'equipo_1');
+  const jugador2 = new JugadorGame(2, 'Jugador 2', 'equipo_2');
+  const jugador3 = new JugadorGame(3, 'Jugador 3', 'equipo_1');
+  const jugador4 = new JugadorGame(4, 'Jugador 4', 'equipo_2');
+
+  jugador3.esPie = true;
+  jugador4.esPie = true;
+
+  equipo1.agregarJugador(jugador1);
+  equipo1.agregarJugador(jugador3);
+  equipo2.agregarJugador(jugador2);
+  equipo2.agregarJugador(jugador4);
+
+  const partidaStub = {
+    codigoSala: 'TEST_SALA',
+    estadoPartida: 'en_juego',
+    puntosVictoria: 30,
+    equipos: [equipo1, equipo2]
+  };
+
+  const ronda = new RondaGame(
+    1,
+    [jugador1, jugador2, jugador3, jugador4],
+    jugador1,
+    [equipo1, equipo2],
+    partidaStub,
+    jest.fn(),
+    jest.fn()
+  );
+
+  return {
+    ronda,
+    jugadores: { jugador1, jugador2, jugador3, jugador4 },
+    equipos: { equipo1, equipo2 }
+  };
+};
+
 const asignarManosYResetearTurno = (ronda, cartasJugador1, cartasJugador2) => {
   const [jugadorMano, jugadorOponente] = ronda.jugadoresEnOrden;
   jugadorMano.recibirCartas(cartasJugador1);
@@ -121,5 +161,83 @@ describe('Gameplay flows 1v1 - Truco & Envido', () => {
     expect(ronda.ganadorRondaEquipoId).toBe(jugador1.equipoId);
     expect(ronda.puntosGanadosTruco).toBe(3);
     expect(ronda.puntosGanadosEnvido).toBe(5);
+  });
+});
+
+describe('Gameplay flows 2v2 - Envido & Truco', () => {
+  test('Only pies can iniciar envido and teammates can recantar before a response', () => {
+    const { ronda, jugadores: { jugador1, jugador2, jugador3 } } = create2v2Ronda();
+
+    expect(ronda.manejarCanto(jugador1.id, 'ENVIDO')).toBe(false);
+
+    expect(ronda.manejarCanto(jugador3.id, 'ENVIDO')).toBe(true);
+
+    expect(ronda.manejarCanto(jugador1.id, 'REAL_ENVIDO')).toBe(true);
+
+    expect(ronda.manejarRespuestaCanto(jugador2.id, 'NO_QUIERO')).toBe(true);
+    expect(ronda.envidoHandler.estadoResolucion).toBe('resuelto');
+    expect(ronda.puntosGanadosEnvido).toBe(2);
+  });
+
+  test('Truco-first sequences enforce envido va primero with pie-only gating', () => {
+    const { ronda, jugadores: { jugador1, jugador2, jugador4 }, equipos: { equipo2 } } = create2v2Ronda();
+
+    expect(ronda.manejarCanto(jugador1.id, 'TRUCO')).toBe(true);
+    expect(ronda.trucoPendientePorEnvidoPrimero).toBe(true);
+
+    expect(ronda.manejarCanto(jugador2.id, 'ENVIDO')).toBe(false);
+    expect(ronda.manejarCanto(jugador4.id, 'ENVIDO')).toBe(true);
+
+    expect(ronda.manejarRespuestaCanto(jugador1.id, 'NO_QUIERO')).toBe(true);
+    expect(ronda.envidoHandler.estadoResolucion).toBe('resuelto');
+    expect(ronda.puntosGanadosEnvido).toBe(1);
+    expect(ronda.trucoPendientePorEnvidoPrimero).toBe(false);
+    expect(ronda.trucoHandler.estaPendienteDeRespuesta()).toBe(true);
+    expect(ronda.trucoHandler.equipoDebeResponderTruco?.id).toBe(equipo2.id);
+  });
+});
+
+describe('Envido declarations 2v2 - Son Buenas handling', () => {
+  const prepararDeclaraciones = () => {
+    const { ronda, jugadores } = create2v2Ronda();
+    const { jugador1, jugador2, jugador3, jugador4 } = jugadores;
+
+    expect(ronda.manejarCanto(jugador3.id, 'ENVIDO')).toBe(true);
+    expect(ronda.manejarRespuestaCanto(jugador4.id, 'QUIERO')).toBe(true);
+    expect(ronda.envidoHandler.declaracionEnCurso).toBe(true);
+    expect(ronda.envidoHandler.jugadorTurnoDeclararPuntosId).toBe(jugador1.id);
+
+    return { ronda, jugador1, jugador2, jugador3, jugador4 };
+  };
+
+  test('Non-last player saying Son Buenas defers to teammate', () => {
+    const { ronda, jugador1, jugador2, jugador3, jugador4 } = prepararDeclaraciones();
+
+    expect(ronda.manejarDeclaracionPuntosEnvido(jugador1.id, 27)).toBe(true);
+    expect(ronda.manejarDeclaracionSonBuenas(jugador2.id)).toBe(true);
+    expect(ronda.envidoHandler.estadoResolucion).toBe('querido_pendiente_puntos');
+    expect(ronda.envidoHandler.jugadorTurnoDeclararPuntosId).toBe(jugador4.id);
+    expect(ronda.envidoHandler.puntosDeclaradosPorJugador[jugador2.id]).toMatchObject({ esPaso: true, esSonBuenas: true });
+
+    expect(ronda.manejarDeclaracionPuntosEnvido(jugador4.id, 31)).toBe(true);
+    expect(ronda.envidoHandler.jugadorTurnoDeclararPuntosId).toBe(jugador3.id);
+
+    expect(ronda.manejarDeclaracionPuntosEnvido(jugador3.id, 28)).toBe(true);
+    expect(ronda.envidoHandler.estadoResolucion).toBe('resuelto');
+    expect(ronda.envidoHandler.ganadorEnvidoEquipoId).toBe(jugador4.equipoId);
+    expect(ronda.puntosGanadosEnvido).toBe(2);
+  });
+
+  test('Last teammate saying Son Buenas concedes the envido', () => {
+    const { ronda, jugador1, jugador2, jugador3, jugador4 } = prepararDeclaraciones();
+
+    expect(ronda.manejarDeclaracionPuntosEnvido(jugador1.id, 25)).toBe(true);
+    expect(ronda.manejarDeclaracionSonBuenas(jugador2.id)).toBe(true);
+    expect(ronda.envidoHandler.jugadorTurnoDeclararPuntosId).toBe(jugador4.id);
+
+    expect(ronda.manejarDeclaracionSonBuenas(jugador4.id)).toBe(true);
+    expect(ronda.envidoHandler.estadoResolucion).toBe('resuelto');
+    expect(ronda.envidoHandler.ganadorEnvidoEquipoId).toBe(jugador1.equipoId);
+    expect(ronda.puntosGanadosEnvido).toBe(2);
   });
 });

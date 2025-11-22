@@ -106,15 +106,14 @@ const OnlineGamePage: React.FC = () => {
     }
   }, [shouldRedirectToLogin, clearRedirectFlag, navigate]);
 
-  // Mostrar opciones de reconexión después de un tiempo
+  // Mostrar opciones de reconexión de inmediato cuando haya error
   useEffect(() => {
-    if (error && reconnectAttempts > 0) {
-      const timeout = setTimeout(() => {
-        setShowReconnectOption(true);
-      }, 5000);
-      return () => clearTimeout(timeout);
+    if (error) {
+      setShowReconnectOption(true);
+    } else {
+      setShowReconnectOption(false);
     }
-  }, [error, reconnectAttempts]);
+  }, [error]);
 
   // Verificar si es el turno del jugador actual
   const esMiTurno = useCallback((): boolean => {
@@ -252,6 +251,23 @@ const OnlineGamePage: React.FC = () => {
               </button>
             </div>
           )}
+
+          <button
+            className="retry-button"
+            onClick={() => navigate('/salas')}
+            style={{ 
+              padding: '10px 20px', 
+              marginTop: '20px', 
+              fontSize: '14px',
+              cursor: 'pointer',
+              backgroundColor: '#4a4a4a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '5px'
+            }}
+          >
+            ⬅️ Volver a las salas
+          </button>
         </div>
       </div>
     );
@@ -325,6 +341,23 @@ const OnlineGamePage: React.FC = () => {
             <p>Estado del socket: {socket?.connected ? '🟢 Conectado' : '🔴 Desconectado'}</p>
             <p>Código de sala: {codigoSala}</p>
           </div>
+
+          <button
+            className="retry-button"
+            onClick={() => navigate('/salas')}
+            style={{ 
+              padding: '10px 20px', 
+              marginTop: '15px', 
+              fontSize: '16px',
+              cursor: 'pointer',
+              backgroundColor: '#343a40',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px'
+            }}
+          >
+            ⬅️ Volver a las salas
+          </button>
         </div>
       </div>
     );
@@ -337,6 +370,42 @@ const OnlineGamePage: React.FC = () => {
         <div className="error-screen">
           <h2>Error de Conexión</h2>
           <p>{error}</p>
+          {!showReconnectOption && (
+            <div style={{ marginTop: '20px' }}>
+              <button
+                className="retry-button"
+                onClick={retryConnection}
+                style={{ 
+                  padding: '10px 20px', 
+                  margin: '10px', 
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px'
+                }}
+              >
+                🔄 Reintentar Conexión
+              </button>
+              <button
+                className="retry-button"
+                onClick={() => navigate('/salas')}
+                style={{ 
+                  padding: '10px 20px', 
+                  margin: '10px', 
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px'
+                }}
+              >
+                ⬅️ Volver a las salas
+              </button>
+            </div>
+          )}
           
           {showReconnectOption && (
             <GameReconnectOptions 
@@ -417,6 +486,7 @@ const OnlineGamePage: React.FC = () => {
                 <ActionsPanel
                   jugadorId={jugadorId}
                   equipos={gameState.equipos}
+                  jugadores={gameState.jugadores || []}
                   envidoInfo={gameState.rondaActual.envidoInfo}
                   trucoInfo={gameState.rondaActual.trucoInfo}
                   esMiTurno={esMiTurno()}

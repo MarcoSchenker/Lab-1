@@ -4,7 +4,7 @@ class JugadorGame {
      * @param {string} nombreUsuario El nombre del usuario.
      * @param {string} equipoId El ID del equipo al que pertenece.
      */
-    constructor(id, nombreUsuario, equipoId) {
+    constructor(id, nombreUsuario, equipoId, skinPreferida = 'Original') {
         this.id = id; // Corresponde al usuario_id de la DB
         this.nombreUsuario = nombreUsuario;
         this.cartasMano = [];
@@ -14,6 +14,7 @@ class JugadorGame {
         this.esPie = false; // Si es el último en jugar de su equipo (relevante para 2v2, 3v3)
         this.ordenEnEquipo = 0; // Para 3v3, podría ser 1, 2, 3
         this.estadoConexion = 'conectado'; // 'conectado', 'desconectado'
+        this.skinPreferida = skinPreferida || 'Original';
     }
 
     recibirCartas(cartas) {
