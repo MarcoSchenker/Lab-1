@@ -31,13 +31,17 @@ import { Naipe } from './naipe';
      }
 
      public puedeCantar(): boolean {
-         if (
-             !this.puedeEnvido ||
-             this.envidoResuelto ||
-             this.equipoDebeResponderEnvido ||
-             this.ronda.trucoHandler.equipoDebeResponderTruco
-         )
-             return false;
+        const trucoBloqueaEnvido =
+            this.ronda.trucoHandler.equipoDebeResponderTruco &&
+            !this.ronda.trucoPendientePorEnvidoPrimero;
+
+        if (
+            !this.puedeEnvido ||
+            this.envidoResuelto ||
+            this.equipoDebeResponderEnvido ||
+            trucoBloqueaEnvido
+        )
+            return false;
          if (this.ronda.numeroDeMano !== 0) return false;
          if (this.ronda.equipoEnTurno === this.ronda.equipoMano && this.ronda.jugadasEnMano > 0)
              return false;
@@ -272,8 +276,13 @@ import { Naipe } from './naipe';
                 this.ronda.equipoEnTurno = this.ronda.equipoMano;
             }
         }
-         if(this.ronda.estadoRonda !== EstadoRonda.RondaTerminada) {
-            this.ronda.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
+        if (this.ronda.estadoRonda !== EstadoRonda.RondaTerminada) {
+            if (this.ronda.trucoPendientePorEnvidoPrimero && this.ronda.trucoHandler.equipoDebeResponderTruco) {
+                this.ronda.estadoRonda = EstadoRonda.EsperandoRespuestaTruco;
+                this.ronda.equipoEnTurno = this.ronda.trucoHandler.equipoDebeResponderTruco;
+            } else {
+                this.ronda.estadoRonda = EstadoRonda.EsperandoJugadaNormal;
+            }
          }
     }
 }

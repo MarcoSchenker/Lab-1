@@ -17,6 +17,13 @@ import api from '../services/api'; // Asegúrate de que la ruta sea correcta
 
 interface CartaConInfoUI extends Naipe { esHumano?: boolean;}
 
+interface CallEntry {
+    id: string;
+    jugador: Jugador | null;
+    mensaje: string;
+    timestamp: number;
+}
+
 interface GameState {
     partidaTerminada: boolean;
     partidaIniciada: boolean;
@@ -29,6 +36,7 @@ interface GameState {
     accionesPosibles: AccionesPosibles;
     mensajeLog: string[];
     ultimoCanto: { jugador: Jugador | null, mensaje: string } | null;
+    callHistory: CallEntry[];
     numeroManoActual: number; // Mano 0, 1, 2
     mostrandoCartelReparto: boolean;
     estadoJuego: 'seleccionando_puntos' | 'jugando' | 'terminado'; // Nuevo estado para flujo
@@ -57,6 +65,7 @@ const initialState: GameState = {
     },
     mensajeLog: [],
     ultimoCanto: null,
+    callHistory: [],
     numeroManoActual: 0,
     mostrandoCartelReparto: false, // Empieza sin mostrar
     mostrandoConfirmacionSalir: false,
@@ -149,9 +158,19 @@ const GamePage: React.FC = () => {
                  });
             },
 
-            showPlayerCall: (jugador, mensaje) => {
-                 console.log(`UI Callback: Canto de ${jugador?.nombre ?? 'Sistema'}: ${mensaje}`);
-                 setGameState(prev => ({ ...prev, ultimoCanto: { jugador, mensaje } }));
+                showPlayerCall: (jugador, mensaje) => {
+                      console.log(`UI Callback: Canto de ${jugador?.nombre ?? 'Sistema'}: ${mensaje}`);
+                      const nuevoRegistro: CallEntry = {
+                          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                          jugador,
+                          mensaje,
+                          timestamp: Date.now(),
+                      };
+                      setGameState(prev => ({
+                          ...prev,
+                          ultimoCanto: { jugador, mensaje },
+                          callHistory: [nuevoRegistro, ...prev.callHistory].slice(0, 8),
+                      }));
                  // Ocultar el canto después de un tiempo
                  setTimeout(() => {
                      // Solo ocultar si el mensaje no ha cambiado mientras tanto
@@ -332,7 +351,7 @@ const GamePage: React.FC = () => {
                           )}
 
                           {/* CallDisplay */}
-                          <CallDisplay call={gameState.ultimoCanto} />
+                          <CallDisplay call={gameState.ultimoCanto} history={gameState.callHistory} />
 
                           {/* Área del Oponente (IA) */}
                           <div className="mb-2">

@@ -33,6 +33,7 @@ export class Ronda {
     public envidoHandler: RondaEnvidoHandler;
     public trucoHandler: RondaTrucoHandler;
     public turnoHandler: RondaTurnoHandler;
+    public trucoPendientePorEnvidoPrimero: boolean = false;
 
     // Referencias y Configuración
     public equipoMano: Equipo;
@@ -85,6 +86,7 @@ export class Ronda {
         this.turnoHandler.nuevaRonda();
         this.envidoHandler.nuevaRonda();
         this.trucoHandler.nuevaRonda();
+        this.trucoPendientePorEnvidoPrimero = false;
 
         // Resetear estado de jugadores y ronda
         this.equipoPrimero.jugador.nuevaRonda();
@@ -144,6 +146,17 @@ export class Ronda {
             const jugadorActual = this.equipoEnTurno.jugador;
             const esHumano = jugadorActual.esHumano;
             let esperarHumano = false;
+
+            if (
+                this.estadoRonda === EstadoRonda.EsperandoRespuestaTruco &&
+                !esHumano &&
+                this.trucoPendientePorEnvidoPrimero
+            ) {
+                const envidoIA = this.procesarCantoIAEnvido();
+                if (envidoIA) {
+                    continue;
+                }
+            }
 
             if (!esHumano) {
                 this.callbacks.actualizarAccionesPosibles({
@@ -272,10 +285,11 @@ export class Ronda {
                     break;
                 case EstadoRonda.EsperandoRespuestaTruco:
                     acciones.puedeResponder = this.trucoHandler.getPosiblesRespuestas();
-                     // No se puede jugar ni cantar otra cosa
                     acciones.puedeJugarCarta = false;
-                    acciones.puedeCantarEnvido = [];
                     acciones.puedeCantarTruco = [];
+                    acciones.puedeCantarEnvido = this.trucoPendientePorEnvidoPrimero
+                        ? this.envidoHandler.getPosiblesCantos()
+                        : [];
                     break;
                 default:
                     acciones.puedeMazo = false; // No ir al mazo si la mano/ronda terminó
@@ -368,8 +382,12 @@ export class Ronda {
         // Intentar procesar como respuesta
         if (this.estadoRonda === EstadoRonda.EsperandoRespuestaEnvido && (esEnvido || esRespuesta)) {
              accionRealizada = this.envidoHandler.registrarRespuesta(canto, this.equipoEnTurno);
-        } else if (this.estadoRonda === EstadoRonda.EsperandoRespuestaTruco && (esTruco || esRespuesta)) {
-            accionRealizada = this.trucoHandler.registrarRespuesta(canto, this.equipoEnTurno);
+        } else if (this.estadoRonda === EstadoRonda.EsperandoRespuestaTruco) {
+            if (esTruco || esRespuesta) {
+                accionRealizada = this.trucoHandler.registrarRespuesta(canto, this.equipoEnTurno);
+            } else if (esEnvido && this.trucoPendientePorEnvidoPrimero) {
+                accionRealizada = this.envidoHandler.registrarCanto(canto, this.equipoEnTurno);
+            }
         }
 
         // Si no fue respuesta, intentar procesar como canto inicial

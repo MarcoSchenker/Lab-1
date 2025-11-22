@@ -31,6 +31,7 @@ export class RondaTrucoHandler {
         this.trucoQuerido = false;
         this.equipoSeFueAlMazo = null;
         this.equipoInterrumpido = null;
+        this.ronda.trucoPendientePorEnvidoPrimero = false;
     }
     
 
@@ -129,6 +130,16 @@ export class RondaTrucoHandler {
         // El turno AHORA es para RESPONDER al canto
         this.ronda.equipoEnTurno = this.equipoDebeResponderTruco;
 
+        if (
+            canto === Canto.Truco &&
+            this.ronda.numeroDeMano === 0 &&
+            !this.ronda.envidoHandler.envidoResuelto &&
+            this.ronda.envidoHandler.puedeEnvido &&
+            this.ronda.envidoHandler.cantosEnvido.length === 0
+        ) {
+            this.ronda.trucoPendientePorEnvidoPrimero = true;
+        }
+
         return true;
     }
     
@@ -142,6 +153,7 @@ export class RondaTrucoHandler {
         this.ronda.callbacks.showPlayerCall(equipoQueResponde.jugador, this.ronda.cantoToString(respuesta));
         this.cantosTruco.push({ canto: respuesta, equipo: equipoQueResponde });
         this.equipoDebeResponderTruco = null;
+        this.ronda.trucoPendientePorEnvidoPrimero = false;
         
         const esRespuestaFinal = respuesta === Canto.Quiero || respuesta === Canto.NoQuiero;
         
@@ -197,6 +209,7 @@ export class RondaTrucoHandler {
         this.trucoQuerido = false;
         this.trucoNoQueridoPor = null;
         this.equipoSeFueAlMazo = equipoQueSeVa;
+        this.ronda.trucoPendientePorEnvidoPrimero = false;
     
         this.ronda.estadoRonda = EstadoRonda.RondaTerminada;
         return true;
