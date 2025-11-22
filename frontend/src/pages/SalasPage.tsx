@@ -4,6 +4,8 @@ import {IoAddCircleOutline, IoFilterOutline, IoLockClosed, IoLockOpen, IoRefresh
 import { io, Socket } from 'socket.io-client';
 import './SalasPage.css';
 import Header from '../components/HeaderDashboard';
+import AuthDiagnostic from '../components/AuthDiagnostic';
+import { useAuthValidation } from '../hooks/useAuthValidation';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const buildApiUrl = (path: string) => `${API_BASE_URL}${path}`;
@@ -23,6 +25,15 @@ interface Sala {
 const SalasPage: React.FC = () => {
   const navigate = useNavigate();
   const socketRef = useRef<Socket | null>(null);
+  
+  // ✅ Validación de autenticación con diagnóstico
+  const { 
+    isAuthenticated, 
+    isLoading: authLoading, 
+    showDiagnostic, 
+    setShowDiagnostic 
+  } = useAuthValidation();
+
   const [salas, setSalas] = useState<Sala[]>([]);
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -551,6 +562,62 @@ const SalasPage: React.FC = () => {
     setShowJoinPrivateModal(true);
   };
 
+  // ✅ Mostrar loading mientras se valida la autenticación
+  if (authLoading) {
+    return (
+      <div className="salas-container">
+        <Header />
+        <div className="salas-content">
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '50vh'
+          }}>
+            <div style={{
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #3498db',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              animation: 'spin 2s linear infinite'
+            }}></div>
+            <p style={{ marginTop: '20px', color: '#666' }}>Validando autenticación...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Si no está autenticado y no hay diagnóstico que mostrar, mostrar loading de redirección
+  if (!isAuthenticated && !showDiagnostic) {
+    return (
+      <div className="salas-container">
+        <Header />
+        <div className="salas-content">
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '50vh'
+          }}>
+            <div style={{
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #3498db',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              animation: 'spin 2s linear infinite'
+            }}></div>
+            <p style={{ marginTop: '20px', color: '#666' }}>Redirigiendo...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="salas-container">
       <Header />
@@ -899,6 +966,12 @@ const SalasPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ✅ Diagnóstico de Autenticación */}
+      <AuthDiagnostic
+        isVisible={showDiagnostic}
+        onClose={() => setShowDiagnostic(false)}
+      />
     </div>
   );
 };

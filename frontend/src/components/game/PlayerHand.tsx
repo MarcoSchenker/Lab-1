@@ -37,7 +37,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
   esMiTurno,
   onJugarCarta 
 }) => {
-  const jugadorActual = jugadores.find(j => j.id === jugadorActualId);
+  const jugadorActual = jugadores?.find(j => j.id === jugadorActualId);
   
   if (!jugadorActual || !jugadorActual.cartasMano) {
     return (

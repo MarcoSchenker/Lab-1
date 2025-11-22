@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AuthService from './authService';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -6,6 +7,27 @@ const API_URL = import.meta.env.VITE_API_URL;
 const api = axios.create({
   baseURL: API_URL,
 });
+
+// Interceptor para agregar automáticamente el token a las requests
+api.interceptors.request.use(
+  (config) => {
+    const token = AuthService.getToken();
+    
+    // Validar que el token sea válido antes de enviarlo
+    if (token && token !== 'undefined' && token !== 'null' && token.trim() !== '') {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    } else if (token) {
+      // Si hay un token pero es inválido, limpiarlo
+      console.warn('[API] 🚨 Token inválido detectado, limpiando datos de auth:', token);
+      AuthService.clearAuthData();
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Interfaz para los datos del usuario
 export interface User {
@@ -75,13 +97,25 @@ export const isTokenExpiring = (token: string): boolean => {
 // Función para refrescar el token
 export const refreshAccessToken = async () => {
   try {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = AuthService.getRefreshToken();
     if (!refreshToken) {
       throw new Error('No hay refresh token disponible');
     }
 
     const response = await api.post('/refresh-token', { refreshToken });
-    localStorage.setItem('token', response.data.accessToken); // Guarda el nuevo access token
+    
+    // Usar AuthService para guardar el nuevo token
+    const success = AuthService.setAuthData({
+      token: response.data.accessToken,
+      username: AuthService.getUsername() || '',
+      refreshToken: refreshToken,
+      isAnonymous: AuthService.isAnonymous()
+    });
+    
+    if (!success) {
+      throw new Error('No se pudo guardar el nuevo token');
+    }
+    
     return response.data.accessToken;
   } catch (err: any) {
     console.error('Error al refrescar el token:', err.message);
@@ -103,7 +137,7 @@ api.interceptors.response.use(
         return api(originalRequest); // Reintentar la solicitud original con el nuevo token
       } catch (err) {
         console.error('No se pudo refrescar el token. Redirigiendo al inicio de sesión.');
-        localStorage.clear(); // Limpia el almacenamiento local
+        AuthService.clearAuthData(); // Usar AuthService para limpiar datos
         window.location.href = '/'; // Redirige al inicio de sesión
         return Promise.reject(err);
       }

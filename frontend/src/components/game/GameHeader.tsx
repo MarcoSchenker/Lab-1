@@ -72,7 +72,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({
         {/* Center section - Teams and Scores */}
         <div className="header-center">
           <div className="teams-score-compact">
-            {equipos.map((equipo, index) => (
+            {equipos?.map((equipo, index) => (
               <div key={equipo.id} className="team-score-compact">
                 <div className="team-info-compact">
                   <span className={`team-name team-${equipo.id}`}>{equipo.nombre}</span>

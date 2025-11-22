@@ -4,23 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { loginUser, registerUser } from '../services/api';
+import AuthService from '../services/authService';
 import { FaUser, FaLock } from 'react-icons/fa';
 import { AiFillEye, AiFillEyeInvisible } from 'react-icons/ai'; // Íconos de ojito
 
 const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
-
-const persistSession = (data: { nombre_usuario?: string; accessToken?: string; refreshToken?: string }) => {
-  if (data.nombre_usuario) {
-    localStorage.setItem('username', data.nombre_usuario);
-  }
-  if (data.accessToken) {
-    localStorage.setItem('token', data.accessToken);
-  }
-  if (data.refreshToken) {
-    localStorage.setItem('refreshToken', data.refreshToken);
-  }
-  localStorage.removeItem('isAnonymous');
-};
 
 const HomePage = () => {
   const [nombreUsuario, setNombreUsuario] = useState('');
@@ -36,37 +24,61 @@ const HomePage = () => {
     setError('');
 
     try {
-      if (credentialResponse.credential) {
-        const decoded: any = jwtDecode(credentialResponse.credential);
-        const { email, name, sub } = decoded;
+      if (!credentialResponse.credential) {
+        setError('No se recibieron credenciales de Google.');
+        return;
+      }
 
-        if (!email) {
-          setError('No se pudo obtener tu email desde Google');
-          return;
+      const decoded: any = jwtDecode(credentialResponse.credential);
+      const { email, name, sub } = decoded;
+
+      if (!email) {
+        setError('No se pudo obtener tu email desde Google');
+        return;
+      }
+
+      const nombre_usuario = name.replace(/\s+/g, '').toLowerCase();
+      const contraseña = sub;
+
+      try {
+        const response = await loginUser({ nombre_usuario, contraseña });
+        const authDataSaved = AuthService.setAuthData({
+          token: response.data.accessToken || response.data.token,
+          username: response.data.nombre_usuario || nombre_usuario,
+          refreshToken: response.data.refreshToken,
+          isAnonymous: false
+        });
+
+        if (!authDataSaved) {
+          throw new Error('No se pudieron guardar los datos de autenticación. Posible modo incógnito.');
         }
 
-        const nombre_usuario = name.replace(/\s+/g, '').toLowerCase();
-        const contraseña = sub;
-
+        setSuccessMessage(`¡Bienvenido, ${nombre_usuario}! Redirigiendo a tu dashboard...`);
+        setTimeout(() => navigate('/dashboard'), 3000);
+      } catch (loginError: any) {
         try {
-          const response = await loginUser({ nombre_usuario, contraseña });
-          persistSession({
-            nombre_usuario: response.data.nombre_usuario,
-            accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken,
-          });
-          setSuccessMessage(`¡Bienvenido, ${nombre_usuario}! Redirigiendo a tu dashboard...`);
-          setTimeout(() => navigate('/dashboard'), 3000);
-        } catch {
           await registerUser({ nombre_usuario, email, contraseña, fromGoogle: true });
           const response = await loginUser({ nombre_usuario, contraseña });
-          persistSession({
-            nombre_usuario: response.data.nombre_usuario,
-            accessToken: response.data.accessToken,
+          const authDataSaved = AuthService.setAuthData({
+            token: response.data.accessToken || response.data.token,
+            username: response.data.nombre_usuario || nombre_usuario,
             refreshToken: response.data.refreshToken,
+            isAnonymous: false
           });
+
+          if (!authDataSaved) {
+            throw new Error('No se pudieron guardar los datos de autenticación. Posible modo incógnito.');
+          }
+
           setSuccessMessage(`¡Registrado y logueado con Google como ${nombre_usuario}! Redirigiendo a tu dashboard...`);
           setTimeout(() => navigate('/dashboard'), 3000);
+        } catch (registerError: any) {
+          console.error('Error en registro después de login fallido:', registerError);
+          if (AuthService.isIncognitoMode()) {
+            setError('Modo incógnito detectado. Para una mejor experiencia, usa una ventana normal del navegador.');
+          } else {
+            setError(registerError.message || 'Error al crear cuenta con Google');
+          }
         }
       }
     } catch (err) {
@@ -82,14 +94,30 @@ const HomePage = () => {
     setError('');
     try {
       const response = await loginUser({ nombre_usuario: nombreUsuario, contraseña: password });
-      localStorage.setItem('username', response.data.nombre_usuario); // Guarda el nombre de usuario
-      localStorage.setItem('token', response.data.accessToken); // Guarda el access token
-      localStorage.setItem('refreshToken', response.data.refreshToken); // Guarda el refresh token
+      
+      // ✅ Usar AuthService para guardar datos de manera robusta
+      const authDataSaved = AuthService.setAuthData({
+        token: response.data.accessToken,
+        username: response.data.nombre_usuario,
+        refreshToken: response.data.refreshToken,
+        isAnonymous: false
+      });
+
+      if (!authDataSaved) {
+        throw new Error('No se pudieron guardar los datos de autenticación. Posible modo incógnito.');
+      }
+
       setSuccessMessage('Inicio de sesión exitoso. Redirigiendo a tu dashboard...');
-      setTimeout(() => navigate('/dashboard'), 3000); // Redirigir después de 3 segundos
-    } catch (err) {
+      setTimeout(() => navigate('/dashboard'), 3000);
+    } catch (err: any) {
       console.error('Error al iniciar sesión:', err);
-      setError('Credenciales inválidas. Verifica usuario y contraseña.');
+      
+      // Verificar si es un problema de modo incógnito
+      if (AuthService.isIncognitoMode()) {
+        setError('Modo incógnito detectado. Para una mejor experiencia, usa una ventana normal del navegador.');
+      } else {
+        setError(err.message || 'Credenciales inválidas. Verifica usuario y contraseña.');
+      }
     } finally {
       setAuthing(false);
     }
@@ -103,16 +131,28 @@ const HomePage = () => {
       // Usa tu servicio api en lugar de fetch directo
       const response = await api.post('/usuario-anonimo');
       
-      // Guardar datos en localStorage
-      localStorage.setItem('username', response.data.nombre_usuario);
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('isAnonymous', 'true');
+      // ✅ Usar AuthService para guardar datos de manera robusta
+      const authDataSaved = AuthService.setAuthData({
+        token: response.data.accessToken,
+        username: response.data.nombre_usuario,
+        isAnonymous: true
+      });
+
+      if (!authDataSaved) {
+        throw new Error('No se pudieron guardar los datos de autenticación. Posible modo incógnito.');
+      }
       
       setSuccessMessage(`¡Bienvenido, ${response.data.nombre_usuario}! Iniciando como invitado...`);
       setTimeout(() => navigate('/salas'), 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al crear usuario anónimo:', err);
-      setError('No se pudo crear usuario temporal. Intente de nuevo más tarde.');
+      
+      // Verificar si es un problema de modo incógnito
+      if (AuthService.isIncognitoMode()) {
+        setError('Modo incógnito detectado. Para una mejor experiencia, usa una ventana normal del navegador.');
+      } else {
+        setError(err.message || 'No se pudo crear usuario temporal. Intente de nuevo más tarde.');
+      }
     } finally {
       setAuthing(false);
     }
