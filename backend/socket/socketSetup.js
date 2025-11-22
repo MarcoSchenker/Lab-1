@@ -4,20 +4,39 @@ const { setupGameHandlers, lastPlayerStates } = require('./handlers/gameSocketHa
 const gameLogicHandler = require('../game-logic/gameLogicHandler');
 require('dotenv').config();
 
+const resolveCorsOrigins = () => {
+  const origins = [];
+  if (process.env.FRONTEND_URL) origins.push(process.env.FRONTEND_URL);
+  if (process.env.BACKEND_URL) origins.push(process.env.BACKEND_URL);
+  if (process.env.EXTRA_SOCKET_ORIGINS) {
+    origins.push(
+      ...process.env.EXTRA_SOCKET_ORIGINS
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(Boolean)
+    );
+  }
+  return Array.from(new Set(origins));
+};
+
 /**
  * Configura y inicializa el servidor Socket.IO
  * @param {http.Server} server - Servidor HTTP
  * @returns {SocketIO.Server} - Instancia del servidor Socket.IO
  */
 function setupSocketServer(server) {
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  const io = new Server(server, { 
-    cors: { 
-      origin: ["*", frontendUrl, frontendUrl],
-      methods: ["GET", "POST"],
-      credentials: true,
-    } 
-  });
+  const allowedOrigins = resolveCorsOrigins();
+  const corsConfig = {
+    origin: allowedOrigins.length ? allowedOrigins : '*',
+    methods: ["GET", "POST"],
+    credentials: true,
+  };
+
+  if (!allowedOrigins.length) {
+    corsConfig.credentials = false;
+  }
+
+  const io = new Server(server, { cors: corsConfig });
 
   // Inicializar gameLogicHandler con io
   gameLogicHandler.initializeGameLogic(io);

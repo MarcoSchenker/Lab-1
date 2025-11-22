@@ -1,5 +1,24 @@
 const pool = require('../config/db');
 
+const normalizeBaseUrl = (url = '') => {
+  if (!url) return '';
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+};
+
+const ensureLeadingSlash = (value = '') => {
+  if (!value) return '/';
+  return value.startsWith('/') ? value : `/${value}`;
+};
+
+const assetBaseUrl = normalizeBaseUrl(process.env.SERVER_URL || process.env.BACKEND_URL || '');
+const buildAssetUrl = (segment = '') => {
+  const normalizedSegment = ensureLeadingSlash(segment);
+  if (!assetBaseUrl) {
+    return normalizedSegment;
+  }
+  return `${assetBaseUrl}${normalizedSegment}`;
+};
+
 /**
  * Controlador para enviar una solicitud de amistad
  */
@@ -64,8 +83,8 @@ const obtenerAmigos = async (req, res) => {
         u.id AS usuario_id, 
         u.nombre_usuario, 
         IFNULL(
-          CONCAT('${process.env.SERVER_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
-          '${process.env.SERVER_URL || 'http://localhost:3001'}/foto_anonima.jpg'
+          CONCAT('${buildAssetUrl('/usuarios/')}', u.nombre_usuario, '/foto-perfil'), 
+          '${buildAssetUrl('/foto_anonima.jpg')}'
         ) AS foto_perfil
       FROM amigos a
       JOIN usuarios u ON (a.usuario_id = u.id OR a.amigo_id = u.id)
@@ -115,8 +134,8 @@ const obtenerSolicitudesPendientes = async (req, res) => {
         a.id, 
         u.nombre_usuario AS from_user,
         IFNULL(
-          CONCAT('${process.env.BACKEND_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
-          '${process.env.BACKEND_URL || 'http://localhost:3001'}/foto_anonima.jpg'
+          CONCAT('${buildAssetUrl('/usuarios/')}', u.nombre_usuario, '/foto-perfil'), 
+          '${buildAssetUrl('/foto_anonima.jpg')}'
         ) AS foto_perfil
       FROM amigos a
       JOIN usuarios u ON a.usuario_id = u.id

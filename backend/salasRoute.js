@@ -762,8 +762,13 @@ router.get('/generar-link/:codigo_sala', authenticateToken, async (req, res) => 
     }
     
     // Generar el enlace de invitación
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5175';
-    const enlaceInvitacion = `${baseUrl}/unirse-invitado/${codigo_sala}`;
+    const baseUrl = process.env.FRONTEND_URL || req.headers.origin || '';
+    if (!baseUrl) {
+      console.error('[salasRoute] FRONTEND_URL no configurada para generar enlaces');
+      return res.status(500).json({ error: 'Configuración de FRONTEND_URL faltante' });
+    }
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const enlaceInvitacion = `${normalizedBaseUrl}/unirse-invitado/${codigo_sala}`;
     
     res.json({
       enlace_invitacion: enlaceInvitacion,

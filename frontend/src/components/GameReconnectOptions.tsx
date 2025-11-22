@@ -3,6 +3,9 @@ import { Socket } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import gameStateDebugger from '../utils/gameStateDebugger';
 
+const DEFAULT_API_BASE = typeof window !== 'undefined' ? window.location.origin : '';
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? DEFAULT_API_BASE).replace(/\/$/, '');
+
 interface GameReconnectOptionsProps {
   socket: Socket | null;
   codigoSala: string;
@@ -89,11 +92,6 @@ const GameReconnectOptions: React.FC<GameReconnectOptionsProps> = ({
     window.open(`/debug-game.html?sala=${codigoSala}`, '_blank');
   };
 
-  const handleRunDiagnostics = () => {
-    gameStateDebugger.logAction('run_diagnostics_clicked', {});
-    runDiagnostics();
-  };
-
   const toggleAdvanced = () => {
     setIsAdvancedOpen(!isAdvancedOpen);
   };
@@ -125,7 +123,7 @@ const GameReconnectOptions: React.FC<GameReconnectOptionsProps> = ({
     const pingServer = async () => {
       try {
         const pingStart = Date.now();
-        const response = await fetch(`${process.env.VITE_API_URL}/api/ping`, {
+        const response = await fetch(`${API_BASE_URL}/api/ping`, {
           method: 'HEAD',
           mode: 'no-cors',
           cache: 'no-store'

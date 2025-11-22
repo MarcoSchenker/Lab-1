@@ -5,6 +5,25 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../config/db');
 
+const normalizeBaseUrl = (url = '') => {
+  if (!url) return '';
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+};
+
+const ensureLeadingSlash = (value = '') => {
+  if (!value) return '/';
+  return value.startsWith('/') ? value : `/${value}`;
+};
+
+const backendBaseUrl = normalizeBaseUrl(process.env.BACKEND_URL || process.env.SERVER_URL || '');
+const buildBackendAssetUrl = (pathSegment = '') => {
+  const normalizedSegment = ensureLeadingSlash(pathSegment);
+  if (!backendBaseUrl) {
+    return normalizedSegment;
+  }
+  return `${backendBaseUrl}${normalizedSegment}`;
+};
+
 /**
  * Controlador para el registro de usuarios
  */
@@ -240,8 +259,8 @@ const obtenerUsuariosDisponibles = async (req, res) => {
       SELECT 
         u.nombre_usuario,
         IFNULL(
-          CONCAT('${process.env.BACKEND_URL || 'http://localhost:3001'}/usuarios/', u.nombre_usuario, '/foto-perfil'), 
-          '${process.env.BACKEND_URL || 'http://localhost:3001'}/foto_anonima.jpg'
+          CONCAT('${buildBackendAssetUrl('/usuarios/')}', u.nombre_usuario, '/foto-perfil'), 
+          '${buildBackendAssetUrl('/foto_anonima.jpg')}'
         ) AS foto_perfil
       FROM usuarios u
       WHERE u.nombre_usuario != ? 

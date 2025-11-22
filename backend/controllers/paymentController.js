@@ -4,8 +4,8 @@ require('dotenv').config();
 // Configurar SDK de MercadoPago
 //nacu hace npm install --save mercadopago y pone esto en el .env del back
 // MERCADOPAGO_ACCESS_TOKEN=TEST-3573059625962722-051115-e4f758360f86205afee48f344de4e3be-2431656045
-// FRONTEND_URL=http://localhost:5173
-// BACKEND_URL=http://localhost:3001
+// FRONTEND_URL=<tu_url_frontend>
+// BACKEND_URL=<tu_url_backend>
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 
 const mp = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });

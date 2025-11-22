@@ -5,6 +5,9 @@ import { io, Socket } from 'socket.io-client';
 import './SalasPage.css';
 import Header from '../components/HeaderDashboard';
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+const buildApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+
 // Interfaces
 interface Sala {
   codigo_sala: string;
@@ -37,6 +40,13 @@ const SalasPage: React.FC = () => {
   const [waitingForPlayers, setWaitingForPlayers] = useState<string | null>(null);
 
   const isAnonymous = localStorage.getItem('isAnonymous') === 'true';
+  const getFormattedToken = () => {
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) {
+      return null;
+    }
+    return storedToken.startsWith('Bearer ') ? storedToken : `Bearer ${storedToken}`;
+  };
   
   // Estado para nueva sala
   const [nuevaSala, setNuevaSala] = useState({
@@ -59,8 +69,10 @@ const SalasPage: React.FC = () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
+    const socketBaseUrl = API_BASE_URL || window.location.origin;
+
     // Connect socket for lobby events
-    const socket = io(process.env.VITE_API_URL, {
+    const socket = io(socketBaseUrl, {
       auth: { token }
     });
 
@@ -93,13 +105,12 @@ const SalasPage: React.FC = () => {
       socketRef.current = null;
     };
   }, [navigate]);
-
   const fetchSalas = async () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
-      const isGuest = isAnonymous || !token;
+      const formattedToken = getFormattedToken();
+      const isGuest = isAnonymous || !formattedToken;
       
       // Agregar parámetros de paginación y filtro de salas llenas
       const params = new URLSearchParams({
@@ -109,11 +120,11 @@ const SalasPage: React.FC = () => {
         excluir_llenas: 'true'
       });
       
-      // Usar ruta pública para invitados o ruta privada para usuarios registrados
-      const endpoint = isGuest ? `/api/salas/publicas?${params}` : `/api/salas?${params}`;
+      const basePath = isGuest ? '/api/salas/publicas' : '/api/salas';
+      const endpoint = buildApiUrl(`${basePath}?${params.toString()}`);
       const headers: Record<string, string> = {};
-      if (!isGuest && token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!isGuest && formattedToken) {
+        headers['Authorization'] = formattedToken;
       }
       
       const response = await fetch(endpoint, {
@@ -170,9 +181,9 @@ const SalasPage: React.FC = () => {
     e.preventDefault();
     try {
       setError(null);
-      const token = localStorage.getItem('token');
+      const formattedToken = getFormattedToken();
       
-      if (!token) {
+      if (!formattedToken) {
         setError('No hay sesión activa. Por favor inicia sesión de nuevo.');
         return;
       }
@@ -185,13 +196,13 @@ const SalasPage: React.FC = () => {
       
       console.log('Enviando datos para crear sala:', JSON.stringify(nuevaSala));
       console.log('URL de la petición:', '/api/salas/crear');
-      console.log('Token usado:', token.substring(0, 15) + '...');
+      console.log('Token usado:', formattedToken.substring(0, 15) + '...');
       
-      const response = await fetch('/api/salas/crear', {
+      const response = await fetch(buildApiUrl('/api/salas/crear'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+          'Authorization': formattedToken
         },
         body: JSON.stringify(nuevaSala),
       });
@@ -267,12 +278,17 @@ const SalasPage: React.FC = () => {
       }
       
       // Si es una sala pública, unirse directamente
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/salas/unirse`, {
+      const formattedToken = getFormattedToken();
+      if (!formattedToken) {
+        setError('Tu sesión expiró. Vuelve a iniciar sesión para unirte a una sala.');
+        return;
+      }
+
+      const response = await fetch(buildApiUrl('/api/salas/unirse'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': formattedToken
         },
         body: JSON.stringify({ codigo_sala: sala.codigo_sala }),
       });
@@ -320,13 +336,18 @@ const SalasPage: React.FC = () => {
           socketRef.current.emit('unirse_sala_lobby', salaSeleccionada);
         }
 
-        const token = localStorage.getItem('token');
+        const formattedToken = getFormattedToken();
+        if (!formattedToken) {
+          setError('Tu sesión expiró. Vuelve a iniciar sesión para unirte a la sala.');
+          return;
+        }
+
         // Unirse a una sala específica con código
-        const response = await fetch(`/api/salas/unirse`, {
+        const response = await fetch(buildApiUrl('/api/salas/unirse'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': formattedToken
           },
           body: JSON.stringify({ 
             codigo_sala: salaSeleccionada,
@@ -360,12 +381,17 @@ const SalasPage: React.FC = () => {
           return;
         }
         
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/salas/unirse-privada`, {
+        const formattedToken = getFormattedToken();
+        if (!formattedToken) {
+          setError('Tu sesión expiró. Vuelve a iniciar sesión para unirte con código.');
+          return;
+        }
+
+        const response = await fetch(buildApiUrl('/api/salas/unirse-privada'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': formattedToken
           },
           body: JSON.stringify({ codigo_acceso: codigoPrivado }),
         });
@@ -417,11 +443,16 @@ const SalasPage: React.FC = () => {
   // Generar enlace de invitación
   const generarEnlaceInvitacion = async (codigoSala: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/salas/generar-link/${codigoSala}`, {
+      const formattedToken = getFormattedToken();
+      if (!formattedToken) {
+        setError('Tu sesión expiró. Vuelve a iniciar sesión para generar enlaces.');
+        return;
+      }
+
+      const response = await fetch(buildApiUrl(`/api/salas/generar-link/${codigoSala}`), {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': formattedToken
         }
       });
 

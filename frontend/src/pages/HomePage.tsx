@@ -7,6 +7,21 @@ import { loginUser, registerUser } from '../services/api';
 import { FaUser, FaLock } from 'react-icons/fa';
 import { AiFillEye, AiFillEyeInvisible } from 'react-icons/ai'; // Íconos de ojito
 
+const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+
+const persistSession = (data: { nombre_usuario?: string; accessToken?: string; refreshToken?: string }) => {
+  if (data.nombre_usuario) {
+    localStorage.setItem('username', data.nombre_usuario);
+  }
+  if (data.accessToken) {
+    localStorage.setItem('token', data.accessToken);
+  }
+  if (data.refreshToken) {
+    localStorage.setItem('refreshToken', data.refreshToken);
+  }
+  localStorage.removeItem('isAnonymous');
+};
+
 const HomePage = () => {
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [password, setPassword] = useState('');
@@ -35,17 +50,23 @@ const HomePage = () => {
 
         try {
           const response = await loginUser({ nombre_usuario, contraseña });
-          localStorage.setItem('username', nombre_usuario); // Guarda el nombre de usuario
-          localStorage.setItem('token', response.data.token);
+          persistSession({
+            nombre_usuario: response.data.nombre_usuario,
+            accessToken: response.data.accessToken,
+            refreshToken: response.data.refreshToken,
+          });
           setSuccessMessage(`¡Bienvenido, ${nombre_usuario}! Redirigiendo a tu dashboard...`);
-          setTimeout(() => navigate('/dashboard'), 3000); // Redirigir después de 3 segundos
+          setTimeout(() => navigate('/dashboard'), 3000);
         } catch {
           await registerUser({ nombre_usuario, email, contraseña, fromGoogle: true });
           const response = await loginUser({ nombre_usuario, contraseña });
-          localStorage.setItem('username', nombre_usuario); // Guarda el nombre de usuario
-          localStorage.setItem('token', response.data.token);
+          persistSession({
+            nombre_usuario: response.data.nombre_usuario,
+            accessToken: response.data.accessToken,
+            refreshToken: response.data.refreshToken,
+          });
           setSuccessMessage(`¡Registrado y logueado con Google como ${nombre_usuario}! Redirigiendo a tu dashboard...`);
-          setTimeout(() => navigate('/dashboard'), 3000); // Redirigir después de 3 segundos
+          setTimeout(() => navigate('/dashboard'), 3000);
         }
       }
     } catch (err) {
@@ -204,15 +225,21 @@ const HomePage = () => {
 
                 <div className="flex justify-center mb-5 w-full">
                   <div className="w-full flex justify-center rounded-lg overflow-hidden">
-                    <GoogleLogin
-                      onSuccess={handleGoogleLogin}
-                      onError={() => setError('Google Login falló')}
-                      text="signin_with"
-                      shape="rectangular"
-                      size="large"
-                      width="384px"
-                      logo_alignment="center"
-                    />
+                    {googleClientConfigured ? (
+                      <GoogleLogin
+                        onSuccess={handleGoogleLogin}
+                        onError={() => setError('Google Login falló')}
+                        text="signin_with"
+                        shape="rectangular"
+                        size="large"
+                        width="384px"
+                        logo_alignment="center"
+                      />
+                    ) : (
+                      <p className="text-center text-sm text-gray-400">
+                        Google Login no está disponible en esta instancia. Contacta al administrador.
+                      </p>
+                    )}
                   </div>
                 </div>
 

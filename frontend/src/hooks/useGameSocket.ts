@@ -4,6 +4,9 @@ import { io, Socket } from 'socket.io-client';
 import gameStateDebugger from '../utils/gameStateDebugger';
 import { gamePerformanceMonitor } from '../utils/gamePerformanceMonitor';
 
+const DEFAULT_SERVER_URL = typeof window !== 'undefined' ? window.location.origin : '';
+const SERVER_URL = (import.meta.env.VITE_API_URL ?? DEFAULT_SERVER_URL).replace(/\/$/, '');
+
 // Interfaces para el estado del juego
 interface Carta {
   idUnico: string;
@@ -160,8 +163,6 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
   
   const maxReconnectAttempts = 5;
   const initialLoadTimeout = 15000; // 15 segundos para timeout inicial
-  const SERVER_URL = process.env.VITE_API_URL || 'http://localhost:3001';
-
   // ✅ Función para limpiar timeouts - sin dependencias para evitar recreación
   const clearTimeouts = useCallback(() => {
     if (reconnectTimeoutRef.current) {

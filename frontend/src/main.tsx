@@ -5,10 +5,22 @@ import './App.css';
 import App from './App';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+if (!googleClientId) {
+  console.error('[GoogleOAuth] VITE_GOOGLE_CLIENT_ID no está configurado. Google Login se deshabilitará.');
+}
+
+const RootApp = (
   <React.StrictMode>
-    <GoogleOAuthProvider clientId="346961563519-a4viktf9kvl2jq414sbpt0cqr16p6tmv.apps.googleusercontent.com">
-    <App />
-    </GoogleOAuthProvider>
+    {googleClientId ? (
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <App />
+      </GoogleOAuthProvider>
+    ) : (
+      <App />
+    )}
   </React.StrictMode>
 );
+
+ReactDOM.createRoot(document.getElementById('root')!).render(RootApp);
