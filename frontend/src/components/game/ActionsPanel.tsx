@@ -87,6 +87,9 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     return calcularEnvido(cartasJugador, cartasJugadas);
   }, [cartasJugador, cartasJugadas]);
 
+  const envidoEnCurso = envidoInfo.cantado && envidoInfo.estadoResolucion !== 'resuelto';
+  const trucoAceptado = trucoInfo.querido === true || trucoInfo.estadoResolucion === 'querido';
+
   // Early returns AFTER hooks
   if (!jugadorId) return null;
 
@@ -97,6 +100,10 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
   const puedoCantarEnvido = (): boolean => {
     // El envido solo se puede cantar en la primera mano
     if (manoActual !== 1) {
+      return false;
+    }
+
+    if (trucoAceptado) {
       return false;
     }
     
@@ -130,12 +137,21 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // Verificar si puedo cantar truco
   const puedoCantarTruco = (): boolean => {
+    if (envidoEnCurso) {
+      return false;
+    }
+
+    if (trucoPendientePorEnvidoPrimero && manoActual === 1 && !envidoInfo.cantado) {
+      return false;
+    }
+
     // ✅ PROBLEMA 2 CORREGIDO: No mostrar niveles de truco ya cantados
     // Puedo cantar truco inicial si no hay truco cantado
     if (!trucoInfo.cantado && esMiTurno) {
       return true;
     }
     
+
     // Puedo subir el truco si fue querido y no soy quien lo cantó originalmente
     if (trucoInfo.cantado && 
         trucoInfo.querido && 
@@ -170,6 +186,17 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
     
     return null;
   };
+
+  const renderNoTurnPanel = () => (
+    <div className="actions-panel">
+      <div className="panel-title">
+        <span>No es tu turno</span>
+      </div>
+      <div className="text-sm text-gray-400 mt-2 text-center">
+        Espera a que tu oponente termine su jugada
+      </div>
+    </div>
+  );
 
   // ✅ NUEVA FUNCIÓN: Verificar si debo esperar respuesta a mi canto
   const deboEsperarRespuesta = (): boolean => {
@@ -236,6 +263,8 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
   // Verificar si debo responder a un canto
   const deboResponderCanto = (): boolean => {
     // ✅ CORRECCIÓN MEJORADA: Priorizar envido durante "envido va primero", truco en situaciones normales
+    const envidoResuelto = envidoInfo.estadoResolucion === 'resuelto';
+    const envidoPendiente = envidoInfo.cantado && !envidoResuelto;
     
     // CASO ESPECIAL: Durante "envido va primero", priorizar respuestas de envido
     if (trucoPendientePorEnvidoPrimero) {
@@ -247,8 +276,9 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
         return true;
       }
       
-      // Solo si no hay envido pendiente, considerar truco
-      if (trucoInfo.cantado &&
+      // Solo si no hay envido pendiente ni en curso, considerar truco
+      if (!envidoPendiente &&
+          trucoInfo.cantado &&
           trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
           trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
           trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
@@ -262,11 +292,14 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
           trucoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
           trucoInfo.equipoDebeResponderTrucoId === miEquipo.id &&
           trucoInfo.cantadoPorEquipoId !== miEquipo.id) {
+        if (trucoPendientePorEnvidoPrimero && envidoPendiente) {
+          return false;
+        }
         return true;
       }
       
       // 2. PRIORIDAD BAJA: Responder a envido solo si NO hay truco pendiente
-      if (envidoInfo.cantado && 
+        if (envidoInfo.cantado && 
           envidoInfo.estadoResolucion === 'cantado_pendiente_respuesta' &&
           envidoInfo.cantadoPorEquipoId !== miEquipo.id &&
           !envidoInfo.declaracionEnCurso) {
@@ -686,16 +719,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({
 
   // ✅ MEJORA: Solo mostrar acciones generales si es mi turno
   if (!esMiTurno) {
-    return (
-      <div className="actions-panel">
-        <div className="panel-title">
-          <span>No es tu turno</span>
-        </div>
-        <div className="text-sm text-gray-400 mt-2 text-center">
-          Espera a que tu oponente termine su jugada
-        </div>
-      </div>
-    );
+    return renderNoTurnPanel();
   }
 
   return (
