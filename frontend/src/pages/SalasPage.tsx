@@ -985,12 +985,6 @@ const SalasPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* ✅ Diagnóstico de Autenticación */}
-      <AuthDiagnostic
-        isVisible={showDiagnostic}
-        onClose={() => setShowDiagnostic(false)}
-      />
     </div>
   );
 };

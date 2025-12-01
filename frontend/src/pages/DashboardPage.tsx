@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaGamepad, FaUsers, FaPalette } from 'react-icons/fa';;
 import Header from '../components/HeaderDashboard';
-import AuthDiagnostic from '../components/AuthDiagnostic';
 import { useAuthValidation } from '../hooks/useAuthValidation';
 import './DashboardPage.css';
 
@@ -73,10 +72,6 @@ const DashboardPage: React.FC = () => {
   
   return (
     <div className="dashboard-container">{/* Diagnóstico de Autenticación */}
-      <AuthDiagnostic
-        isVisible={showDiagnostic}
-        onClose={() => setShowDiagnostic(false)}
-      />
       
       <Header />
       <div className="dashboard-content">
