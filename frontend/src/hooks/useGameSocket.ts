@@ -106,6 +106,12 @@ interface EstadoJuego {
   indiceJugadorManoGlobal: number;
   rondaActual: EstadoRonda;
   historialRondas: any[];
+  mensajesJuego?: Array<{
+    id: string;
+    texto: string;
+    tipo: 'info' | 'accion' | 'error' | 'sistema';
+    timestamp: string;
+  }>;
   // ✅ Nuevos campos para abandono
   motivoFinalizacion?: string;
   tipoFinalizacion?: string;

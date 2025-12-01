@@ -47,8 +47,13 @@ class RondaGame {
     }
 
     manejarCanto(jugadorId, tipoCanto, detalleCanto) { // detalleCanto no se usa mucho aquí
+        const jugador = this.jugadoresEnOrden.find(j => j.id === jugadorId);
+        const nombreJugador = jugador ? jugador.nombreUsuario : 'Jugador';
+
         if (tipoCanto.includes('ENVIDO') || tipoCanto === 'FALTA_ENVIDO') {
-            return this.envidoHandler.registrarCanto(jugadorId, tipoCanto);
+            const resultado = this.envidoHandler.registrarCanto(jugadorId, tipoCanto);
+            if (resultado) this.partida.agregarMensaje(`${nombreJugador} cantó ${tipoCanto.replace(/_/g, ' ')}`, 'accion');
+            return resultado;
         } else if (tipoCanto === 'TRUCO' || tipoCanto === 'RETRUCO' || tipoCanto === 'VALE_CUATRO') {
             // ✅ PROBLEMA 1 CORREGIDO: Implementar "Envido va primero" correctamente
             if (tipoCanto === 'TRUCO' && 
@@ -64,6 +69,7 @@ class RondaGame {
                 
                 if (resultado) {
                     console.log(`[RONDA] ⚡ Truco cantado en primera mano - activando "Envido va primero"`);
+                    this.partida.agregarMensaje(`${nombreJugador} cantó TRUCO (Envido va primero)`, 'accion');
                     this._actualizarEstadoParaNotificar('truco_pendiente_por_envido_primero', {
                         jugadorId,
                         tipoCanto,
@@ -74,7 +80,9 @@ class RondaGame {
                 return resultado;
             }
             
-            return this.trucoHandler.registrarCanto(jugadorId, tipoCanto);
+            const resultado = this.trucoHandler.registrarCanto(jugadorId, tipoCanto);
+            if (resultado) this.partida.agregarMensaje(`${nombreJugador} cantó ${tipoCanto.replace(/_/g, ' ')}`, 'accion');
+            return resultado;
         } else {
             console.warn(`Tipo de canto desconocido: ${tipoCanto}`);
             return false;
@@ -82,10 +90,14 @@ class RondaGame {
     }
 
     manejarRespuestaCanto(jugadorId, respuesta, cantoRespondidoTipo, nuevoCantoSiMas) {
+        const jugador = this.jugadoresEnOrden.find(j => j.id === jugadorId);
+        const nombreJugador = jugador ? jugador.nombreUsuario : 'Jugador';
+
         // cantoRespondidoTipo y nuevoCantoSiMas pueden ser útiles para lógica más fina,
         // pero la respuesta misma (QUIERO, NO_QUIERO, o un nuevo canto) es clave.
         if (this.envidoHandler.estaPendienteDeRespuesta()) {
             const resultado = this.envidoHandler.registrarRespuesta(jugadorId, respuesta);
+            if (resultado) this.partida.agregarMensaje(`${nombreJugador} respondió ${respuesta.replace(/_/g, ' ')}`, 'accion');
             
             // Si el envido ha sido completamente resuelto y hay un truco pendiente por Envido Primero
             if (resultado && 
@@ -103,11 +115,14 @@ class RondaGame {
             }
             return resultado;
         } else if (this.trucoHandler.estaPendienteDeRespuesta()) {
-            return this.trucoHandler.registrarRespuesta(jugadorId, respuesta);
+            const resultado = this.trucoHandler.registrarRespuesta(jugadorId, respuesta);
+            if (resultado) this.partida.agregarMensaje(`${nombreJugador} respondió ${respuesta.replace(/_/g, ' ')}`, 'accion');
+            return resultado;
         } else if (this.envidoHandler.estadoResolucion === 'querido_pendiente_puntos') {
             // Si es "Son Buenas" para el envido
             if (respuesta === 'SON_BUENAS_ENVIDO') {
                 const resultado = this.envidoHandler.registrarSonBuenas(jugadorId);
+                if (resultado) this.partida.agregarMensaje(`${nombreJugador} dijo: Son buenas`, 'accion');
                 
                 // Si el envido se ha resuelto completamente y hay truco pendiente por Envido Primero
                 if (resultado && 
@@ -126,7 +141,9 @@ class RondaGame {
             } 
             // Si son puntos declarados para el envido
             else if (!isNaN(parseInt(respuesta))) {
-                const resultado = this.envidoHandler.registrarPuntosDeclarados(jugadorId, parseInt(respuesta));
+                const puntos = parseInt(respuesta);
+                const resultado = this.envidoHandler.registrarPuntosDeclarados(jugadorId, puntos);
+                if (resultado) this.partida.agregarMensaje(`${nombreJugador} declaró ${puntos} puntos`, 'accion');
                 
                 // Similar a la lógica anterior, verificar si ahora debemos retomar el truco
                 if (resultado && 
@@ -162,6 +179,8 @@ class RondaGame {
      */
     manejarDeclaracionPuntosEnvido(jugadorId, puntos) {
         console.log(`[RONDA] 🔢 Jugador ${jugadorId} declara ${puntos} puntos de envido`);
+        const jugador = this.jugadoresEnOrden.find(j => j.id === jugadorId);
+        const nombreJugador = jugador ? jugador.nombreUsuario : 'Jugador';
         
         if (!this.envidoHandler.declaracionEnCurso) {
             console.warn(`[RONDA] ❌ No hay declaración de envido en curso`);
@@ -173,6 +192,7 @@ class RondaGame {
         }
 
         const resultado = this.envidoHandler.registrarPuntosDeclarados(jugadorId, puntos);
+        if (resultado) this.partida.agregarMensaje(`${nombreJugador} declaró ${puntos} puntos`, 'accion');
         
         // Si el envido se resuelve y hay truco pendiente por "Envido Primero"
         if (resultado && 
@@ -197,6 +217,8 @@ class RondaGame {
      */
     manejarDeclaracionSonBuenas(jugadorId) {
         console.log(`[RONDA] ✅ Jugador ${jugadorId} dice "Son Buenas"`);
+        const jugador = this.jugadoresEnOrden.find(j => j.id === jugadorId);
+        const nombreJugador = jugador ? jugador.nombreUsuario : 'Jugador';
         
         if (!this.envidoHandler.declaracionEnCurso) {
             console.warn(`[RONDA] ❌ No hay declaración de envido en curso para "Son Buenas"`);
@@ -208,6 +230,7 @@ class RondaGame {
         }
 
         const resultado = this.envidoHandler.registrarSonBuenas(jugadorId);
+        if (resultado) this.partida.agregarMensaje(`${nombreJugador} dijo: Son buenas`, 'accion');
         
         // Si el envido se resuelve y hay truco pendiente por "Envido Primero"
         if (resultado && 
@@ -250,7 +273,9 @@ class RondaGame {
         }
 
         // Delegar la lógica del mazo al trucoHandler que maneja correctamente los puntos
-        return this.trucoHandler.registrarMazo(jugadorId);
+        const resultado = this.trucoHandler.registrarMazo(jugadorId);
+        if (resultado) this.partida.agregarMensaje(`${jugador.nombreUsuario} se fue al mazo`, 'accion');
+        return resultado;
     }
 
     /**

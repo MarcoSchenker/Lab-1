@@ -23,7 +23,8 @@ const create1v1Ronda = () => {
     codigoSala: 'TEST_SALA',
     estadoPartida: 'en_juego',
     puntosVictoria: 30,
-    equipos: [equipo1, equipo2]
+    equipos: [equipo1, equipo2],
+    agregarMensaje: jest.fn()
   };
 
   const ronda = new RondaGame(
@@ -59,7 +60,8 @@ const create2v2Ronda = () => {
     codigoSala: 'TEST_SALA',
     estadoPartida: 'en_juego',
     puntosVictoria: 30,
-    equipos: [equipo1, equipo2]
+    equipos: [equipo1, equipo2],
+    agregarMensaje: jest.fn()
   };
 
   const ronda = new RondaGame(

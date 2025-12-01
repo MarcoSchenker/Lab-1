@@ -28,7 +28,6 @@ Manejar Callbacks: Implementar las funciones de callback que PartidaGame necesit
  */
 const PartidaGame = require('./PartidaGame');
 const pool = require('../config/db'); // Acceso a la base de datos
-const { getIoInstance } = require('../server'); 
 const { normalizeSkinName } = require('../utils/skinUtils');
 
 let activeGames = {};

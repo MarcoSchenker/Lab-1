@@ -10,6 +10,7 @@ import ActionsPanel from '../components/game/ActionsPanel';
 import TeamsPanel from '../components/game/TeamsPanel'; // ✅ Nuevo componente
 import GameEndModal from '../components/game/GameEndModal'; // ✅ Nuevo componente
 import LeaveGameModal from '../components/game/LeaveGameModal'; // ✅ Nuevo componente
+import GameLog from '../components/game/GameLog'; // ✅ Nuevo componente
 import GameReconnectOptions from '../components/GameReconnectOptions';
 import GameStateViewer from '../components/GameStateViewer';
 // import RecompensasScreen from '../components/RecompensasScreen'; // ✅ Ya no necesario - integrado en GameEndModal
@@ -546,11 +547,10 @@ const OnlineGamePage: React.FC = () => {
         isVisible={showLeaveGameModal}
         onConfirm={confirmarAbandonarPartida}
         onCancel={cancelarAbandonarPartida}
-        jugadorActualId={jugadorId}
-        jugadores={gameState.jugadores || []}
-        equipos={gameState.equipos || []}
-        codigoSala={codigoSala || ''}
       />
+
+      {/* ✅ Log del juego */}
+      <GameLog mensajes={gameState.mensajesJuego || []} />
       
       {/* Panel de depuración */}
       {showDebugPanel && (

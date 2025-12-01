@@ -32,6 +32,7 @@ class PartidaGame {
         this.numeroRondaActual = 0;
         this.historialRondas = []; // Guardar resumen de rondas pasadas
         this.indiceJugadorManoGlobal = 0; 
+        this.mensajesJuego = []; // ✅ Log de mensajes del juego
 
         this.notificarEstadoGlobal = notificarEstadoGlobalCallback;
         this.persistirPartida = persistirPartidaCallback;
@@ -39,6 +40,25 @@ class PartidaGame {
         this.finalizarPartidaCallback = finalizarPartidaCallback;
 
         this._configurarPartida(jugadoresInfo);
+    }
+
+    /**
+     * Agrega un mensaje al log del juego
+     * @param {string} texto - Texto del mensaje
+     * @param {string} tipo - Tipo de mensaje ('info', 'accion', 'error', 'sistema')
+     */
+    agregarMensaje(texto, tipo = 'info') {
+        const mensaje = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            texto,
+            tipo,
+            timestamp: new Date().toISOString()
+        };
+        this.mensajesJuego.push(mensaje);
+        // Mantener solo los últimos 50 mensajes
+        if (this.mensajesJuego.length > 50) {
+            this.mensajesJuego.shift();
+        }
     }
 
     _configurarPartida(jugadoresInfo) {
@@ -615,7 +635,8 @@ class PartidaGame {
                 numeroRondaActual: this.numeroRondaActual,
                 indiceJugadorManoGlobal: this.indiceJugadorManoGlobal, // Quién será mano en la siguiente ronda
                 estadoRondaActual: this.rondaActual ? this.rondaActual.obtenerEstadoRonda() : null,
-                historialRondas: this.historialRondas || []
+                historialRondas: this.historialRondas || [],
+                mensajesJuego: this.mensajesJuego || [] // ✅ Incluir mensajes en el estado
             };
             
             // ✅ Solo agregar rondaActual si tenemos una ronda válida y datos completos

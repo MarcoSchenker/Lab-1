@@ -126,6 +126,9 @@ class RondaTurnoHandler {
             usuario_id_accion: jugadorId,
             detalle_accion: { carta_jugada: this._serializeCarta(cartaJugada), mano_numero: this.manoActualNumero }
         });
+        
+        this.ronda.partida.agregarMensaje(`${jugador.nombreUsuario} jugó ${cartaJugada.numero} de ${cartaJugada.palo}`, 'accion');
+        
         this.ronda._actualizarEstadoParaNotificar('carta_jugada', { jugadorId, carta: this._serializeCarta(cartaJugada), jugadorTurnoActualId: this.jugadorTurnoActual.id });
 
         if (this.cartasEnMesaManoActual.length === this.ronda.jugadoresEnOrden.length) {
@@ -164,17 +167,9 @@ class RondaTurnoHandler {
                 ganadorManoJugador = this.ronda.jugadoresEnOrden.find(j => j.id === mejoresJugadas.sort((a,b) => a.ordenJugada - b.ordenJugada)[0].jugadorId);
                 ganadorManoEquipoId = primerEquipoEmpatado;
             } else { // Empate entre diferentes equipos
-                if (this.manoActualNumero === 1) {
-                    const manoDeRondaEstaEnEmpate = mejoresJugadas.some(j => j.jugadorId === this.ronda.jugadorManoRonda.id);
-                    if (manoDeRondaEstaEnEmpate) {
-                        ganadorManoJugador = this.ronda.jugadorManoRonda;
-                        ganadorManoEquipoId = ganadorManoJugador.equipoId;
-                    } else {
-                        fueParda = true; // Parda si el mano de la ronda no está en el empate de la primera
-                    }
-                } else {
-                    fueParda = true; // En 2da o 3ra mano, empate entre equipos es parda
-                }
+                // ✅ CORRECCIÓN PARDA: En cualquier mano, si hay empate entre equipos diferentes, es Parda.
+                // La regla de que gana el mano solo aplica si las 3 manos son pardas (manejado en determinarGanadorRondaPorManos)
+                fueParda = true;
             }
         }
 

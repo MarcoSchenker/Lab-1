@@ -1,0 +1,102 @@
+.game-log-container {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  height: 200px;
+  width: 300px;
+  font-size: 0.85rem;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.game-log-header {
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px 8px 0 0;
+}
+
+.game-log-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.game-log-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Scrollbar styling */
+.game-log-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.game-log-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.game-log-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.game-log-message {
+  display: flex;
+  gap: 8px;
+  line-height: 1.3;
+  align-items: flex-start;
+}
+
+.game-log-message.accion {
+  color: #ffd700; /* Gold for actions */
+}
+
+.game-log-message.error {
+  color: #ff6b6b;
+}
+
+.game-log-message.sistema {
+  color: #4dabf7;
+}
+
+.game-log-message.info {
+  color: #e9ecef;
+}
+
+.log-time {
+  color: #868e96;
+  font-size: 0.75rem;
+  min-width: 35px;
+  margin-top: 1px;
+}
+
+.game-log-empty {
+  color: #868e96;
+  text-align: center;
+  margin-top: 20px;
+  font-style: italic;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .game-log-container {
+    width: 200px;
+    height: 150px;
+    bottom: 10px;
+    left: 10px;
+    font-size: 0.75rem;
+  }
+}

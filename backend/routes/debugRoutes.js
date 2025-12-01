@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const gameLogicHandler = require('../game-logic/gameLogicHandler');
 const { getRoomDebugInfo } = require('../utils/debugUtils');
-const { getIoInstance } = require('../server');
 
 /**
  * Debug endpoint to check active games
@@ -48,7 +47,7 @@ router.get('/game/:codigoSala', async (req, res) => {
         }
         
         // Get Socket.IO room info
-        const io = getIoInstance();
+        const io = req.app.get('io');
         let socketInfo = { error: 'Socket.IO instance not available' };
         
         if (io) {
