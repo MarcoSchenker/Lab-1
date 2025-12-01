@@ -111,8 +111,7 @@ const obtenerRanking = async (req, res) => {
              IFNULL(e.elo, 500) as elo
       FROM usuarios u
       LEFT JOIN estadisticas e ON u.id = e.usuario_id
-      WHERE u.nombre_usuario NOT LIKE 'Anónimo%' 
-        AND u.nombre_usuario NOT LIKE 'Guest%'
+      WHERE u.es_anonimo = 0
         AND IFNULL(e.elo, 500) >= 500
         AND IFNULL(e.partidas_jugadas, 0) > 0
       ORDER BY e.elo DESC, e.victorias DESC
