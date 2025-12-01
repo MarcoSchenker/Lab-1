@@ -4,7 +4,6 @@ import {IoAddCircleOutline, IoFilterOutline, IoLockClosed, IoLockOpen, IoRefresh
 import { io, Socket } from 'socket.io-client';
 import './SalasPage.css';
 import Header from '../components/HeaderDashboard';
-import AuthDiagnostic from '../components/AuthDiagnostic';
 import { useAuthValidation } from '../hooks/useAuthValidation';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');

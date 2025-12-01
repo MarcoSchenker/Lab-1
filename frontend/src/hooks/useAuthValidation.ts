@@ -35,11 +35,12 @@ export const useAuthValidation = (): UseAuthValidationResult => {
             const hasToken = AuthService.getToken();
             const hasUsername = AuthService.getUsername();
             
-            // Si hay datos pero son inválidos, probablemente es un problema de modo incógnito
+            // Si hay datos pero son inválidos, limpiar y redirigir
             if ((hasToken && hasToken !== 'undefined') || (hasUsername && hasUsername !== 'undefined')) {
               console.warn('[useAuthValidation] 🚨 Datos de autenticación detectados pero inválidos:', validation.issues);
-              setShowDiagnostic(true);
-              return; // No redirigir inmediatamente, mostrar diagnóstico primero
+              AuthService.clearAuthData();
+              navigate('/');
+              return;
             }
           }
 

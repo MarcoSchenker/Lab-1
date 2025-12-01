@@ -223,32 +223,8 @@ const GameReconnectOptions: React.FC<GameReconnectOptionsProps> = ({
           >
             Desconectar Socket
           </button>
-          
-          <button 
-            onClick={handleViewDebug} 
-            className="advanced-button debug"
-          >
-            Ver Diagnostico
-          </button>
         </div>
       )}
-
-      {/* Diagnostic info display */}
-      <div className="diagnostic-info">
-        <h3>Información de Diagnóstico</h3>
-        <p>Estado del Socket: {diagnosticInfo.socketConnected ? 'Conectado' : 'Desconectado'}</p>
-        <p>Conexión a Internet: {diagnosticInfo.internetConnected ? 'Disponible' : 'No disponible'}</p>
-        <p>Servidor Alcanzable: {diagnosticInfo.serverReachable ? 'Sí' : 'No'}</p>
-        <p>Última Verificación: {new Date(diagnosticInfo.lastCheckTime).toLocaleTimeString()}</p>
-        
-        <button 
-          onClick={runDiagnostics} 
-          className="diagnostic-button"
-          disabled={isRunningDiagnostic}
-        >
-          {isRunningDiagnostic ? 'Ejecutando Diagnóstico...' : 'Ejecutar Diagnóstico de Red'}
-        </button>
-      </div>
     </div>
   );
 };

@@ -301,6 +301,49 @@ router.post('/unirse', authenticateToken, async (req, res) => {
     );
     
     if (jugadorExistente.length > 0) {
+      console.log(`[salasRoute] Usuario ${usuarioId} ya está en sala ${codigo_sala}. Jugadores: ${sala.jugadores_actuales}/${sala.max_jugadores}`);
+      
+      // Verificar si la sala está llena y el juego debería estar iniciado
+      if (sala.jugadores_actuales >= sala.max_jugadores) {
+        // Verificar si la partida existe en memoria
+        const partidaActiva = gameLogicHandler.getGameById(codigo_sala);
+        if (!partidaActiva) {
+          console.log(`[salasRoute] ⚠️ Sala ${codigo_sala} llena pero sin partida activa. Intentando recuperar...`);
+          
+          // Obtener todos los jugadores de la sala
+          const [jugadores] = await connection.query(
+            `SELECT jp.usuario_id, u.nombre_usuario, COALESCE(s.codigo, 'Original') AS skin_codigo
+             FROM jugadores_partidas jp 
+             JOIN usuarios u ON jp.usuario_id = u.id 
+             LEFT JOIN perfiles p ON p.usuario_id = u.id
+             LEFT JOIN skins s ON p.skin_id = s.id
+             WHERE jp.partida_id = ?`,
+            [codigo_sala]
+          );
+          
+          const jugadoresInfo = jugadores.map(j => ({
+            id: j.usuario_id,
+            nombre_usuario: j.nombre_usuario,
+            skin_preferida: normalizeSkinName(j.skin_codigo)
+          }));
+          
+          const tipoPartida = sala.max_jugadores === 2 ? '1v1' : 
+                              sala.max_jugadores === 4 ? '2v2' : '3v3';
+          
+          try {
+            await gameLogicHandler.crearNuevaPartida(
+              codigo_sala, 
+              jugadoresInfo, 
+              tipoPartida, 
+              sala.puntos_victoria || 15
+            );
+            console.log(`[salasRoute] ✅ Partida recuperada exitosamente para sala ${codigo_sala}`);
+          } catch (err) {
+            console.error(`[salasRoute] ❌ Error al recuperar partida ${codigo_sala}:`, err);
+          }
+        }
+      }
+      
       await connection.commit();
       return res.status(200).json({ mensaje: 'Ya estás en esta sala' });
     }
@@ -510,8 +553,9 @@ router.post('/unirse-privada', authenticateToken, async (req, res) => {
   }
 });
 
-// Unirse a una sala como invitado mediante link (sin autenticación)
+// Unirse a una sala como invitado mediante link (soporta usuarios autenticados y anónimos)
 router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
+  console.log(`[salasRoute] 🟢 POST /unirse-invitado/${req.params.codigo_sala}`);
   let connection;
   try {
     connection = await pool.getConnection();
@@ -520,8 +564,23 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
     const { codigo_sala } = req.params;
     const { nombre_invitado } = req.body;
     
-    // Validar nombre de invitado
-    if (!nombre_invitado || nombre_invitado.trim() === '') {
+    // Verificar si hay un usuario autenticado
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    let usuarioAutenticado = null;
+    
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        usuarioAutenticado = jwt.verify(token, process.env.JWT_SECRET || 'tu_clave_secreta');
+        console.log(`[salasRoute] Usuario autenticado en unirse-invitado: ${usuarioAutenticado.id}`);
+      } catch (e) {
+        console.log('[salasRoute] Token inválido en unirse-invitado, procediendo como anónimo');
+      }
+    }
+
+    // Validar nombre de invitado solo si no está autenticado
+    if (!usuarioAutenticado && (!nombre_invitado || nombre_invitado.trim() === '')) {
       await connection.rollback();
       return res.status(400).json({ error: 'El nombre de invitado es requerido' });
     }
@@ -531,7 +590,7 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
       `SELECT s.*, 
               (SELECT COUNT(*) FROM jugadores_partidas jp WHERE jp.partida_id = s.codigo_sala) AS jugadores_actuales
        FROM partidas s 
-       WHERE s.codigo_sala = ? AND s.estado = 'en_juego'`,
+       WHERE s.codigo_sala = ?`,
       [codigo_sala]
     );
     
@@ -541,6 +600,7 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
     }
     
     const sala = salas[0];
+    console.log(`[salasRoute] Sala encontrada: ${codigo_sala}, Jugadores: ${sala.jugadores_actuales}/${sala.max_jugadores}`);
     
     // Verificar si la sala ha expirado
     if (sala.tiempo_expiracion) {
@@ -554,23 +614,110 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
     
     // Verificar si la sala está llena
     if (sala.jugadores_actuales >= sala.max_jugadores) {
+      // Si el usuario ya está en la sala, permitirle entrar
+      if (usuarioAutenticado) {
+        const [jugadorExistente] = await connection.query(
+          `SELECT * FROM jugadores_partidas WHERE partida_id = ? AND usuario_id = ?`,
+          [codigo_sala, usuarioAutenticado.id]
+        );
+        if (jugadorExistente.length > 0) {
+           // Verificar si la partida existe en memoria (recuperación)
+           const partidaActiva = gameLogicHandler.getGameById(codigo_sala);
+           if (!partidaActiva) {
+             console.log(`[salasRoute] ⚠️ Sala ${codigo_sala} llena pero sin partida activa. Intentando recuperar...`);
+             // ... lógica de recuperación ...
+             const [jugadores] = await connection.query(
+               `SELECT jp.usuario_id, u.nombre_usuario, COALESCE(s.codigo, 'Original') AS skin_codigo
+                FROM jugadores_partidas jp 
+                JOIN usuarios u ON jp.usuario_id = u.id 
+                LEFT JOIN perfiles p ON p.usuario_id = u.id
+                LEFT JOIN skins s ON p.skin_id = s.id
+                WHERE jp.partida_id = ?`,
+               [codigo_sala]
+             );
+             
+             const jugadoresInfo = jugadores.map(j => ({
+               id: j.usuario_id,
+               nombre_usuario: j.nombre_usuario,
+               skin_preferida: normalizeSkinName(j.skin_codigo)
+             }));
+             
+             const tipoPartida = sala.max_jugadores === 2 ? '1v1' : 
+                                 sala.max_jugadores === 4 ? '2v2' : '3v3';
+             
+             try {
+               await gameLogicHandler.crearNuevaPartida(
+                 codigo_sala, 
+                 jugadoresInfo, 
+                 tipoPartida, 
+                 sala.puntos_victoria || 15
+               );
+               console.log(`[salasRoute] ✅ Partida recuperada exitosamente para sala ${codigo_sala}`);
+             } catch (err) {
+               console.error(`[salasRoute] ❌ Error al recuperar partida ${codigo_sala}:`, err);
+             }
+           }
+
+           await connection.commit();
+           return res.status(200).json({ 
+             mensaje: 'Ya estás en esta sala',
+             codigo_sala,
+             usuario_id: usuarioAutenticado.id,
+             nombre_usuario: usuarioAutenticado.nombre_usuario,
+             token: token,
+             juego_iniciado: true
+           });
+        }
+      }
+      
       await connection.rollback();
       return res.status(400).json({ error: 'La sala está llena' });
     }
-    
-    // Crear usuario anónimo temporal
-    const nombreUsuarioUnico = `Invitado_${nombre_invitado}_${Date.now()}`;
-    const emailTemporal = `${nombreUsuarioUnico}@temp.com`;
-    const contraseñaTemporal = 'temp_password';
-    const fechaExpiracion = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 horas
-    
-    const [usuarioResult] = await connection.query(
-      `INSERT INTO usuarios (nombre_usuario, email, contraseña, es_anonimo, fecha_expiracion) 
-       VALUES (?, ?, ?, true, ?)`,
-      [nombreUsuarioUnico, emailTemporal, contraseñaTemporal, fechaExpiracion]
-    );
-    
-    const usuarioId = usuarioResult.insertId;
+
+    let usuarioId;
+    let nombreUsuario;
+    let esNuevoUsuario = false;
+
+    if (usuarioAutenticado) {
+      usuarioId = usuarioAutenticado.id;
+      nombreUsuario = usuarioAutenticado.nombre_usuario;
+      
+      // Verificar si ya está en la sala
+      const [jugadorExistente] = await connection.query(
+        `SELECT * FROM jugadores_partidas WHERE partida_id = ? AND usuario_id = ?`,
+        [codigo_sala, usuarioId]
+      );
+      
+      if (jugadorExistente.length > 0) {
+        await connection.commit();
+        // Verificar si el juego ya inició
+        const juegoIniciado = sala.estado === 'en_juego';
+        return res.status(200).json({ 
+          mensaje: 'Ya estás en esta sala',
+          codigo_sala,
+          usuario_id: usuarioId,
+          nombre_usuario: nombreUsuario,
+          token: token, // Devolver el mismo token
+          juego_iniciado: juegoIniciado
+        });
+      }
+    } else {
+      // Crear usuario anónimo temporal
+      const nombreUsuarioUnico = `Invitado_${nombre_invitado}_${Date.now()}`;
+      const emailTemporal = `${nombreUsuarioUnico}@temp.com`;
+      const contraseñaTemporal = 'temp_password';
+      const fechaExpiracion = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 horas
+      
+      const [usuarioResult] = await connection.query(
+        `INSERT INTO usuarios (nombre_usuario, email, contraseña, es_anonimo, fecha_expiracion) 
+         VALUES (?, ?, ?, true, ?)`,
+        [nombreUsuarioUnico, emailTemporal, contraseñaTemporal, fechaExpiracion]
+      );
+      
+      usuarioId = usuarioResult.insertId;
+      nombreUsuario = nombreUsuarioUnico;
+      esNuevoUsuario = true;
+    }
     
     // Insertar al usuario como jugador de la sala
     await connection.query(
@@ -620,24 +767,35 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
         );
         
         if (partidaCreada) {
-          // Crear token temporal para el invitado
-          const jwt = require('jsonwebtoken');
-          const tokenTemporal = jwt.sign(
-            { 
-              id: usuarioId, 
-              nombre_usuario: nombreUsuarioUnico,
-              isAnonymous: true 
-            },
-            process.env.JWT_SECRET || 'tu_clave_secreta',
-            { expiresIn: '24h' }
-          );
+          // Preparar token de respuesta
+          let tokenRespuesta = token;
+          if (esNuevoUsuario) {
+            const jwt = require('jsonwebtoken');
+            tokenRespuesta = jwt.sign(
+              { 
+                id: usuarioId, 
+                nombre_usuario: nombreUsuario,
+                isAnonymous: true 
+              },
+              process.env.JWT_SECRET || 'tu_clave_secreta',
+              { expiresIn: '24h' }
+            );
+          }
+          
+          // Notificar a sockets en lobby para redirección
+          const io = req.app.get('io');
+          if (io) {
+            setTimeout(() => {
+              io.to(codigo_sala).emit('iniciar_redireccion_juego', { codigoSala: codigo_sala });
+            }, 100);
+          }
           
           return res.status(200).json({ 
-            mensaje: 'Te has unido como invitado exitosamente',
+            mensaje: 'Te has unido exitosamente',
             codigo_sala,
             usuario_id: usuarioId,
-            nombre_usuario: nombreUsuarioUnico,
-            token: tokenTemporal,
+            nombre_usuario: nombreUsuario,
+            token: tokenRespuesta,
             juego_iniciado: true
           });
         }
@@ -648,24 +806,27 @@ router.post('/unirse-invitado/:codigo_sala', async (req, res) => {
     } else {
       await connection.commit();
       
-      // Crear token temporal para el invitado
-      const jwt = require('jsonwebtoken');
-      const tokenTemporal = jwt.sign(
-        { 
-          id: usuarioId, 
-          nombre_usuario: nombreUsuarioUnico,
-          isAnonymous: true 
-        },
-        process.env.JWT_SECRET || 'tu_clave_secreta',
-        { expiresIn: '24h' }
-      );
+      // Preparar token de respuesta
+      let tokenRespuesta = token;
+      if (esNuevoUsuario) {
+        const jwt = require('jsonwebtoken');
+        tokenRespuesta = jwt.sign(
+          { 
+            id: usuarioId, 
+            nombre_usuario: nombreUsuario,
+            isAnonymous: true 
+          },
+          process.env.JWT_SECRET || 'tu_clave_secreta',
+          { expiresIn: '24h' }
+        );
+      }
       
       return res.status(200).json({ 
-        mensaje: 'Te has unido como invitado exitosamente',
+        mensaje: 'Te has unido exitosamente',
         codigo_sala,
         usuario_id: usuarioId,
-        nombre_usuario: nombreUsuarioUnico,
-        token: tokenTemporal,
+        nombre_usuario: nombreUsuario,
+        token: tokenRespuesta,
         juego_iniciado: false
       });
     }

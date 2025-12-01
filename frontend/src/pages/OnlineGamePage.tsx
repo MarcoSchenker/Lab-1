@@ -215,6 +215,44 @@ const OnlineGamePage: React.FC = () => {
   //   navigate('/salas');
   // }, [navigate]);
 
+  // ✅ Pantalla de espera para inicio de partida
+  if (!gameState && !isLoading && !error) {
+    return (
+      <div className="game-container">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <h2>⏳ Esperando jugadores...</h2>
+          <p className="loading-message">
+            La partida comenzará cuando la sala esté llena.
+          </p>
+          <p style={{ marginTop: '10px', fontSize: '14px', color: '#ccc' }}>
+            Código de sala: <strong>{codigoSala}</strong>
+          </p>
+          <p style={{ fontSize: '12px', color: '#aaa' }}>
+            Comparte este código o el enlace de invitación con tus amigos.
+          </p>
+          
+          <button
+            className="retry-button"
+            onClick={() => navigate('/salas')}
+            style={{ 
+              padding: '10px 20px', 
+              marginTop: '20px', 
+              fontSize: '14px',
+              cursor: 'pointer',
+              backgroundColor: '#4a4a4a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '5px'
+            }}
+          >
+            ⬅️ Volver a las salas
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading && !loadingTimeoutActive && !gameState) {
     return (
       <div className="game-container">

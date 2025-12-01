@@ -564,6 +564,14 @@ export function useGameSocket(codigoSala: string | undefined): UseGameSocketRetu
       console.log('[CLIENT] ⏳ Esperando inicio:', data);
       setGameState(null);
       setError(null);
+      setIsLoading(false); // ✅ Dejar de cargar para mostrar pantalla de espera
+    });
+
+    // ✅ Escuchar evento de redirección/inicio desde el lobby
+    newSocket.on('iniciar_redireccion_juego', (data) => {
+      console.log('[CLIENT] 🚀 Recibido iniciar_redireccion_juego:', data);
+      // Solicitar el estado inmediatamente
+      requestGameState();
     });
 
     // Manejar "Envido va primero" - retomar truco pendiente

@@ -19,31 +19,71 @@ const UnirseInvitadoPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uniendose, setUniendose] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Cargar información de la sala
-    const cargarInfoSala = async () => {
-      try {
-        const response = await fetch(`/api/salas/info/${codigo_sala}`);
-        if (response.ok) {
-          const sala = await response.json();
-          setSalaInfo(sala);
-        } else {
-          const error = await response.json();
-          setError(error.error || 'Sala no encontrada o no disponible');
-        }
-      } catch (err) {
-        console.error('Error al cargar info de sala:', err);
-        setError('Error de conexión');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (codigo_sala) {
+    // Verificar si el usuario ya está logueado
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+      // Intentar unirse automáticamente
+      handleUnirseAutomatico(token);
+    } else {
+      // Cargar información de la sala solo si no estamos intentando unirnos automáticamente
       cargarInfoSala();
     }
   }, [codigo_sala]);
+
+  const cargarInfoSala = async () => {
+    try {
+      const response = await fetch(`/api/salas/info/${codigo_sala}`);
+      if (response.ok) {
+        const sala = await response.json();
+        setSalaInfo(sala);
+      } else {
+        const error = await response.json();
+        setError(error.error || 'Sala no encontrada o no disponible');
+      }
+    } catch (err) {
+      console.error('Error al cargar info de sala:', err);
+      setError('Error de conexión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnirseAutomatico = async (token: string) => {
+    setUniendose(true);
+    try {
+      const response = await fetch(`/api/salas/unirse-invitado/${codigo_sala}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({}), // No necesitamos body si está autenticado
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Redirigir al juego siempre, la página del juego manejará la espera
+        navigate(`/online-game-page/${codigo_sala}`);
+      } else {
+        // Si falla la unión automática (ej. sala llena), mostrar error y cargar info
+        setError(data.error || 'Error al unirse a la sala');
+        setLoading(false); // Dejar de cargar para mostrar el error
+        cargarInfoSala(); // Cargar info para mostrar detalles
+      }
+    } catch (err) {
+      console.error('Error al unirse automáticamente:', err);
+      setError('Error de conexión. Inténtalo de nuevo.');
+      setLoading(false);
+      cargarInfoSala();
+    } finally {
+      setUniendose(false);
+    }
+  };
 
   const handleUnirse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,13 +121,8 @@ const UnirseInvitadoPage: React.FC = () => {
         localStorage.setItem('nombre_usuario', data.nombre_usuario);
         localStorage.setItem('usuario_id', data.usuario_id.toString());
 
-        // Redirigir al juego
-        if (data.juego_iniciado) {
-          navigate(`/online-game-page/${codigo_sala}`);
-        } else {
-          // Redirigir a una sala de espera o mostrar mensaje
-          navigate(`/salas`);
-        }
+        // Redirigir al juego siempre
+        navigate(`/online-game-page/${codigo_sala}`);
       } else {
         setError(data.error || 'Error al unirse a la sala');
       }
@@ -123,7 +158,7 @@ const UnirseInvitadoPage: React.FC = () => {
       <div className="unirse-invitado-container">
         <div className="loading-card">
           <div className="spinner"></div>
-          <p>Cargando información de la sala...</p>
+          <p>{isLoggedIn ? 'Uniéndose a la sala...' : 'Cargando información de la sala...'}</p>
         </div>
       </div>
     );
