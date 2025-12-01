@@ -66,10 +66,7 @@ const StatsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="stats-container loading">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
           <p>Cargando estadísticas...</p>
-        </div>
       </div>
     );
   }
