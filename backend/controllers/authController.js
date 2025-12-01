@@ -91,14 +91,14 @@ const loginUsuario = async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE nombre_usuario = ?', [nombre_usuario]);
 
     if (rows.length === 0) {
-      return res.status(400).json({ error: 'Usuario no encontrado' });
+      return res.status(400).json({ error: 'Credenciales inválidas' });
     }
 
     const usuario = rows[0];
     const isMatch = await bcrypt.compare(contraseña, usuario.contraseña);
 
     if (!isMatch) {
-      return res.status(400).json({ error: 'Contraseña incorrecta' });
+      return res.status(400).json({ error: 'Credenciales inválidas' });
     }
 
     // Generar el access token (válido por 24 horas)

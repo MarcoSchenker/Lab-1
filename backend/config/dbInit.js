@@ -384,6 +384,12 @@ await dropForeignKeyIfExists(connection, 'perfiles', 'perfiles_ibfk_1');
 await dropForeignKeyIfExists(connection, 'skins_desbloqueadas', 'skins_desbloqueadas_ibfk_1');
 await dropForeignKeyIfExists(connection, 'amigos', 'amigos_ibfk_1');
 await dropForeignKeyIfExists(connection, 'amigos', 'amigos_ibfk_2');
+await dropForeignKeyIfExists(connection, 'jugadores_partidas', 'jugadores_partidas_ibfk_2');
+await dropForeignKeyIfExists(connection, 'jugadores_partidas', 'jugadores_partidas_ibfk_2');
+await dropForeignKeyIfExists(connection, 'pagos', 'pagos_ibfk_1');
+await dropForeignKeyIfExists(connection, 'transacciones_monedas', 'transacciones_monedas_ibfk_1');
+await dropForeignKeyIfExists(connection, 'personalizacion', 'personalizacion_ibfk_1');
+await dropForeignKeyIfExists(connection, 'partidas_acciones_historial', 'partidas_acciones_historial_ibfk_2');
 
 // Agregar las restricciones con ON DELETE CASCADE
 await connection.query('ALTER TABLE imagenes_perfil ADD CONSTRAINT imagenes_perfil_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
@@ -392,6 +398,21 @@ await connection.query('ALTER TABLE perfiles ADD CONSTRAINT perfiles_ibfk_1 FORE
 await connection.query('ALTER TABLE skins_desbloqueadas ADD CONSTRAINT skins_desbloqueadas_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
 await connection.query('ALTER TABLE amigos ADD CONSTRAINT amigos_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
 await connection.query('ALTER TABLE amigos ADD CONSTRAINT amigos_ibfk_2 FOREIGN KEY (amigo_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+await connection.query('ALTER TABLE jugadores_partidas ADD CONSTRAINT jugadores_partidas_ibfk_2 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+
+try {
+  await connection.query('ALTER TABLE pagos ADD CONSTRAINT pagos_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+} catch (e) { console.log('Tabla pagos no lista o constraint ya existe, saltando...'); }
+
+    try {
+      await connection.query('ALTER TABLE transacciones_monedas ADD CONSTRAINT transacciones_monedas_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+    } catch (e) { console.log('Tabla transacciones_monedas no lista, saltando...'); }
+
+try {
+      await connection.query('ALTER TABLE personalizacion ADD CONSTRAINT personalizacion_ibfk_1 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE');
+    } catch (e) { console.log('Tabla personalizacion no lista, saltando...'); }
+
+await connection.query('ALTER TABLE partidas_acciones_historial ADD CONSTRAINT partidas_acciones_historial_ibfk_2 FOREIGN KEY (usuario_id_accion) REFERENCES usuarios(id) ON DELETE CASCADE');
 
 // Función para agregar una columna si no existe
 async function addColumnIfNotExists(connection, tableName, columnName, columnDefinition) {
